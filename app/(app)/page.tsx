@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { GradientButton } from "@/components/GradientButton";
+import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { PostCard } from "@/components/PostCard";
 import { useAppState } from "@/lib/AppStateContext";
 import { recentPosts } from "@/lib/store/selectors";
@@ -10,8 +10,6 @@ import { recentPosts } from "@/lib/store/selectors";
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [posting, setPosting] = useState(false);
 
   const posts = recentPosts(state.social);
 
@@ -21,20 +19,6 @@ export default function FeedPage() {
       await actions.refreshSocial();
     } finally {
       setRefreshing(false);
-    }
-  }
-
-  async function handlePost() {
-    const trimmed = draft.trim();
-    if (!trimmed || posting) return;
-    setPosting(true);
-    try {
-      await actions.createPost(trimmed);
-      setDraft("");
-    } catch (error) {
-      console.warn("[menzo/web] createPost failed", error);
-    } finally {
-      setPosting(false);
     }
   }
 
@@ -54,18 +38,7 @@ export default function FeedPage() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 flex flex-col gap-3">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="¿Qué recuerdo quieres compartir?"
-          rows={3}
-          className="w-full resize-none rounded-xl bg-[var(--color-surface-secondary)] p-3 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-        />
-        <div className="self-end">
-          <GradientButton label="Publicar" onClick={handlePost} disabled={!draft.trim()} loading={posting} fullWidth={false} size="md" />
-        </div>
-      </div>
+      <CreatePostComposer />
 
       <div className="flex flex-col gap-4">
         {posts.length === 0 ? (

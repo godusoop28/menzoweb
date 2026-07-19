@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
 
 import { Avatar } from "./Avatar";
-import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon } from "./icons";
+import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon } from "./icons";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: HomeIcon },
@@ -18,6 +18,7 @@ const SECONDARY_ITEMS = [
   { href: "/search", label: "Buscar", icon: SearchIcon },
   { href: "/events", label: "Eventos", icon: CalendarIcon },
   { href: "/notifications", label: "Notificaciones", icon: BellIcon },
+  { href: "/settings", label: "Configuración", icon: SettingsIcon },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -137,6 +138,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/notifications" aria-label="Notificaciones" className="relative text-[var(--color-text-secondary)]">
               <BellIcon />
               {unread > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />}
+            </Link>
+            <Link href="/settings" aria-label="Configuración" className="text-[var(--color-text-secondary)]">
+              <SettingsIcon />
             </Link>
           </div>
         </div>

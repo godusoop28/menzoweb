@@ -45,7 +45,14 @@ type AppStateContextValue = {
     logout: () => Promise<void>;
     toggleLike: (postId: string) => void;
     toggleBookmark: (postId: string) => void;
-    createPost: (body: string, title?: string) => Promise<void>;
+    createPost: (payload: {
+      body: string;
+      title?: string;
+      tags?: string[];
+      imageUri?: string;
+      imageFile?: File;
+      pollOptions?: string[];
+    }) => Promise<void>;
     sendMessage: (roomId: string, body: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
     createRoom: (payload: { name: string; description?: string; topic?: string }) => Promise<string | null>;
@@ -290,9 +297,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       call.catch((error) => console.warn("[menzo/api] toggleBookmark failed", error));
     }
 
-    async function createPost(body: string, title?: string) {
+    async function createPost(payload: {
+      body: string;
+      title?: string;
+      tags?: string[];
+      imageUri?: string;
+      imageFile?: File;
+      pollOptions?: string[];
+    }) {
       if (!hasSession()) throw new Error("No hay sesión activa");
-      const dto = await postsApi.create({ type: "text", title, body, tags: [] });
+      const imageUri = await ensureUploaded(payload.imageUri, payload.imageFile);
+      const dto = await postsApi.create({
+        type: payload.pollOptions ? "poll" : imageUri ? "image" : "text",
+        title: payload.title,
+        body: payload.body,
+        imageUri,
+        tags: payload.tags ?? [],
+        pollOptions: payload.pollOptions,
+      });
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }
 
