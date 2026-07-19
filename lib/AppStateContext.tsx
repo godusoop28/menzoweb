@@ -3,29 +3,36 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 
 import {
+  activityApi,
   authApi,
   chatApi,
   clearSession,
+  communityApi,
   ensureUploaded,
   getCachedSession,
   getMyRealId,
   loadSession,
   mapChatRoom,
+  mapComment,
+  mapEvent,
   mapMessage,
+  mapNotification,
   mapPost,
   mapUserProfile,
   mapUserSummary,
+  mapWallMessage,
+  notificationsApi,
   onSessionExpired,
   postsApi,
   saveSession,
   usersApi,
 } from "@/lib/api";
-import type { ChatRoom, UserProfile } from "@/lib/types";
+import type { ChatRoom, CommunityEvent, UserProfile } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./store/localUser";
 import { appReducer, createDefaultState } from "./store/reducer";
 import { getItem, removeItem, setItem, StorageKeys } from "./storage";
-import type { AppState, OnboardingPayload, SocialState } from "./store/types";
+import type { AppState, OnboardingPayload, RecentlyViewedEntry, SocialState } from "./store/types";
 
 type AppStateContextValue = {
   state: AppState;
@@ -44,6 +51,24 @@ type AppStateContextValue = {
     createRoom: (payload: { name: string; description?: string; topic?: string }) => Promise<string | null>;
     toggleFavoriteRoom: (roomId: string) => void;
     refreshSocial: () => Promise<void>;
+    ensurePostLoaded: (postId: string) => Promise<void>;
+    loadPostComments: (postId: string) => Promise<void>;
+    addComment: (postId: string, body: string) => void;
+    votePoll: (postId: string, optionId: string) => void;
+    ensureUserLoaded: (userId: string) => Promise<void>;
+    loadProfileWall: (profileId: string) => Promise<void>;
+    addWallMessage: (profileId: string, body: string) => void;
+    toggleFollow: (userId: string) => void;
+    openDirectMessage: (userId: string) => Promise<string | null>;
+    loadEvents: () => Promise<void>;
+    attendEvent: (eventId: string) => void;
+    createEvent: (payload: { title: string; description: string; date: string; time: string; kind: string }) => Promise<CommunityEvent | null>;
+    loadNotifications: () => Promise<void>;
+    markNotificationRead: (id: string) => void;
+    markAllNotificationsRead: () => void;
+    addRecentlyViewed: (entry: RecentlyViewedEntry) => void;
+    addRecentSearch: (query: string) => void;
+    clearRecentSearches: () => void;
   };
 };
 
@@ -54,9 +79,13 @@ function hasSession() {
 }
 
 async function fetchInitialSocialSnapshot(myRealId: string, profile: UserProfile): Promise<Partial<SocialState>> {
-  const [postsPage, rooms] = await Promise.all([
+  const [postsPage, rooms, events, notificationsPage, following, membersPage] = await Promise.all([
     postsApi.list(0, 20).catch(() => null),
     chatApi.rooms().catch(() => []),
+    communityApi.events().catch(() => []),
+    notificationsApi.list(0, 30).catch(() => null),
+    usersApi.following(myRealId).catch(() => []),
+    usersApi.search("", 0, 60).catch(() => null),
   ]);
 
   const userMap = new Map<string, ReturnType<typeof mapUserSummary>>();
@@ -67,11 +96,22 @@ async function fetchInitialSocialSnapshot(myRealId: string, profile: UserProfile
       if (!userMap.has(u.id)) userMap.set(u.id, u);
     }
   }
+  for (const dto of following) {
+    if (!userMap.has(dto.id)) userMap.set(dto.id, { ...mapUserProfile(dto, myRealId), activityStatus: dto.statusText ?? "" });
+  }
+  if (membersPage) {
+    for (const dto of membersPage.items) {
+      if (!userMap.has(dto.id)) userMap.set(dto.id, { ...mapUserProfile(dto, myRealId), activityStatus: dto.statusText ?? "" });
+    }
+  }
 
   return {
     users: Array.from(userMap.values()),
     posts: postsPage ? postsPage.items.map((dto) => mapPost(dto, myRealId)) : [],
     rooms: rooms.map((dto) => mapChatRoom(dto, myRealId)),
+    events: events.map(mapEvent),
+    notifications: notificationsPage ? notificationsPage.items.map((dto) => mapNotification(dto, myRealId)) : [],
+    following: following.map((dto) => dto.id),
   };
 }
 
@@ -306,6 +346,173 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    async function ensurePostLoaded(postId: string) {
+      if (stateRef.current.social.posts.some((p) => p.id === postId)) return;
+      try {
+        const dto = await postsApi.getById(postId);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { posts: [mapPost(dto, myRealId)], users: [mapUserSummary(dto.author, myRealId)] } });
+      } catch (error) {
+        console.warn("[menzo/api] ensurePostLoaded failed", error);
+      }
+    }
+
+    async function loadPostComments(postId: string) {
+      try {
+        const page = await postsApi.comments(postId, 0, 30);
+        const myRealId = getMyRealId();
+        dispatch({
+          type: "MERGE_SOCIAL",
+          payload: {
+            comments: page.items.map((dto) => mapComment(dto, myRealId)),
+            users: page.items.map((dto) => mapUserSummary(dto.author, myRealId)),
+          },
+        });
+      } catch (error) {
+        console.warn("[menzo/api] loadPostComments failed", error);
+      }
+    }
+
+    function addComment(postId: string, body: string) {
+      if (!hasSession()) return;
+      postsApi
+        .addComment(postId, body)
+        .then((dto) => dispatch({ type: "ADD_COMMENT", payload: mapComment(dto, getMyRealId()) }))
+        .catch((error) => console.warn("[menzo/api] addComment failed", error));
+    }
+
+    function votePoll(postId: string, optionId: string) {
+      dispatch({ type: "VOTE_POLL", payload: { postId, optionId } });
+      if (!hasSession()) return;
+      postsApi.vote(postId, optionId).catch((error) => console.warn("[menzo/api] votePoll failed", error));
+    }
+
+    async function ensureUserLoaded(userId: string) {
+      if (userId === LOCAL_USER_ID) return;
+      if (stateRef.current.social.users.some((u) => u.id === userId)) return;
+      try {
+        const dto = await usersApi.getById(userId);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { users: [{ ...mapUserProfile(dto, myRealId), activityStatus: dto.statusText ?? "" }] } });
+      } catch (error) {
+        console.warn("[menzo/api] ensureUserLoaded failed", error);
+      }
+    }
+
+    async function loadProfileWall(profileId: string) {
+      const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
+      if (!targetId) return;
+      try {
+        const page = await usersApi.wall(targetId, 0, 20);
+        const myRealId = getMyRealId();
+        dispatch({
+          type: "MERGE_SOCIAL",
+          payload: {
+            wallMessages: page.items.map((dto) => mapWallMessage(dto, myRealId)),
+            users: page.items.map((dto) => mapUserSummary(dto.author, myRealId)),
+          },
+        });
+      } catch (error) {
+        console.warn("[menzo/api] loadProfileWall failed", error);
+      }
+    }
+
+    function addWallMessage(profileId: string, body: string) {
+      if (!hasSession()) return;
+      const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
+      if (!targetId) return;
+      usersApi
+        .postWall(targetId, body)
+        .then((dto) => dispatch({ type: "ADD_WALL_MESSAGE", payload: mapWallMessage(dto, getMyRealId()) }))
+        .catch((error) => console.warn("[menzo/api] addWallMessage failed", error));
+    }
+
+    function toggleFollow(userId: string) {
+      const wasFollowing = stateRef.current.social.following.includes(userId);
+      dispatch({ type: "TOGGLE_FOLLOW", payload: { userId } });
+      if (!hasSession()) return;
+      const call = wasFollowing ? usersApi.unfollow(userId) : usersApi.follow(userId);
+      call.catch((error) => console.warn("[menzo/api] toggleFollow failed", error));
+    }
+
+    async function openDirectMessage(userId: string): Promise<string | null> {
+      if (!hasSession()) return null;
+      try {
+        const dto = await chatApi.openDirect(userId);
+        const room = mapChatRoom(dto, getMyRealId());
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [room] } });
+        return room.id;
+      } catch (error) {
+        console.warn("[menzo/api] openDirectMessage failed", error);
+        return null;
+      }
+    }
+
+    async function loadEvents() {
+      try {
+        const events = await communityApi.events();
+        dispatch({ type: "MERGE_SOCIAL", payload: { events: events.map(mapEvent) } });
+      } catch (error) {
+        console.warn("[menzo/api] loadEvents failed", error);
+      }
+    }
+
+    function attendEvent(eventId: string) {
+      const wasAttending = stateRef.current.social.events.find((e) => e.id === eventId)?.attendees.includes(LOCAL_USER_ID) ?? false;
+      dispatch({ type: "ATTEND_EVENT", payload: { eventId } });
+      if (!hasSession()) return;
+      const call = wasAttending ? communityApi.unattend(eventId) : communityApi.attend(eventId);
+      call.catch((error) => console.warn("[menzo/api] attendEvent failed", error));
+    }
+
+    async function createEvent(payload: { title: string; description: string; date: string; time: string; kind: string }): Promise<CommunityEvent | null> {
+      if (!hasSession()) return null;
+      try {
+        const dto = await communityApi.createEvent(payload);
+        const mapped = mapEvent(dto);
+        dispatch({ type: "CREATE_EVENT", payload: mapped });
+        return mapped;
+      } catch (error) {
+        console.warn("[menzo/api] createEvent failed", error);
+        return null;
+      }
+    }
+
+    async function loadNotifications() {
+      try {
+        const page = await notificationsApi.list(0, 30);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { notifications: page.items.map((dto) => mapNotification(dto, myRealId)) } });
+      } catch (error) {
+        console.warn("[menzo/api] loadNotifications failed", error);
+      }
+    }
+
+    function markNotificationRead(id: string) {
+      dispatch({ type: "MARK_NOTIFICATION_READ", payload: { id } });
+      if (hasSession()) notificationsApi.markRead(id).catch((error) => console.warn("[menzo/api] markRead failed", error));
+    }
+
+    function markAllNotificationsRead() {
+      dispatch({ type: "MARK_ALL_NOTIFICATIONS_READ" });
+      if (hasSession()) notificationsApi.markAllRead().catch((error) => console.warn("[menzo/api] markAllRead failed", error));
+    }
+
+    function addRecentlyViewed(entry: RecentlyViewedEntry) {
+      dispatch({ type: "ADD_RECENTLY_VIEWED", payload: entry });
+      if (hasSession()) activityApi.addRecentlyViewed(entry.kind, entry.id).catch((error) => console.warn("[menzo/api] addRecentlyViewed failed", error));
+    }
+
+    function addRecentSearch(query: string) {
+      dispatch({ type: "ADD_RECENT_SEARCH", payload: query });
+      if (hasSession()) activityApi.addRecentSearch(query).catch((error) => console.warn("[menzo/api] addRecentSearch failed", error));
+    }
+
+    function clearRecentSearches() {
+      dispatch({ type: "CLEAR_RECENT_SEARCHES" });
+      if (hasSession()) activityApi.clearRecentSearches().catch((error) => console.warn("[menzo/api] clearRecentSearches failed", error));
+    }
+
     async function logout() {
       const session = getCachedSession();
       if (session) authApi.logout({ refreshToken: session.refreshToken }).catch(() => {});
@@ -330,6 +537,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       createRoom,
       toggleFavoriteRoom,
       refreshSocial,
+      ensurePostLoaded,
+      loadPostComments,
+      addComment,
+      votePoll,
+      ensureUserLoaded,
+      loadProfileWall,
+      addWallMessage,
+      toggleFollow,
+      openDirectMessage,
+      loadEvents,
+      attendEvent,
+      createEvent,
+      loadNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
+      addRecentlyViewed,
+      addRecentSearch,
+      clearRecentSearches,
     };
   }, []);
 

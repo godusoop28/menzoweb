@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useAppState } from "@/lib/AppStateContext";
 import { relativeTime } from "@/lib/time";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
@@ -28,7 +30,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 flex flex-col gap-3 menzo-fade-in">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+        <Link href={`/member/${author.id}`} className="flex items-center gap-3 min-w-0">
           <Avatar
             name={author.displayName}
             avatarUri={author.avatarUri}
@@ -43,7 +45,7 @@ export function PostCard({ post }: { post: Post }) {
               Nivel {author.level} · {relativeTime(post.createdAt)}
             </p>
           </div>
-        </div>
+        </Link>
         {!!typeLabel[post.type] && (
           <span className="shrink-0 rounded-full bg-[var(--color-surface-elevated)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]">
             {typeLabel[post.type]}
@@ -51,8 +53,14 @@ export function PostCard({ post }: { post: Post }) {
         )}
       </div>
 
-      {!!post.title && <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{post.title}</h3>}
-      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
+      <Link href={`/post/${post.id}`} className="flex flex-col gap-3">
+        {!!post.title && <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{post.title}</h3>}
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
+        {!!post.imageUri && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={post.imageUri} alt="" className="max-h-96 w-full rounded-xl object-cover" />
+        )}
+      </Link>
 
       {post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -74,10 +82,10 @@ export function PostCard({ post }: { post: Post }) {
           <span className={`text-xs ${liked ? "text-[var(--color-coral)]" : ""}`}>{post.likes.length}</span>
         </button>
 
-        <span className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
+        <Link href={`/post/${post.id}`} className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
           <CommentIcon />
           <span className="text-xs">{post.commentCount}</span>
-        </span>
+        </Link>
 
         <button
           onClick={() => actions.toggleBookmark(post.id)}

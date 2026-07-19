@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
 
 import { Avatar } from "./Avatar";
-import { ChatIcon, HomeIcon, LogoutIcon, ProfileIcon } from "./icons";
+import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon } from "./icons";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: HomeIcon },
@@ -14,10 +14,17 @@ const NAV_ITEMS = [
   { href: "/profile", label: "Perfil", icon: ProfileIcon },
 ];
 
+const SECONDARY_ITEMS = [
+  { href: "/search", label: "Buscar", icon: SearchIcon },
+  { href: "/events", label: "Eventos", icon: CalendarIcon },
+  { href: "/notifications", label: "Notificaciones", icon: BellIcon },
+];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { state, actions } = useAppState();
+  const unread = state.social.notifications.filter((n) => !n.read).length;
 
   async function handleLogout() {
     await actions.logout();
@@ -58,6 +65,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          <div className="my-2 h-px bg-[var(--color-border-soft)]" />
+
+          {SECONDARY_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)]"
+                }`}
+              >
+                <Icon size={20} />
+                {item.label}
+                {item.href === "/notifications" && unread > 0 && (
+                  <span className="ml-auto rounded-full bg-[var(--color-coral)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="mt-auto flex flex-col gap-3">
@@ -86,7 +119,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Contenido */}
-      <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>
+      <div className="flex-1 min-w-0">
+        {/* Barra superior — solo móvil */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border-soft)] px-4 py-3 md:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 rounded-lg" />
+            <span className="font-display text-base font-bold">MENZO</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/search" aria-label="Buscar" className="text-[var(--color-text-secondary)]">
+              <SearchIcon />
+            </Link>
+            <Link href="/events" aria-label="Eventos" className="text-[var(--color-text-secondary)]">
+              <CalendarIcon />
+            </Link>
+            <Link href="/notifications" aria-label="Notificaciones" className="relative text-[var(--color-text-secondary)]">
+              <BellIcon />
+              {unread > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />}
+            </Link>
+          </div>
+        </div>
+
+        <main className="pb-20 md:pb-0">{children}</main>
+      </div>
 
       {/* Tab bar — solo móvil */}
       <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 backdrop-blur md:hidden">

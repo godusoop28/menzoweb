@@ -1,4 +1,16 @@
-import type { ChatRoom, Comment, DemoUser, Message, Post, UserProfile, WallMessage } from "@/lib/types";
+import type {
+  ChatRoom,
+  Comment,
+  CommunityEvent,
+  DemoUser,
+  Message,
+  Notification,
+  Post,
+  UserProfile,
+  WallMessage,
+} from "@/lib/types";
+
+export type RecentlyViewedEntry = { kind: "post" | "member"; id: string; at: string };
 
 export type SocialState = {
   users: DemoUser[];
@@ -7,7 +19,11 @@ export type SocialState = {
   rooms: ChatRoom[];
   messages: Message[];
   wallMessages: WallMessage[];
+  events: CommunityEvent[];
+  notifications: Notification[];
   following: string[];
+  recentlyViewed: RecentlyViewedEntry[];
+  recentSearches: string[];
 };
 
 export type AppState = {

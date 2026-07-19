@@ -1,17 +1,32 @@
-import type { Comment, Post, UserProfile, WallMessage } from "@/lib/types";
+import type { Comment, CommunityEvent, Post, UserProfile, WallMessage } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./localUser";
-import type { AppState, SocialState } from "./types";
+import type { AppState, RecentlyViewedEntry, SocialState } from "./types";
 
 export function createDefaultSocialState(): SocialState {
-  return { users: [], posts: [], comments: [], rooms: [], messages: [], wallMessages: [], following: [] };
+  return {
+    users: [],
+    posts: [],
+    comments: [],
+    rooms: [],
+    messages: [],
+    wallMessages: [],
+    events: [],
+    notifications: [],
+    following: [],
+    recentlyViewed: [],
+    recentSearches: [],
+  };
 }
 
 export function createDefaultState(): AppState {
   return { isHydrated: false, profile: null, onboardingCompleted: false, social: createDefaultSocialState() };
 }
 
-type MergeableSocialState = Pick<SocialState, "users" | "posts" | "comments" | "messages" | "wallMessages" | "rooms">;
+type MergeableSocialState = Pick<
+  SocialState,
+  "users" | "posts" | "comments" | "messages" | "wallMessages" | "rooms" | "events" | "notifications"
+>;
 
 export type Action =
   | { type: "HYDRATE"; payload: AppState }
@@ -27,7 +42,15 @@ export type Action =
   | { type: "ADD_WALL_MESSAGE"; payload: WallMessage }
   | { type: "TOGGLE_FOLLOW"; payload: { userId: string } }
   | { type: "SEND_MESSAGE"; payload: import("@/lib/types").Message }
-  | { type: "TOGGLE_FAVORITE_ROOM"; payload: { roomId: string } };
+  | { type: "TOGGLE_FAVORITE_ROOM"; payload: { roomId: string } }
+  | { type: "VOTE_POLL"; payload: { postId: string; optionId: string } }
+  | { type: "ATTEND_EVENT"; payload: { eventId: string } }
+  | { type: "CREATE_EVENT"; payload: CommunityEvent }
+  | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
+  | { type: "MARK_ALL_NOTIFICATIONS_READ" }
+  | { type: "ADD_RECENTLY_VIEWED"; payload: RecentlyViewedEntry }
+  | { type: "ADD_RECENT_SEARCH"; payload: string }
+  | { type: "CLEAR_RECENT_SEARCHES" };
 
 function nextLevel(xp: number) {
   return Math.floor(xp / 500) + 1;
@@ -78,6 +101,8 @@ export function appReducer(state: AppState, action: Action): AppState {
           messages: p.messages ? mergeById(state.social.messages, p.messages) : state.social.messages,
           wallMessages: p.wallMessages ? mergeById(state.social.wallMessages, p.wallMessages) : state.social.wallMessages,
           rooms: p.rooms ? mergeById(state.social.rooms, p.rooms) : state.social.rooms,
+          events: p.events ? mergeById(state.social.events, p.events) : state.social.events,
+          notifications: p.notifications ? mergeById(state.social.notifications, p.notifications) : state.social.notifications,
         },
       };
     }
@@ -198,6 +223,85 @@ export function appReducer(state: AppState, action: Action): AppState {
         },
       };
     }
+
+    case "VOTE_POLL": {
+      const { postId, optionId } = action.payload;
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          posts: state.social.posts.map((post) => {
+            if (post.id !== postId || !post.pollOptions) return post;
+            const alreadyVoted = post.pollOptions.find((o) => o.id === optionId)?.votes.includes(LOCAL_USER_ID);
+            return {
+              ...post,
+              pollOptions: post.pollOptions.map((option) => {
+                const withoutMe = option.votes.filter((id) => id !== LOCAL_USER_ID);
+                if (option.id === optionId && !alreadyVoted) return { ...option, votes: [...withoutMe, LOCAL_USER_ID] };
+                return { ...option, votes: withoutMe };
+              }),
+            };
+          }),
+        },
+      };
+    }
+
+    case "ATTEND_EVENT": {
+      const { eventId } = action.payload;
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          events: state.social.events.map((event) => {
+            if (event.id !== eventId) return event;
+            const attending = event.attendees.includes(LOCAL_USER_ID);
+            return {
+              ...event,
+              attendees: attending
+                ? event.attendees.filter((id) => id !== LOCAL_USER_ID)
+                : [...event.attendees, LOCAL_USER_ID],
+            };
+          }),
+        },
+      };
+    }
+
+    case "CREATE_EVENT":
+      return { ...state, social: { ...state.social, events: [action.payload, ...state.social.events] } };
+
+    case "MARK_NOTIFICATION_READ": {
+      const { id } = action.payload;
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          notifications: state.social.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        },
+      };
+    }
+
+    case "MARK_ALL_NOTIFICATIONS_READ":
+      return {
+        ...state,
+        social: { ...state.social, notifications: state.social.notifications.map((n) => ({ ...n, read: true })) },
+      };
+
+    case "ADD_RECENTLY_VIEWED": {
+      const filtered = state.social.recentlyViewed.filter(
+        (entry) => !(entry.kind === action.payload.kind && entry.id === action.payload.id)
+      );
+      return { ...state, social: { ...state.social, recentlyViewed: [action.payload, ...filtered].slice(0, 20) } };
+    }
+
+    case "ADD_RECENT_SEARCH": {
+      const query = action.payload.trim();
+      if (!query) return state;
+      const filtered = state.social.recentSearches.filter((q) => q.toLowerCase() !== query.toLowerCase());
+      return { ...state, social: { ...state.social, recentSearches: [query, ...filtered].slice(0, 8) } };
+    }
+
+    case "CLEAR_RECENT_SEARCHES":
+      return { ...state, social: { ...state.social, recentSearches: [] } };
 
     default:
       return state;
