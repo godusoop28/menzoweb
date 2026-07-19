@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-background: #07090d;
+  --color-background-deep: #030509;
+  --color-surface: #11141b;
+  --color-surface-secondary: #171b24;
+  --color-surface-elevated: #1e2330;
+  --color-surface-soft: #242a36;
+
+  --color-border: #292f3d;
+  --color-border-soft: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+
+  --color-text-primary: #f7f8fc;
+  --color-text-secondary: #b3bac8;
+  --color-text-muted: #767f91;
+  --color-text-on-accent: #090a0e;
+
+  --color-orange: #ff7a1a;
+  --color-yellow: #ffbe2e;
+  --color-coral: #ff4f45;
+  --color-red: #f43f5e;
+  --color-blue: #3478f6;
+  --color-cyan: #22d3ee;
+  --color-purple: #8b5cf6;
+  --color-violet: #a855f7;
+  --color-green: #68d391;
+
+  --color-success: #4ade80;
+  --color-danger: #fb7185;
+  --color-online: #4ade80;
+  --color-offline: #6b7280;
+
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-soft);
+  border-radius: 999px;
+}
+
+input,
+textarea {
+  font-family: var(--font-body);
+}
+
+@keyframes menzo-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menzo-fade-in {
+  animation: menzo-fade-in 0.35s ease-out;
 }
