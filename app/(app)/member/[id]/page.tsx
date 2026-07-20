@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -114,8 +115,8 @@ export default function MemberProfilePage() {
 
           <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
             <Stat value={user.reputation} label="Reputación" />
-            <Stat value={user.following} label="Siguiendo" />
-            <Stat value={user.followers} label="Seguidores" />
+            <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />
+            <Stat value={user.followers} label="Seguidores" href={`/connections/${user.id}/followers`} />
             <Stat value={user.visitors} label="Visitantes" />
           </div>
 
@@ -148,13 +149,21 @@ export default function MemberProfilePage() {
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div>
+function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
+  const content = (
+    <>
       <p className="text-lg font-semibold">{value}</p>
       <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="transition-opacity hover:opacity-75">
+        {content}
+      </Link>
+    );
+  }
+  return <div>{content}</div>;
 }
 
 function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {

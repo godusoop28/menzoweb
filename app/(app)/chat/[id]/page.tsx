@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Avatar } from "@/components/Avatar";
 import { BackIcon, SendIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { useAppState } from "@/lib/AppStateContext";
@@ -39,6 +40,7 @@ export default function ChatRoomPage() {
     try {
       await actions.sendMessage(id, trimmed);
       setDraft("");
+      requestAnimationFrame(() => listEndRef.current?.scrollIntoView({ block: "end" }));
     } catch (error) {
       console.warn("[menzo/web] sendMessage failed", error);
     } finally {
@@ -62,28 +64,49 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="mx-auto flex h-screen w-full max-w-2xl flex-col px-4 md:px-8">
-      <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] py-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col px-4 md:px-8">
+      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md">
         <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
           <BackIcon />
         </button>
-        <div className="min-w-0 flex-1 text-center">
+        {room.type === "direct" && room.peer ? (
+          <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={32} showOnline online={room.peer.isOnline} />
+        ) : (
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, var(--color-cyan), var(--color-blue))" }}
+          >
+            {headerTitle.charAt(0).toUpperCase()}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{headerTitle}</p>
           {!!headerSubtitle && <p className="text-xs text-[var(--color-green)]">{headerSubtitle}</p>}
         </div>
-        <div className="w-6" />
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 py-4">
         {messages.length === 0 ? (
-          <p className="m-auto text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
+          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
         ) : (
-          messages.map((m) => <ChatBubble key={m.id} message={m} author={findUser(state.social, m.authorId)} isOwn={m.authorId === LOCAL_USER_ID} />)
+          messages.map((m, i) => {
+            const prev = messages[i - 1];
+            const showAvatar = !prev || prev.authorId !== m.authorId;
+            return (
+              <ChatBubble
+                key={m.id}
+                message={m}
+                author={findUser(state.social, m.authorId)}
+                isOwn={m.authorId === LOCAL_USER_ID}
+                showAvatar={showAvatar}
+              />
+            );
+          })
         )}
         <div ref={listEndRef} />
       </div>
 
-      <div className="flex items-end gap-2 border-t border-[var(--color-border-soft)] py-3">
+      <div className="sticky bottom-20 z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -100,7 +123,7 @@ export default function ChatRoomPage() {
         <button
           onClick={handleSend}
           disabled={!draft.trim() || sending}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-orange)] text-[var(--color-text-on-accent)] disabled:opacity-50 cursor-pointer"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-orange)] text-[var(--color-text-on-accent)] shadow-[0_4px_14px_-2px_rgba(255,122,26,0.5)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
           aria-label="Enviar mensaje"
         >
           <SendIcon />

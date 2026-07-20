@@ -6,10 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
 
 import { Avatar } from "./Avatar";
-import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon } from "./icons";
+import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: HomeIcon },
+  { href: "/members", label: "Miembros", icon: UsersIcon },
   { href: "/chat", label: "Chats", icon: ChatIcon },
   { href: "/profile", label: "Perfil", icon: ProfileIcon },
 ];
@@ -38,9 +39,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1100px]">
+    <div className="mx-auto flex h-screen w-full max-w-[1100px] overflow-hidden">
       {/* Sidebar — solo escritorio */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:gap-6 md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6">
+      <aside className="hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6">
         <Link href="/" className="group flex items-center gap-2.5 px-2">
           <div className="relative">
             <div className="absolute inset-0 -z-10 rounded-lg bg-[var(--color-orange)]/40 opacity-0 blur-lg transition-opacity group-hover:opacity-100" />
@@ -125,10 +126,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Contenido */}
-      <div className="flex-1 min-w-0">
+      {/* Contenido — única región con scroll, para no anidar scrolls (chat, etc.) */}
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Barra superior — solo móvil */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
           <Link href="/" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 rounded-lg" />
@@ -151,7 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <main className="pb-20 md:pb-0">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
       </div>
 
       {/* Tab bar — solo móvil */}

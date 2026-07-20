@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
+import { getMyRealId } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, savedPosts, wallMessagesForProfile } from "@/lib/store/selectors";
@@ -48,6 +49,7 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
+  const myRealId = getMyRealId();
   const myPosts = postsByAuthor(state.social, LOCAL_USER_ID);
   const myWall = wallMessagesForProfile(state.social, LOCAL_USER_ID);
   const mySaved = savedPosts(state.social, LOCAL_USER_ID);
@@ -95,8 +97,8 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
             <Stat value={profile.reputation} label="Reputación" />
-            <Stat value={profile.following} label="Siguiendo" />
-            <Stat value={profile.followers} label="Seguidores" />
+            <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
+            <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
             <Stat value={profile.visitors} label="Visitantes" />
           </div>
 
@@ -156,13 +158,21 @@ export default function ProfilePage() {
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div>
+function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
+  const content = (
+    <>
       <p className="text-lg font-semibold">{value}</p>
       <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="transition-opacity hover:opacity-75">
+        {content}
+      </Link>
+    );
+  }
+  return <div>{content}</div>;
 }
 
 function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
