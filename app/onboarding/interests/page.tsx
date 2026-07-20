@@ -29,8 +29,10 @@ export default function OnboardingInterestsPage() {
                 key={interest.id}
                 onClick={() => toggleInterest(interest.id)}
                 disabled={disabled}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
-                  selected ? "text-white border-transparent" : "border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]"
+                className={`rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-md transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+                  selected
+                    ? "text-white border-transparent shadow-lg scale-[1.03]"
+                    : "border-[var(--color-border-soft)] bg-[var(--color-surface)]/60 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/80"
                 }`}
                 style={selected ? { background: gradientCss(interest.gradient) } : undefined}
               >

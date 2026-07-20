@@ -41,9 +41,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto flex min-h-screen w-full max-w-[1100px]">
       {/* Sidebar — solo escritorio */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:gap-6 md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6">
-        <Link href="/" className="flex items-center gap-2 px-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/branding/menzo-logo.png" alt="Menzo" className="h-8 w-8 rounded-lg" />
+        <Link href="/" className="group flex items-center gap-2.5 px-2">
+          <div className="relative">
+            <div className="absolute inset-0 -z-10 rounded-lg bg-[var(--color-orange)]/40 opacity-0 blur-lg transition-opacity group-hover:opacity-100" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/menzo-logo.png" alt="Menzo" className="h-9 w-9 rounded-xl shadow-lg" />
+          </div>
           <span className="font-display text-lg font-bold tracking-tight">MENZO</span>
         </Link>
 
@@ -55,13 +58,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
-                    ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]"
+                    ? "bg-gradient-to-r from-[var(--color-orange)]/15 to-transparent text-[var(--color-text-primary)]"
                     : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
-                <Icon size={20} />
+                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-[var(--color-orange)]" />}
+                <Icon size={20} className={active ? "text-[var(--color-orange)]" : ""} />
                 {item.label}
               </Link>
             );
@@ -98,20 +102,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {state.profile && (
             <Link
               href="/profile"
-              className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-[var(--color-surface-secondary)]"
+              className="flex items-center gap-3 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-2.5 py-2.5 transition-colors hover:bg-[var(--color-surface-secondary)]"
             >
               <Avatar
                 name={state.profile.displayName}
                 avatarUri={state.profile.avatarUri}
                 gradient={state.profile.avatarGradient}
                 size={36}
+                showOnline
+                online
               />
               <span className="truncate text-sm font-medium">{state.profile.displayName}</span>
             </Link>
           )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-coral)] cursor-pointer"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-coral)] cursor-pointer"
           >
             <LogoutIcon size={18} />
             Cerrar sesión
@@ -122,7 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Contenido */}
       <div className="flex-1 min-w-0">
         {/* Barra superior — solo móvil */}
-        <div className="flex items-center justify-between border-b border-[var(--color-border-soft)] px-4 py-3 md:hidden">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
           <Link href="/" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 rounded-lg" />
@@ -149,7 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Tab bar — solo móvil */}
-      <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 backdrop-blur-md md:hidden">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
@@ -157,10 +163,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
-                active ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
+              className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+                active ? "text-[var(--color-orange)]" : "text-[var(--color-text-muted)]"
               }`}
             >
+              {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[var(--color-orange)]" />}
               <Icon size={22} />
               {item.label}
             </Link>

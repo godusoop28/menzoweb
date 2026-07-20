@@ -38,7 +38,7 @@ export default function OnboardingNamePage() {
             onChange={(e) => setLocalName(e.target.value.slice(0, NAME_MAX))}
             placeholder="Tu nombre visible"
             autoFocus
-            className="border-b-2 border-[var(--color-border-strong)] bg-transparent pb-2 text-2xl font-semibold outline-none"
+            className="border-b-2 border-[var(--color-border-strong)] bg-transparent pb-2 text-2xl font-semibold outline-none transition-colors focus:border-[var(--color-orange)]"
           />
           <span className="self-end text-xs text-[var(--color-text-muted)]">
             {trimmed.length}/{NAME_MAX}
@@ -51,7 +51,7 @@ export default function OnboardingNamePage() {
         )}
 
         {trimmed.length >= NAME_MIN && (
-          <div className="flex items-center gap-4 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] p-5">
+          <div className="menzo-fade-in flex items-center gap-4 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)]/70 p-5 backdrop-blur-md shadow-xl">
             <Avatar name={trimmed} gradient="fire" size={64} />
             <div>
               <p className="text-lg font-semibold">{trimmed}</p>

@@ -8,10 +8,12 @@ import { GradientButton } from "@/components/GradientButton";
 import { BackIcon } from "@/components/icons";
 import { PostCard } from "@/components/PostCard";
 import { WallMessageCard } from "@/components/WallMessageCard";
+import { auraById } from "@/data/auras";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, wallMessagesForProfile } from "@/lib/store/selectors";
 import { formatJoinDate } from "@/lib/time";
+import { gradientCss } from "@/lib/theme";
 
 type Tab = "posts" | "wall";
 
@@ -74,17 +76,19 @@ export default function MemberProfilePage() {
         Volver
       </button>
 
-      <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)]">
+      <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
         {user.coverUri ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.coverUri} alt="" className="h-36 w-full object-cover" />
+          <img src={user.coverUri} alt="" className="h-40 w-full object-cover" />
         ) : (
-          <div className="h-36 w-full bg-[var(--color-surface-elevated)]" />
+          <div className="h-40 w-full" style={{ background: gradientCss(auraById(user.aura).gradient) }} />
         )}
 
         <div className="-mt-11 flex flex-col gap-3 px-6 pb-6">
           <div className="flex items-end justify-between gap-3">
-            <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={92} showOnline online={user.isOnline} />
+            <div className="rounded-full ring-4 ring-[var(--color-surface)] shadow-xl">
+              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={92} showOnline online={user.isOnline} />
+            </div>
             <div className="flex gap-2">
               <GradientButton
                 label={isFollowing ? "Siguiendo" : "Seguir"}

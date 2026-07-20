@@ -28,7 +28,7 @@ export function PostCard({ post }: { post: Post }) {
   if (!author) return null;
 
   return (
-    <article className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 flex flex-col gap-3 menzo-fade-in">
+    <article className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 flex flex-col gap-3 menzo-fade-in shadow-[0_4px_18px_-6px_rgba(0,0,0,0.4)] transition-shadow hover:border-[var(--color-border-strong)] hover:shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]">
       <div className="flex items-center justify-between gap-3">
         <Link href={`/member/${author.id}`} className="flex items-center gap-3 min-w-0">
           <Avatar

@@ -26,12 +26,14 @@ export default function OnboardingAuraPage() {
               <button
                 key={aura.id}
                 onClick={() => setAura(aura.id)}
-                className={`flex items-center gap-4 rounded-2xl border p-4 text-left transition-colors cursor-pointer ${
-                  selected ? "border-[var(--color-border-strong)] bg-[var(--color-surface-soft)]" : "border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)]"
+                className={`flex items-center gap-4 rounded-2xl border p-4 text-left backdrop-blur-md transition-all cursor-pointer ${
+                  selected
+                    ? "border-[var(--color-orange)]/60 bg-[var(--color-surface-soft)]/80 shadow-lg scale-[1.01]"
+                    : "border-[var(--color-border-soft)] bg-[var(--color-surface)]/60 hover:bg-[var(--color-surface-secondary)]/70"
                 }`}
               >
                 <span
-                  className="h-12 w-12 shrink-0 rounded-full"
+                  className="h-12 w-12 shrink-0 rounded-full shadow-md"
                   style={{ background: gradientCss(aura.gradient) }}
                 />
                 <span>

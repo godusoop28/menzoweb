@@ -29,7 +29,11 @@ export default function OnboardingAvatarPage() {
           </p>
         </div>
 
-        <div className="my-6">
+        <div className="menzo-fade-in relative my-6">
+          <div
+            className="absolute inset-0 -z-10 rounded-full blur-2xl opacity-60"
+            style={{ background: "radial-gradient(circle, rgba(255,122,26,0.35), transparent 70%)" }}
+          />
           <Avatar name={draft.displayName || "?"} avatarUri={draft.avatarUri} gradient={draft.avatarGradient} size={140} />
         </div>
 
@@ -37,7 +41,7 @@ export default function OnboardingAvatarPage() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] py-3 text-sm font-medium cursor-pointer"
+            className="w-full rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)]/80 py-3 text-sm font-medium backdrop-blur-md transition-colors hover:bg-[var(--color-surface-soft)] cursor-pointer"
           >
             Elegir desde el equipo
           </button>

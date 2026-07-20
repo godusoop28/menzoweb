@@ -95,7 +95,7 @@ export default function ChatRoomPage() {
           }}
           placeholder="Escribe un mensaje…"
           rows={1}
-          className="flex-1 resize-none rounded-2xl bg-[var(--color-surface-secondary)] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+          className="flex-1 resize-none rounded-2xl border border-transparent bg-[var(--color-surface-secondary)] px-4 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-orange)] placeholder:text-[var(--color-text-muted)]"
         />
         <button
           onClick={handleSend}

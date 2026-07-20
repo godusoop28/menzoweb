@@ -48,7 +48,7 @@ export default function ChatListPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nombre de la sala"
-            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none"
+            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none transition-colors focus:border-[var(--color-orange)]"
           />
           <GradientButton label="Crear" onClick={handleCreate} disabled={!name.trim()} loading={creating} size="md" />
         </div>

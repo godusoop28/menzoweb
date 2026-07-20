@@ -13,7 +13,7 @@ export function WallMessageCard({ message }: { message: WallMessage }) {
   if (!author) return null;
 
   return (
-    <div className="flex gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+    <div className="flex gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
       <Link href={`/member/${author.id}`}>
         <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={34} />
       </Link>

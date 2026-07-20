@@ -159,7 +159,7 @@ export default function PostDetailPage() {
           onChange={(e) => setCommentDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submitComment()}
           placeholder="Escribe algo…"
-          className="flex-1 rounded-full bg-[var(--color-surface-secondary)] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+          className="flex-1 rounded-full border border-transparent bg-[var(--color-surface-secondary)] px-4 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-orange)] placeholder:text-[var(--color-text-muted)]"
         />
         <button
           onClick={submitComment}

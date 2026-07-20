@@ -30,7 +30,7 @@ export default function SearchPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8">
-      <div className="flex items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-2.5">
+      <div className="flex items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-2.5 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-colors focus-within:border-[var(--color-orange)]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

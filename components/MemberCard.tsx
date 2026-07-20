@@ -12,7 +12,7 @@ export function MemberCard({ user, variant = "row" }: { user: DemoUser; variant?
       className={
         isColumn
           ? "flex w-24 flex-col items-center gap-1.5 text-center"
-          : "flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-secondary)]"
+          : "flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-secondary)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
       }
     >
       <Avatar

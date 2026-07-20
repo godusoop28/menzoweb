@@ -70,7 +70,7 @@ function EventCard({ event }: { event: CommunityEvent }) {
   const attending = event.attendees.includes(LOCAL_USER_ID);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5">
+    <div className="menzo-fade-in flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-shadow hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]">
       <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-violet)]">{event.kind}</p>
       <Link href={`/events/${event.id}`} className="text-lg font-semibold">
         {event.title}
@@ -111,7 +111,7 @@ function CreateEventForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}

@@ -85,25 +85,27 @@ export default function EditProfilePage() {
         <div className="flex flex-col items-center gap-2">
           {coverUri ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUri} alt="" className="h-32 w-full rounded-2xl object-cover" />
+            <img src={coverUri} alt="" className="h-32 w-full rounded-2xl object-cover shadow-lg" />
           ) : (
-            <div className="h-32 w-full rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)]" />
+            <div className="h-32 w-full rounded-2xl shadow-lg" style={{ background: gradientCss(auras.find((a) => a.id === aura)!.gradient) }} />
           )}
           <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
           <button
             onClick={() => coverInputRef.current?.click()}
-            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] cursor-pointer"
+            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer"
           >
             Cambiar portada
           </button>
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <Avatar name={displayName} avatarUri={avatarUri} gradient={auras.find((a) => a.id === aura)!.gradient} size={100} />
+          <div className="rounded-full shadow-xl ring-4 ring-[var(--color-background)]">
+            <Avatar name={displayName} avatarUri={avatarUri} gradient={auras.find((a) => a.id === aura)!.gradient} size={100} />
+          </div>
           <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
           <button
             onClick={() => avatarInputRef.current?.click()}
-            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] cursor-pointer"
+            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer"
           >
             Cambiar foto
           </button>
@@ -113,7 +115,7 @@ export default function EditProfilePage() {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value.slice(0, NAME_MAX))}
-            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none"
+            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none transition-colors focus:border-[var(--color-orange)]"
           />
         </Field>
 
@@ -122,7 +124,7 @@ export default function EditProfilePage() {
             value={statusText}
             onChange={(e) => setStatusText(e.target.value.slice(0, 40))}
             placeholder="¿Qué estás haciendo?"
-            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none"
+            className="w-full rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none transition-colors focus:border-[var(--color-orange)]"
           />
         </Field>
 
@@ -131,7 +133,7 @@ export default function EditProfilePage() {
             value={bio}
             onChange={(e) => setBio(e.target.value.slice(0, 160))}
             rows={3}
-            className="w-full resize-none rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none"
+            className="w-full resize-none rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 outline-none transition-colors focus:border-[var(--color-orange)]"
           />
         </Field>
 
@@ -141,7 +143,9 @@ export default function EditProfilePage() {
               <button
                 key={a.id}
                 onClick={() => setAura(a.id)}
-                className={`h-10 w-10 rounded-full border-2 cursor-pointer ${aura === a.id ? "border-[var(--color-text-primary)]" : "border-transparent"}`}
+                className={`h-10 w-10 rounded-full border-2 shadow-md transition-transform cursor-pointer hover:scale-110 ${
+                  aura === a.id ? "border-[var(--color-text-primary)] scale-110" : "border-transparent"
+                }`}
                 style={{ background: gradientCss(a.gradient) }}
                 aria-label={a.name}
                 title={a.name}

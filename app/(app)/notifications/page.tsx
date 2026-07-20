@@ -86,8 +86,10 @@ export default function NotificationsPage() {
               <button
                 key={n.id}
                 onClick={() => handleClick(n)}
-                className={`flex items-start gap-3 rounded-xl border p-4 text-left cursor-pointer ${
-                  n.read ? "border-[var(--color-border-soft)] bg-[var(--color-surface)]" : "border-[var(--color-orange)]/35 bg-[var(--color-surface-secondary)]"
+                className={`flex items-start gap-3 rounded-xl border p-4 text-left shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all cursor-pointer hover:-translate-y-0.5 ${
+                  n.read
+                    ? "border-[var(--color-border-soft)] bg-[var(--color-surface)]"
+                    : "border-[var(--color-orange)]/35 bg-[var(--color-surface-secondary)] shadow-[0_4px_18px_-6px_rgba(255,122,26,0.25)]"
                 }`}
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-elevated)]">

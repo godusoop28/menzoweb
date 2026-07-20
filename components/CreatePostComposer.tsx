@@ -59,7 +59,7 @@ export function CreatePostComposer() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+    <div className="menzo-fade-in flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
       <div className="flex gap-2">
         {(["text", "image", "poll"] as Mode[]).map((m) => (
           <button
