@@ -82,13 +82,15 @@ async function doRefresh(): Promise<boolean> {
   const session = getCachedSession();
   if (!session) return false;
   try {
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    // Pasa por apiFetch (no por fetch crudo) para heredar los reintentos de red y el margen de
+    // 4 minutos que ya usan el resto de las peticiones: sin esto, un backend de Render que
+    // recién está despertando podía hacer fallar este refresh puntual y desloguear a alguien
+    // con una sesión perfectamente válida.
+    const data = await apiFetch<AuthResponseDto>("/api/auth/refresh", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: session.refreshToken }),
+      body: { refreshToken: session.refreshToken },
+      skipAuth: true,
     });
-    if (!res.ok) return false;
-    const data = (await res.json()) as AuthResponseDto;
     saveSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, userId: data.profile.id });
     return true;
   } catch {

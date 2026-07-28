@@ -183,3 +183,18 @@ export function CommentIcon({ size = 18, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function CameraIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="13.5" r="3.2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}

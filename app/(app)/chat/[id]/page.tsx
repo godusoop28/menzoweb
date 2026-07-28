@@ -49,6 +49,7 @@ export default function ChatRoomPage() {
   }
 
   const headerTitle = room?.type === "direct" ? room?.peer?.displayName ?? "Conversación" : room?.name ?? "Conversación";
+  const headerOnline = room?.type === "direct" ? !!room?.peer?.isOnline : !!room && room.onlineCount > 0;
   const headerSubtitle =
     room?.type === "direct" ? (room?.peer?.isOnline ? "En línea" : "Desconectado") : room ? `${room.onlineCount} conectados` : "";
 
@@ -81,7 +82,9 @@ export default function ChatRoomPage() {
         )}
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{headerTitle}</p>
-          {!!headerSubtitle && <p className="text-xs text-[var(--color-green)]">{headerSubtitle}</p>}
+          {!!headerSubtitle && (
+            <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
+          )}
         </div>
       </div>
 

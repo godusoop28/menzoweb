@@ -67,7 +67,7 @@ export default function ProfilePage() {
         <div className="-mt-11 flex flex-col gap-3 px-6 pb-6">
           <div className="flex items-end justify-between">
             <div className="rounded-full ring-4 ring-[var(--color-surface)] shadow-xl">
-              <Avatar name={profile.displayName} avatarUri={profile.avatarUri} gradient={profile.avatarGradient} size={92} showOnline online />
+              <Avatar name={profile.displayName} avatarUri={profile.avatarUri} gradient={profile.avatarGradient} size={92} showOnline online level={profile.level} />
             </div>
             <div className="flex gap-2">
               <button

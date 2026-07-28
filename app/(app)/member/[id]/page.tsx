@@ -88,7 +88,7 @@ export default function MemberProfilePage() {
         <div className="-mt-11 flex flex-col gap-3 px-6 pb-6">
           <div className="flex items-end justify-between gap-3">
             <div className="rounded-full ring-4 ring-[var(--color-surface)] shadow-xl">
-              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={92} showOnline online={user.isOnline} />
+              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={92} showOnline online={user.isOnline} level={user.level} />
             </div>
             <div className="flex gap-2">
               <GradientButton

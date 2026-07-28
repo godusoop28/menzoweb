@@ -152,6 +152,14 @@ export type ChatRoomDto = {
   onlineCount: number;
   favorite: boolean;
   joined: boolean;
+  lastMessage: ChatRoomLastMessageDto | null;
+};
+
+export type ChatRoomLastMessageDto = {
+  body: string | null;
+  hasImage: boolean;
+  senderId: string;
+  createdAt: string;
 };
 
 export type MessageDto = {

@@ -8,6 +8,7 @@ import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findUser } from "@/lib/store/selectors";
 import type { Post } from "@/lib/types";
 
+import { AbstractArtwork } from "./AbstractArtwork";
 import { Avatar } from "./Avatar";
 import { BookmarkIcon, CommentIcon, HeartIcon } from "./icons";
 
@@ -38,6 +39,7 @@ export function PostCard({ post }: { post: Post }) {
             size={42}
             showOnline
             online={author.isOnline}
+            level={author.level}
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">{author.displayName}</p>
@@ -56,9 +58,13 @@ export function PostCard({ post }: { post: Post }) {
       <Link href={`/post/${post.id}`} className="flex flex-col gap-3">
         {!!post.title && <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{post.title}</h3>}
         <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
-        {!!post.imageUri && (
+        {post.imageUri ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={post.imageUri} alt="" className="max-h-96 w-full rounded-xl object-cover" />
+        ) : (
+          post.abstractVisual && (
+            <AbstractArtwork preset={post.abstractVisual.preset} caption={post.abstractVisual.caption} className="h-[150px] w-full rounded-xl" />
+          )
         )}
       </Link>
 

@@ -122,6 +122,14 @@ export type ChatRoom = {
   onlineCount: number;
   favorite: boolean;
   peer?: ChatPeer;
+  lastMessage?: ChatRoomLastMessage;
+};
+
+export type ChatRoomLastMessage = {
+  body: string;
+  hasImage: boolean;
+  senderId: string;
+  createdAt: string;
 };
 
 export type WallMessage = { id: string; profileId: string; authorId: string; body: string; createdAt: string };

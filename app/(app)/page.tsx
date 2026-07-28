@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
+import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityHero } from "@/components/CommunityHero";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
+import { FeaturedPostCard } from "@/components/FeaturedPostCard";
 import { PostCard } from "@/components/PostCard";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAppState } from "@/lib/AppStateContext";
-import { recentPosts } from "@/lib/store/selectors";
+import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
+
+type HomeTab = "recientes" | "destacados" | "hangout";
 
 export default function FeedPage() {
   const { state, actions } = useAppState();
+  const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
 
   const posts = recentPosts(state.social);
+  const featured = featuredPosts(state.social);
+  const onlineMembers = onlineUsers(state.social);
+
+  const favoriteRooms = useMemo(() => state.social.rooms.filter((r) => r.favorite), [state.social.rooms]);
+  const otherRooms = useMemo(() => state.social.rooms.filter((r) => !r.favorite), [state.social.rooms]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -41,17 +53,116 @@ export default function FeedPage() {
         </button>
       </div>
 
-      <CommunityHero />
+      <CommunityHero previewMembers={onlineMembers} />
 
-      <CreatePostComposer />
+      <SegmentedTabs
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "recientes", label: "Recientes" },
+          { value: "destacados", label: "Destacados" },
+          { value: "hangout", label: "Hangout" },
+        ]}
+      />
 
-      <div className="flex flex-col gap-4">
-        {posts.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
+      {tab === "recientes" && (
+        <>
+          <CreatePostComposer />
+          <div className="flex flex-col gap-4">
+            {posts.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
+            ) : (
+              posts.map((post) => <PostCard key={post.id} post={post} />)
+            )}
+          </div>
+        </>
+      )}
+
+      {tab === "destacados" &&
+        (featured.length === 0 ? (
+          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Nada destacado todavía.</p>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
-        )}
-      </div>
+          <div className="flex flex-col gap-6">
+            <div
+              className="relative flex h-36 flex-col justify-end overflow-hidden rounded-2xl bg-cover bg-center p-5"
+              style={{ backgroundImage: "url(/banners/banner-featured.png)" }}
+            >
+              <div className="absolute inset-0 bg-[rgba(7,9,13,0.3)]" />
+              <div className="relative flex flex-col gap-0.5 text-white">
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/85">El reencuentro brilla más aquí</span>
+                <h2 className="font-display text-2xl font-bold">Destacados</h2>
+              </div>
+            </div>
+
+            <FeaturedPostCard post={featured[0]} variant="hero" />
+            <div className="grid grid-cols-2 gap-4">
+              {featured.slice(1, 3).map((post) => (
+                <FeaturedPostCard key={post.id} post={post} />
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="font-display text-lg font-bold">Elegidos por la comunidad</h3>
+              <div className="flex snap-x gap-4 overflow-x-auto pb-1">
+                {featured.map((post) => (
+                  <div key={`chosen-${post.id}`} className="snap-start">
+                    <FeaturedPostCard post={post} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="font-display text-lg font-bold">Recuerdos que regresaron</h3>
+              <div className="flex snap-x gap-4 overflow-x-auto pb-1">
+                {[...featured].reverse().map((post) => (
+                  <div key={`memory-${post.id}`} className="snap-start">
+                    <FeaturedPostCard post={post} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+      {tab === "hangout" && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <h2 className="font-display text-xl font-bold">Hangout</h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Entra, escucha y vuelve a formar parte de la conversación.
+            </p>
+          </div>
+
+          {favoriteRooms.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Favoritos</h3>
+              <div className="flex flex-col gap-2">
+                {favoriteRooms.map((room) => (
+                  <ChatRoomListItem key={room.id} room={room} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas</h3>
+            {otherRooms.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No hay conversaciones activas. Enciende la primera.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {otherRooms.map((room) => (
+                  <ChatRoomListItem key={room.id} room={room} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Link href="/events" className="text-center text-sm font-medium text-[var(--color-cyan)]">
+            Ver eventos de la comunidad →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

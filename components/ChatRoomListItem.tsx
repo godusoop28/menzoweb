@@ -9,7 +9,14 @@ import { ChatIcon } from "./icons";
 export function ChatRoomListItem({ room }: { room: ChatRoom }) {
   const title = room.peer?.displayName ?? room.name;
   const subtitle = room.type === "direct" ? (room.peer?.isOnline ? "En línea" : "Desconectado") : `${room.onlineCount} conectados`;
-  const lastMessagePreview = room.type === "direct" ? undefined : room.description || room.topic;
+  const lastMessagePreview =
+    room.type === "direct"
+      ? room.lastMessage
+        ? room.lastMessage.hasImage && !room.lastMessage.body
+          ? "📷 Foto"
+          : room.lastMessage.body
+        : undefined
+      : room.description || room.topic;
 
   return (
     <Link

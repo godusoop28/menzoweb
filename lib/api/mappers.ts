@@ -165,6 +165,14 @@ export function mapChatRoom(dto: ChatRoomDto, myRealId: string | null = null): C
           isOnline: dto.peer.isOnline,
         }
       : undefined,
+    lastMessage: dto.lastMessage
+      ? {
+          body: dto.lastMessage.body ?? "",
+          hasImage: dto.lastMessage.hasImage,
+          senderId: dto.lastMessage.senderId === "system" ? "system" : alias(dto.lastMessage.senderId, myRealId),
+          createdAt: dto.lastMessage.createdAt,
+        }
+      : undefined,
   };
 }
 

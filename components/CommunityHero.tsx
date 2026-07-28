@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { communityApi } from "@/lib/api";
 import type { CommunityConfigDto } from "@/lib/api/types";
+import type { DemoUser } from "@/lib/types";
 
-export function CommunityHero() {
+import { Avatar } from "./Avatar";
+
+export function CommunityHero({ previewMembers }: { previewMembers?: DemoUser[] }) {
   const [config, setConfig] = useState<CommunityConfigDto | null>(null);
 
   useEffect(() => {
@@ -29,6 +33,24 @@ export function CommunityHero() {
           <span className="h-1 w-1 rounded-full bg-white/60" />
           <span>{config.onlineCount} conectados</span>
         </div>
+
+        {previewMembers && previewMembers.length > 0 && (
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex">
+              {previewMembers.slice(0, 4).map((member, index) => (
+                <div key={member.id} className="rounded-full ring-2 ring-[rgba(7,9,13,0.6)]" style={{ marginLeft: index === 0 ? 0 : -10 }}>
+                  <Avatar name={member.displayName} avatarUri={member.avatarUri} gradient={member.avatarGradient} size={32} />
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/members"
+              className="rounded-full border border-white/25 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              Ver comunidad
+            </Link>
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap gap-2">
           {config.tags.map((tag) => (

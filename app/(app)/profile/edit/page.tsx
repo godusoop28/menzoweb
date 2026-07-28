@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
+import { CameraIcon } from "@/components/icons";
 import { GradientButton } from "@/components/GradientButton";
 import { auras } from "@/data/auras";
 import { useAppState } from "@/lib/AppStateContext";
@@ -82,33 +83,39 @@ export default function EditProfilePage() {
       </div>
 
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          {coverUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUri} alt="" className="h-32 w-full rounded-2xl object-cover shadow-lg" />
-          ) : (
-            <div className="h-32 w-full rounded-2xl shadow-lg" style={{ background: gradientCss(auras.find((a) => a.id === aura)!.gradient) }} />
-          )}
-          <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
-          <button
-            onClick={() => coverInputRef.current?.click()}
-            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer"
-          >
-            Cambiar portada
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center gap-2">
-          <div className="rounded-full shadow-xl ring-4 ring-[var(--color-background)]">
-            <Avatar name={displayName} avatarUri={avatarUri} gradient={auras.find((a) => a.id === aura)!.gradient} size={100} />
+        <div>
+          <div className="relative">
+            {coverUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverUri} alt="" className="h-40 w-full rounded-2xl object-cover shadow-lg" />
+            ) : (
+              <div className="h-40 w-full rounded-2xl shadow-lg" style={{ background: gradientCss(auras.find((a) => a.id === aura)!.gradient) }} />
+            )}
+            <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
+            <button
+              onClick={() => coverInputRef.current?.click()}
+              aria-label="Cambiar portada"
+              title="Cambiar portada"
+              className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/70 cursor-pointer"
+            >
+              <CameraIcon size={17} />
+            </button>
           </div>
-          <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
-          <button
-            onClick={() => avatarInputRef.current?.click()}
-            className="rounded-full border border-[var(--color-border-soft)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer"
-          >
-            Cambiar foto
-          </button>
+
+          <div className="-mt-12 flex justify-center">
+            <div className="relative rounded-full shadow-xl ring-4 ring-[var(--color-background)]">
+              <Avatar name={displayName} avatarUri={avatarUri} gradient={auras.find((a) => a.id === aura)!.gradient} size={92} />
+              <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                aria-label="Cambiar foto de perfil"
+                title="Cambiar foto de perfil"
+                className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/70 cursor-pointer"
+              >
+                <CameraIcon size={15} />
+              </button>
+            </div>
+          </div>
         </div>
 
         <Field label="Nombre visible">

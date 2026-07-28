@@ -45,6 +45,20 @@ export function gradientCss(id: GradientId, angle = 135) {
   return `linear-gradient(${angle}deg, ${Gradients[id].join(", ")})`;
 }
 
+export type LevelTier = {
+  color: string;
+  gradient?: GradientId;
+  glow?: boolean;
+};
+
+export function levelTier(level: number): LevelTier {
+  if (level >= 30) return { color: Colors.yellow, gradient: "fire", glow: true };
+  if (level >= 20) return { color: Colors.orange, gradient: "fire" };
+  if (level >= 10) return { color: Colors.purple, gradient: "midnight" };
+  if (level >= 5) return { color: Colors.cyan };
+  return { color: Colors.borderStrong };
+}
+
 export const Radius = {
   sm: 12,
   md: 16,

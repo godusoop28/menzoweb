@@ -62,7 +62,7 @@ export default function PostDetailPage() {
 
       {author && (
         <Link href={`/member/${author.id}`} className="flex items-center gap-3">
-          <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={48} showOnline online={author.isOnline} />
+          <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={48} showOnline online={author.isOnline} level={author.level} />
           <div>
             <p className="font-medium">{author.displayName}</p>
             <p className="text-xs text-[var(--color-text-muted)]">
@@ -138,7 +138,7 @@ export default function PostDetailPage() {
             return (
               <div key={comment.id} className="flex gap-2.5">
                 <Link href={`/member/${commentAuthor.id}`}>
-                  <Avatar name={commentAuthor.displayName} avatarUri={commentAuthor.avatarUri} gradient={commentAuthor.avatarGradient} size={34} />
+                  <Avatar name={commentAuthor.displayName} avatarUri={commentAuthor.avatarUri} gradient={commentAuthor.avatarGradient} size={34} level={commentAuthor.level} />
                 </Link>
                 <div className="flex-1 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3">
                   <Link href={`/member/${commentAuthor.id}`} className="text-sm font-semibold">

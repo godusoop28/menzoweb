@@ -26,7 +26,7 @@ export function ChatBubble({
   return (
     <div className={`flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""}`}>
       {showAvatar ? (
-        <Avatar name={author?.displayName ?? "?"} avatarUri={author?.avatarUri} gradient={author?.avatarGradient ?? "fire"} size={30} />
+        <Avatar name={author?.displayName ?? "?"} avatarUri={author?.avatarUri} gradient={author?.avatarGradient ?? "fire"} size={30} level={author?.level} />
       ) : (
         <div className="w-[30px] shrink-0" />
       )}

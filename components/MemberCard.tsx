@@ -22,6 +22,7 @@ export function MemberCard({ user, variant = "row" }: { user: DemoUser; variant?
         size={isColumn ? 64 : 48}
         showOnline
         online={user.isOnline}
+        level={user.level}
       />
       <div className={isColumn ? "" : "min-w-0 flex-1"}>
         <p className="truncate text-sm font-medium">{user.displayName}</p>

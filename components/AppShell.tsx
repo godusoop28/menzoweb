@@ -112,6 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 size={36}
                 showOnline
                 online
+                level={state.profile.level}
               />
               <span className="truncate text-sm font-medium">{state.profile.displayName}</span>
             </Link>
