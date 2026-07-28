@@ -17,8 +17,8 @@ export function FeaturedPostCard({ post, variant = "medium" }: { post: Post; var
   return (
     <Link
       href={`/post/${post.id}`}
-      className={`group relative flex shrink-0 flex-col justify-end overflow-hidden rounded-2xl shadow-lg ${
-        isHero ? "h-52 w-full" : "h-[150px] w-[220px]"
+      className={`group relative flex w-full flex-col justify-end overflow-hidden rounded-2xl shadow-lg ${
+        isHero ? "h-52" : "h-[150px]"
       }`}
     >
       <AbstractArtwork

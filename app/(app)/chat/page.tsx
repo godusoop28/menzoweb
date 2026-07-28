@@ -13,7 +13,8 @@ export default function ChatListPage() {
   const [creating, setCreating] = useState(false);
 
   const favoriteRooms = state.social.rooms.filter((r) => r.favorite);
-  const otherRooms = state.social.rooms.filter((r) => !r.favorite);
+  const directRooms = state.social.rooms.filter((r) => !r.favorite && r.type === "direct");
+  const publicRooms = state.social.rooms.filter((r) => !r.favorite && r.type === "public");
 
   async function handleCreate() {
     const trimmed = name.trim();
@@ -65,13 +66,24 @@ export default function ChatListPage() {
         </div>
       )}
 
+      {directRooms.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Mensajes directos</h2>
+          <div className="flex flex-col gap-2">
+            {directRooms.map((room) => (
+              <ChatRoomListItem key={room.id} room={room} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas</h2>
-        {otherRooms.length === 0 ? (
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h2>
+        {publicRooms.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Tus próximas historias comienzan aquí.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {otherRooms.map((room) => (
+            {publicRooms.map((room) => (
               <ChatRoomListItem key={room.id} room={room} />
             ))}
           </div>

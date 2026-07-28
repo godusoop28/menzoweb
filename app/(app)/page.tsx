@@ -24,7 +24,14 @@ export default function FeedPage() {
   const onlineMembers = onlineUsers(state.social);
 
   const favoriteRooms = useMemo(() => state.social.rooms.filter((r) => r.favorite), [state.social.rooms]);
-  const otherRooms = useMemo(() => state.social.rooms.filter((r) => !r.favorite), [state.social.rooms]);
+  const directRooms = useMemo(
+    () => state.social.rooms.filter((r) => !r.favorite && r.type === "direct"),
+    [state.social.rooms]
+  );
+  const publicRooms = useMemo(
+    () => state.social.rooms.filter((r) => !r.favorite && r.type === "public"),
+    [state.social.rooms]
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -105,7 +112,7 @@ export default function FeedPage() {
               <h3 className="font-display text-lg font-bold">Elegidos por la comunidad</h3>
               <div className="flex snap-x gap-4 overflow-x-auto pb-1">
                 {featured.map((post) => (
-                  <div key={`chosen-${post.id}`} className="snap-start">
+                  <div key={`chosen-${post.id}`} className="w-[220px] shrink-0 snap-start">
                     <FeaturedPostCard post={post} />
                   </div>
                 ))}
@@ -116,7 +123,7 @@ export default function FeedPage() {
               <h3 className="font-display text-lg font-bold">Recuerdos que regresaron</h3>
               <div className="flex snap-x gap-4 overflow-x-auto pb-1">
                 {[...featured].reverse().map((post) => (
-                  <div key={`memory-${post.id}`} className="snap-start">
+                  <div key={`memory-${post.id}`} className="w-[220px] shrink-0 snap-start">
                     <FeaturedPostCard post={post} />
                   </div>
                 ))}
@@ -127,11 +134,19 @@ export default function FeedPage() {
 
       {tab === "hangout" && (
         <div className="flex flex-col gap-5">
-          <div>
-            <h2 className="font-display text-xl font-bold">Hangout</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Entra, escucha y vuelve a formar parte de la conversación.
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold">Hangout</h2>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Entra, escucha y vuelve a formar parte de la conversación.
+              </p>
+            </div>
+            <Link
+              href="/chat"
+              className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium whitespace-nowrap"
+            >
+              Crear sala
+            </Link>
           </div>
 
           {favoriteRooms.length > 0 && (
@@ -145,13 +160,24 @@ export default function FeedPage() {
             </div>
           )}
 
+          {directRooms.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Mensajes directos</h3>
+              <div className="flex flex-col gap-2">
+                {directRooms.map((room) => (
+                  <ChatRoomListItem key={room.id} room={room} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas</h3>
-            {otherRooms.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No hay conversaciones activas. Enciende la primera.</p>
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h3>
+            {publicRooms.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No hay salas activas. Enciende la primera.</p>
             ) : (
               <div className="flex flex-col gap-2">
-                {otherRooms.map((room) => (
+                {publicRooms.map((room) => (
                   <ChatRoomListItem key={room.id} room={room} />
                 ))}
               </div>
