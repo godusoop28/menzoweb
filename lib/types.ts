@@ -23,6 +23,8 @@ export type UserProfile = {
   avatarUri?: string;
   avatarGradient: GradientId;
   coverUri?: string;
+  backgroundUri?: string;
+  backgroundColor?: string;
   aura: AuraId;
   bio: string;
   statusText: string;
@@ -37,6 +39,8 @@ export type UserProfile = {
   isOnline: boolean;
   badges: string[];
   isLocalUser?: boolean;
+  followedByMe?: boolean;
+  followsMe?: boolean;
 };
 
 export type DemoUser = UserProfile & { activityStatus: string };
@@ -118,9 +122,13 @@ export type ChatRoom = {
   topic: string;
   gradient: GradientId;
   icon: string;
+  coverUri?: string;
+  backgroundUri?: string;
   memberIds: string[];
   onlineCount: number;
   favorite: boolean;
+  joined: boolean;
+  createdAt: string;
   peer?: ChatPeer;
   lastMessage?: ChatRoomLastMessage;
 };
@@ -132,7 +140,24 @@ export type ChatRoomLastMessage = {
   createdAt: string;
 };
 
-export type WallMessage = { id: string; profileId: string; authorId: string; body: string; createdAt: string };
+export type WallMessage = {
+  id: string;
+  profileId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  commentCount: number;
+};
+
+export type WallComment = {
+  id: string;
+  wallMessageId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+};
 
 export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos";
 

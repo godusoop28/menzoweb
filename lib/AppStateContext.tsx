@@ -20,6 +20,7 @@ import {
   mapPost,
   mapUserProfile,
   mapUserSummary,
+  mapWallComment,
   mapWallMessage,
   notificationsApi,
   onSessionExpired,
@@ -33,6 +34,7 @@ import { LOCAL_USER_ID } from "./store/localUser";
 import { appReducer, createDefaultState } from "./store/reducer";
 import { getItem, removeItem, setItem, StorageKeys } from "./storage";
 import type { AppState, OnboardingPayload, RecentlyViewedEntry, SocialState } from "./store/types";
+import { useToast } from "./ToastContext";
 
 type AppStateContextValue = {
   state: AppState;
@@ -40,7 +42,10 @@ type AppStateContextValue = {
     register: (email: string, password: string) => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
     completeOnboarding: (payload: OnboardingPayload) => Promise<void>;
-    updateProfile: (payload: Partial<UserProfile>, files?: { avatar?: File; cover?: File }) => Promise<void>;
+    updateProfile: (
+      payload: Partial<UserProfile>,
+      files?: { avatar?: File; cover?: File; background?: File }
+    ) => Promise<void>;
     refreshProfile: () => Promise<void>;
     logout: () => Promise<void>;
     toggleLike: (postId: string) => void;
@@ -57,6 +62,10 @@ type AppStateContextValue = {
     loadRoomMessages: (roomId: string) => Promise<void>;
     createRoom: (payload: { name: string; description?: string; topic?: string }) => Promise<string | null>;
     toggleFavoriteRoom: (roomId: string) => void;
+    joinRoom: (roomId: string) => Promise<void>;
+    loadDiscoverRooms: (sort?: "recent" | "popular") => Promise<void>;
+    updateRoomCover: (roomId: string, coverUri: string, file?: File) => Promise<void>;
+    updateRoomBackground: (roomId: string, backgroundUri: string, file?: File) => Promise<void>;
     refreshSocial: () => Promise<void>;
     ensurePostLoaded: (postId: string) => Promise<void>;
     loadPostComments: (postId: string) => Promise<void>;
@@ -65,6 +74,9 @@ type AppStateContextValue = {
     ensureUserLoaded: (userId: string) => Promise<void>;
     loadProfileWall: (profileId: string) => Promise<void>;
     addWallMessage: (profileId: string, body: string) => void;
+    loadWallComments: (wallMessageId: string) => Promise<void>;
+    addWallComment: (wallMessageId: string, body: string) => Promise<void>;
+    toggleWallCommentLike: (commentId: string, wallMessageId: string) => Promise<void>;
     toggleFollow: (userId: string) => void;
     openDirectMessage: (userId: string) => Promise<string | null>;
     loadEvents: () => Promise<void>;
@@ -126,6 +138,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, createDefaultState());
   const hasHydrated = useRef(false);
   const stateRef = useRef(state);
+  const showToast = useToast();
 
   useEffect(() => {
     stateRef.current = state;
@@ -251,18 +264,31 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SET_SESSION", payload: { profile, onboardingCompleted: true } });
     }
 
-    async function updateProfile(payload: Partial<UserProfile>, files?: { avatar?: File; cover?: File }) {
+    async function updateProfile(
+      payload: Partial<UserProfile>,
+      files?: { avatar?: File; cover?: File; background?: File }
+    ) {
       dispatch({ type: "UPDATE_PROFILE", payload });
       if (!hasSession()) return;
       const avatarUri =
         payload.avatarUri !== undefined ? await ensureUploaded(payload.avatarUri, files?.avatar) : undefined;
       const coverUri =
         payload.coverUri !== undefined ? await ensureUploaded(payload.coverUri, files?.cover) : undefined;
+      // "" es la señal explícita de "quitar fondo" — no debe pasar por ensureUploaded, que
+      // colapsa cualquier valor vacío/falsy a undefined (= "sin cambios" en el PATCH parcial).
+      const backgroundUri =
+        payload.backgroundUri !== undefined
+          ? payload.backgroundUri === ""
+            ? ""
+            : await ensureUploaded(payload.backgroundUri, files?.background)
+          : undefined;
       const dto = await usersApi.updateMe({
         displayName: payload.displayName,
         avatarUri,
         avatarGradient: payload.avatarGradient,
         coverUri,
+        backgroundUri,
+        backgroundColor: payload.backgroundColor,
         aura: payload.aura,
         bio: payload.bio,
         statusText: payload.statusText,
@@ -354,6 +380,52 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (!hasSession()) return;
       const call = wasFavorite ? chatApi.unfavorite(roomId) : chatApi.favorite(roomId);
       call.catch((error) => console.warn("[menzo/api] toggleFavoriteRoom failed", error));
+    }
+
+    async function joinRoom(roomId: string) {
+      if (!hasSession()) return;
+      try {
+        await chatApi.join(roomId);
+        const dto = await chatApi.getRoom(roomId);
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
+      } catch (error) {
+        console.warn("[menzo/api] joinRoom failed", error);
+        showToast("No pudimos unirte a la sala. Inténtalo de nuevo.");
+      }
+    }
+
+    async function loadDiscoverRooms(sort: "recent" | "popular" = "recent") {
+      try {
+        const dtos = await chatApi.discover(sort);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: dtos.map((dto) => mapChatRoom(dto, myRealId)) } });
+      } catch (error) {
+        console.warn("[menzo/api] loadDiscoverRooms failed", error);
+      }
+    }
+
+    async function updateRoomCover(roomId: string, coverUri: string, file?: File) {
+      if (!hasSession()) return;
+      try {
+        const uploaded = coverUri === "" ? "" : await ensureUploaded(coverUri, file);
+        const dto = await chatApi.updateRoom(roomId, { coverUri: uploaded });
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
+      } catch (error) {
+        console.warn("[menzo/api] updateRoomCover failed", error);
+        showToast("No pudimos actualizar la portada de la sala.");
+      }
+    }
+
+    async function updateRoomBackground(roomId: string, backgroundUri: string, file?: File) {
+      if (!hasSession()) return;
+      try {
+        const uploaded = backgroundUri === "" ? "" : await ensureUploaded(backgroundUri, file);
+        const dto = await chatApi.updateRoom(roomId, { backgroundUri: uploaded });
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
+      } catch (error) {
+        console.warn("[menzo/api] updateRoomBackground failed", error);
+        showToast("No pudimos actualizar el fondo de la sala.");
+      }
     }
 
     async function refreshSocial() {
@@ -449,12 +521,59 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         .catch((error) => console.warn("[menzo/api] addWallMessage failed", error));
     }
 
+    async function loadWallComments(wallMessageId: string) {
+      try {
+        const dtos = await usersApi.wallComments(wallMessageId);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: dtos.map((dto) => mapWallComment(dto, myRealId)) } });
+      } catch (error) {
+        console.warn("[menzo/api] loadWallComments failed", error);
+      }
+    }
+
+    async function addWallComment(wallMessageId: string, body: string) {
+      if (!hasSession()) return;
+      try {
+        const dto = await usersApi.addWallComment(wallMessageId, body);
+        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: [mapWallComment(dto, getMyRealId())] } });
+      } catch (error) {
+        console.warn("[menzo/api] addWallComment failed", error);
+        showToast("No pudimos publicar el comentario. Inténtalo de nuevo.");
+      }
+    }
+
+    async function toggleWallCommentLike(commentId: string, wallMessageId: string) {
+      if (!hasSession()) return;
+      const wasLiked = stateRef.current.social.wallComments.find((c) => c.id === commentId)?.likedByMe ?? false;
+      try {
+        if (wasLiked) {
+          await usersApi.unlikeWallComment(commentId);
+        } else {
+          await usersApi.likeWallComment(commentId);
+        }
+        const dtos = await usersApi.wallComments(wallMessageId);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: dtos.map((dto) => mapWallComment(dto, myRealId)) } });
+      } catch (error) {
+        console.warn("[menzo/api] toggleWallCommentLike failed", error);
+      }
+    }
+
     function toggleFollow(userId: string) {
       const wasFollowing = stateRef.current.social.following.includes(userId);
       dispatch({ type: "TOGGLE_FOLLOW", payload: { userId } });
       if (!hasSession()) return;
       const call = wasFollowing ? usersApi.unfollow(userId) : usersApi.follow(userId);
-      call.catch((error) => console.warn("[menzo/api] toggleFollow failed", error));
+      call.catch((error) => {
+        console.warn("[menzo/api] toggleFollow failed", error);
+        // La petición falló: revertimos el cambio optimista para que la UI no quede mostrando
+        // un estado que el servidor nunca guardó (antes esto se corregía en silencio recién en
+        // el siguiente refreshSocial, dando la sensación de que "el follow se quita solo").
+        dispatch({ type: "TOGGLE_FOLLOW", payload: { userId } });
+        showToast(
+          wasFollowing ? "No pudimos dejar de seguir. Inténtalo de nuevo." : "No pudimos seguir a esta persona. Inténtalo de nuevo."
+        );
+      });
     }
 
     async function openDirectMessage(userId: string): Promise<string | null> {
@@ -558,6 +677,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       loadRoomMessages,
       createRoom,
       toggleFavoriteRoom,
+      joinRoom,
+      loadDiscoverRooms,
+      updateRoomCover,
+      updateRoomBackground,
       refreshSocial,
       ensurePostLoaded,
       loadPostComments,
@@ -566,6 +689,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       ensureUserLoaded,
       loadProfileWall,
       addWallMessage,
+      loadWallComments,
+      addWallComment,
+      toggleWallCommentLike,
       toggleFollow,
       openDirectMessage,
       loadEvents,
@@ -578,7 +704,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addRecentSearch,
       clearRecentSearches,
     };
-  }, []);
+  }, [showToast]);
 
   const value = useMemo(() => ({ state, actions }), [state, actions]);
 

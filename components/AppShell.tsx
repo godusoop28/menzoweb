@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 
 import { Avatar } from "./Avatar";
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const unread = state.social.notifications.filter((n) => !n.read).length;
 
   async function handleLogout() {
@@ -59,14 +61,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                style={active ? { background: `linear-gradient(to right, ${accent.color}26, transparent)` } : undefined}
                 className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
-                    ? "bg-gradient-to-r from-[var(--color-orange)]/15 to-transparent text-[var(--color-text-primary)]"
+                    ? "text-[var(--color-text-primary)]"
                     : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
-                {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-[var(--color-orange)]" />}
-                <Icon size={20} className={active ? "text-[var(--color-orange)]" : ""} />
+                {active && (
+                  <span
+                    className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
+                    style={{ background: accent.color }}
+                  />
+                )}
+                <span style={active ? { color: accent.color } : undefined}>
+                  <Icon size={20} />
+                </span>
                 {item.label}
               </Link>
             );
@@ -165,11 +175,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              style={active ? { color: accent.color } : undefined}
               className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                active ? "text-[var(--color-orange)]" : "text-[var(--color-text-muted)]"
+                active ? "" : "text-[var(--color-text-muted)]"
               }`}
             >
-              {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[var(--color-orange)]" />}
+              {active && (
+                <span className="absolute top-0 h-0.5 w-8 rounded-full" style={{ background: accent.color }} />
+              )}
               <Icon size={22} />
               {item.label}
             </Link>

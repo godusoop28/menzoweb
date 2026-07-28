@@ -10,6 +10,7 @@ import type {
   Notification,
   Post,
   UserProfile,
+  WallComment,
   WallMessage,
 } from "@/lib/types";
 
@@ -22,6 +23,7 @@ import type {
   PostDto,
   UserProfileDto,
   UserSummaryDto,
+  WallCommentDto,
   WallMessageDto,
 } from "./types";
 
@@ -50,6 +52,8 @@ export function mapUserProfile(dto: UserProfileDto, myRealId: string | null): Us
     avatarUri: dto.avatarUri ?? undefined,
     avatarGradient: toGradient(dto.avatarGradient),
     coverUri: dto.coverUri ?? undefined,
+    backgroundUri: dto.backgroundUri ?? undefined,
+    backgroundColor: dto.backgroundColor ?? undefined,
     aura: dto.aura as UserProfile["aura"],
     bio: dto.bio ?? "",
     statusText: dto.statusText ?? "",
@@ -64,6 +68,8 @@ export function mapUserProfile(dto: UserProfileDto, myRealId: string | null): Us
     isOnline: dto.isOnline,
     badges: dto.badges,
     isLocalUser: !!myRealId && dto.id === myRealId,
+    followedByMe: dto.followedByMe,
+    followsMe: dto.followsMe,
   };
 }
 
@@ -139,6 +145,19 @@ export function mapWallMessage(dto: WallMessageDto, myRealId: string | null): Wa
     authorId: alias(dto.author.id, myRealId),
     body: dto.body,
     createdAt: dto.createdAt,
+    commentCount: dto.commentCount,
+  };
+}
+
+export function mapWallComment(dto: WallCommentDto, myRealId: string | null): WallComment {
+  return {
+    id: dto.id,
+    wallMessageId: dto.wallMessageId,
+    authorId: alias(dto.author.id, myRealId),
+    body: dto.body,
+    createdAt: dto.createdAt,
+    likeCount: dto.likeCount,
+    likedByMe: dto.likedByMe,
   };
 }
 
@@ -152,9 +171,13 @@ export function mapChatRoom(dto: ChatRoomDto, myRealId: string | null = null): C
     topic: dto.topic ?? "",
     gradient: toGradient(dto.gradient, "connection"),
     icon: dto.icon ?? "chatbubbles",
+    coverUri: dto.coverUri ?? undefined,
+    backgroundUri: dto.backgroundUri ?? undefined,
     memberIds: synthArray(dto.memberCount, dto.joined),
     onlineCount: dto.onlineCount,
     favorite: dto.favorite,
+    joined: dto.joined,
+    createdAt: dto.createdAt,
     peer: dto.peer
       ? {
           id: alias(dto.peer.id, myRealId),

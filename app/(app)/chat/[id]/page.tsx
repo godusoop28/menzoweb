@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, SendIcon } from "@/components/icons";
+import { BackIcon, CameraIcon, ImageIcon, SendIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
@@ -14,9 +15,12 @@ export default function ChatRoomPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const room = findRoom(state.social, id);
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
@@ -48,6 +52,20 @@ export default function ChatRoomPage() {
     }
   }
 
+  function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !id) return;
+    actions.updateRoomCover(id, URL.createObjectURL(file), file);
+  }
+
+  function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !id) return;
+    actions.updateRoomBackground(id, URL.createObjectURL(file), file);
+  }
+
   const headerTitle = room?.type === "direct" ? room?.peer?.displayName ?? "Conversación" : room?.name ?? "Conversación";
   const headerOnline = room?.type === "direct" ? !!room?.peer?.isOnline : !!room && room.onlineCount > 0;
   const headerSubtitle =
@@ -66,7 +84,15 @@ export default function ChatRoomPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col px-4 md:px-8">
-      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md">
+      <div
+        className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-cover bg-center py-3 backdrop-blur-md"
+        style={{
+          backgroundColor: "rgba(7,9,13,0.95)",
+          backgroundImage: room.coverUri
+            ? `linear-gradient(rgba(7,9,13,0.55), rgba(7,9,13,0.75)), url(${room.coverUri})`
+            : undefined,
+        }}
+      >
         <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
           <BackIcon />
         </button>
@@ -86,9 +112,36 @@ export default function ChatRoomPage() {
             <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
           )}
         </div>
+        <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
+        <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
+        <button
+          onClick={() => coverInputRef.current?.click()}
+          aria-label="Cambiar portada de la sala"
+          title="Cambiar portada"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+        >
+          <CameraIcon size={15} />
+        </button>
+        <button
+          onClick={() => backgroundInputRef.current?.click()}
+          aria-label="Cambiar fondo de la conversación"
+          title="Cambiar fondo del chat"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+        >
+          <ImageIcon size={15} />
+        </button>
       </div>
 
-      <div className="flex flex-col gap-2.5 py-4">
+      <div
+        className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
+        style={
+          room.backgroundUri
+            ? {
+                backgroundImage: `linear-gradient(rgba(7,9,13,0.62), rgba(7,9,13,0.62)), url(${room.backgroundUri})`,
+              }
+            : undefined
+        }
+      >
         {messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
         ) : (
@@ -126,7 +179,8 @@ export default function ChatRoomPage() {
         <button
           onClick={handleSend}
           disabled={!draft.trim() || sending}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-orange)] text-[var(--color-text-on-accent)] shadow-[0_4px_14px_-2px_rgba(255,122,26,0.5)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+          style={{ background: accent.color, boxShadow: `0 4px 14px -2px ${accent.color}80` }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-text-on-accent)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
           aria-label="Enviar mensaje"
         >
           <SendIcon />

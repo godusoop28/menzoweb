@@ -39,6 +39,8 @@ export type UserProfileDto = {
   avatarUri: string | null;
   avatarGradient: string | null;
   coverUri: string | null;
+  backgroundUri: string | null;
+  backgroundColor: string | null;
   aura: string;
   bio: string | null;
   statusText: string | null;
@@ -53,6 +55,7 @@ export type UserProfileDto = {
   isOnline: boolean;
   badges: string[];
   followedByMe: boolean;
+  followsMe: boolean;
 };
 
 export type AuthResponseDto = {
@@ -81,6 +84,9 @@ export type UpdateProfileRequest = {
   avatarUri?: string;
   avatarGradient?: string;
   coverUri?: string;
+  /** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios. */
+  backgroundUri?: string;
+  backgroundColor?: string;
   aura?: string;
   bio?: string;
   statusText?: string;
@@ -147,12 +153,21 @@ export type ChatRoomDto = {
   gradient: string | null;
   icon: string | null;
   type: "PUBLIC" | "DIRECT";
+  coverUri: string | null;
+  backgroundUri: string | null;
   peer: UserSummaryDto | null;
   memberCount: number;
   onlineCount: number;
   favorite: boolean;
   joined: boolean;
+  createdAt: string;
   lastMessage: ChatRoomLastMessageDto | null;
+};
+
+export type UpdateRoomRequest = {
+  /** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios. */
+  coverUri?: string;
+  backgroundUri?: string;
 };
 
 export type ChatRoomLastMessageDto = {
@@ -181,6 +196,17 @@ export type WallMessageDto = {
   author: UserSummaryDto;
   body: string;
   createdAt: string;
+  commentCount: number;
+};
+
+export type WallCommentDto = {
+  id: string;
+  wallMessageId: string;
+  author: UserSummaryDto;
+  body: string;
+  createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
 };
 
 export type CommunityConfigDto = {

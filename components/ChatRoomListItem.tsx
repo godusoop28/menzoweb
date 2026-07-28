@@ -6,7 +6,16 @@ import type { ChatRoom } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { ChatIcon } from "./icons";
 
-export function ChatRoomListItem({ room }: { room: ChatRoom }) {
+export function ChatRoomListItem({
+  room,
+  onJoin,
+  joining,
+}: {
+  room: ChatRoom;
+  /** Si se pasa, las salas públicas sin unirse muestran un botón "Unirse" en vez de navegar directo. */
+  onJoin?: (roomId: string) => void;
+  joining?: boolean;
+}) {
   const title = room.peer?.displayName ?? room.name;
   const subtitle = room.type === "direct" ? (room.peer?.isOnline ? "En línea" : "Desconectado") : `${room.onlineCount} conectados`;
   const lastMessagePreview =
@@ -25,6 +34,9 @@ export function ChatRoomListItem({ room }: { room: ChatRoom }) {
     >
       {room.type === "direct" && room.peer ? (
         <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={48} showOnline online={room.peer.isOnline} />
+      ) : room.coverUri ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={room.coverUri} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover shadow-md" />
       ) : (
         <span
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-md"
@@ -37,7 +49,21 @@ export function ChatRoomListItem({ room }: { room: ChatRoom }) {
         <span className="block truncate font-medium">{title}</span>
         <span className="block truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
       </span>
-      {room.favorite && <span className="shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>}
+      {onJoin && room.type === "public" && !room.joined ? (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onJoin(room.id);
+          }}
+          disabled={joining}
+          className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-medium disabled:opacity-50 cursor-pointer"
+        >
+          {joining ? "…" : "Unirse"}
+        </button>
+      ) : (
+        room.favorite && <span className="shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>
+      )}
     </Link>
   );
 }

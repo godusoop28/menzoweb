@@ -8,9 +8,19 @@ import { CameraIcon } from "@/components/icons";
 import { GradientButton } from "@/components/GradientButton";
 import { auras } from "@/data/auras";
 import { useAppState } from "@/lib/AppStateContext";
-import { gradientCss } from "@/lib/theme";
+import { Colors, gradientCss } from "@/lib/theme";
 import type { AuraId } from "@/lib/types";
 import { collapseSpaces, isValidDisplayName, NAME_MAX } from "@/lib/validation";
+
+const BACKGROUND_COLORS = [
+  Colors.orange,
+  Colors.coral,
+  Colors.blue,
+  Colors.purple,
+  Colors.green,
+  Colors.cyan,
+  Colors.yellow,
+];
 
 export default function EditProfilePage() {
   const { state, actions } = useAppState();
@@ -25,11 +35,15 @@ export default function EditProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | undefined>();
   const [coverUri, setCoverUri] = useState(profile.coverUri);
   const [coverFile, setCoverFile] = useState<File | undefined>();
+  const [backgroundUri, setBackgroundUri] = useState(profile.backgroundUri);
+  const [backgroundFile, setBackgroundFile] = useState<File | undefined>();
+  const [backgroundColor, setBackgroundColor] = useState(profile.backgroundColor);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const valid = isValidDisplayName(displayName);
 
@@ -47,11 +61,35 @@ export default function EditProfilePage() {
     setCoverFile(file);
   }
 
+  function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackgroundUri(URL.createObjectURL(file));
+    setBackgroundFile(file);
+    setBackgroundColor(undefined);
+  }
+
+  function handlePickBackgroundColor(color: string) {
+    setBackgroundColor(color);
+    setBackgroundUri(undefined);
+    setBackgroundFile(undefined);
+  }
+
+  function handleClearBackground() {
+    setBackgroundUri(undefined);
+    setBackgroundFile(undefined);
+    setBackgroundColor(undefined);
+  }
+
   async function handleSave() {
     if (!valid || saving) return;
     setSaving(true);
     setError(null);
     try {
+      // "" limpia el campo en el backend; solo se manda si el usuario tenía algo puesto antes
+      // y lo quitó (si nunca hubo nada, no hace falta mandar el PATCH de ese campo).
+      const finalBackgroundUri = backgroundUri ?? (profile.backgroundUri ? "" : undefined);
+      const finalBackgroundColor = backgroundColor ?? (profile.backgroundColor ? "" : undefined);
       await actions.updateProfile(
         {
           displayName: collapseSpaces(displayName).trim(),
@@ -61,8 +99,10 @@ export default function EditProfilePage() {
           avatarGradient: auras.find((a) => a.id === aura)!.gradient,
           avatarUri,
           coverUri,
+          backgroundUri: finalBackgroundUri,
+          backgroundColor: finalBackgroundColor,
         },
-        { avatar: avatarFile, cover: coverFile }
+        { avatar: avatarFile, cover: coverFile, background: backgroundFile }
       );
       router.push("/profile");
     } catch (e) {
@@ -158,6 +198,49 @@ export default function EditProfilePage() {
                 title={a.name}
               />
             ))}
+          </div>
+        </Field>
+
+        <Field label="Fondo del perfil">
+          <div className="flex flex-col gap-3">
+            {(backgroundUri || backgroundColor) && (
+              <div
+                className="h-20 w-full rounded-xl bg-cover bg-center"
+                style={
+                  backgroundUri
+                    ? { backgroundImage: `url(${backgroundUri})` }
+                    : { background: backgroundColor }
+                }
+              />
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {BACKGROUND_COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => handlePickBackgroundColor(color)}
+                  className={`h-8 w-8 rounded-full border-2 shadow-sm transition-transform cursor-pointer hover:scale-110 ${
+                    backgroundColor === color ? "border-[var(--color-text-primary)] scale-110" : "border-transparent"
+                  }`}
+                  style={{ background: color }}
+                  aria-label={`Fondo color ${color}`}
+                />
+              ))}
+              <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
+              <button
+                onClick={() => backgroundInputRef.current?.click()}
+                className="rounded-full border border-[var(--color-border-soft)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer"
+              >
+                Subir foto
+              </button>
+              {(backgroundUri || backgroundColor) && (
+                <button
+                  onClick={handleClearBackground}
+                  className="rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-coral)] cursor-pointer"
+                >
+                  Quitar fondo
+                </button>
+              )}
+            </div>
           </div>
         </Field>
 

@@ -12,9 +12,10 @@ export default function ChatListPage() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const favoriteRooms = state.social.rooms.filter((r) => r.favorite);
-  const directRooms = state.social.rooms.filter((r) => !r.favorite && r.type === "direct");
-  const publicRooms = state.social.rooms.filter((r) => !r.favorite && r.type === "public");
+  const myRooms = state.social.rooms.filter((r) => r.type === "direct" || r.joined);
+  const favoriteRooms = myRooms.filter((r) => r.favorite);
+  const directRooms = myRooms.filter((r) => !r.favorite && r.type === "direct");
+  const publicRooms = myRooms.filter((r) => !r.favorite && r.type === "public");
 
   async function handleCreate() {
     const trimmed = name.trim();

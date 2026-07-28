@@ -24,6 +24,12 @@ export function wallMessagesForProfile(social: SocialState, profileId: string) {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export function wallCommentsForMessage(social: SocialState, wallMessageId: string) {
+  return social.wallComments
+    .filter((c) => c.wallMessageId === wallMessageId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
 export function postsByAuthor(social: SocialState, authorId: string) {
   return social.posts
     .filter((p) => p.authorId === authorId)

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityHero } from "@/components/CommunityHero";
@@ -12,26 +12,43 @@ import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAppState } from "@/lib/AppStateContext";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
 
-type HomeTab = "recientes" | "destacados" | "hangout";
+type HomeTab = "recientes" | "destacados" | "descubrir";
+type RoomSort = "recent" | "popular";
 
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
+  const [roomSort, setRoomSort] = useState<RoomSort>("recent");
+  const [joiningId, setJoiningId] = useState<string | null>(null);
 
   const posts = recentPosts(state.social);
   const featured = featuredPosts(state.social);
   const onlineMembers = onlineUsers(state.social);
 
-  const favoriteRooms = useMemo(() => state.social.rooms.filter((r) => r.favorite), [state.social.rooms]);
-  const directRooms = useMemo(
-    () => state.social.rooms.filter((r) => !r.favorite && r.type === "direct"),
-    [state.social.rooms]
-  );
-  const publicRooms = useMemo(
-    () => state.social.rooms.filter((r) => !r.favorite && r.type === "public"),
-    [state.social.rooms]
-  );
+  useEffect(() => {
+    if (tab === "descubrir") actions.loadDiscoverRooms(roomSort);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, roomSort]);
+
+  const discoverRooms = useMemo(() => {
+    const publicRooms = state.social.rooms.filter((r) => r.type === "public");
+    const sorted = [...publicRooms].sort((a, b) =>
+      roomSort === "popular"
+        ? b.onlineCount - a.onlineCount
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return sorted;
+  }, [state.social.rooms, roomSort]);
+
+  async function handleJoin(roomId: string) {
+    setJoiningId(roomId);
+    try {
+      await actions.joinRoom(roomId);
+    } finally {
+      setJoiningId(null);
+    }
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -68,7 +85,7 @@ export default function FeedPage() {
         options={[
           { value: "recientes", label: "Recientes" },
           { value: "destacados", label: "Destacados" },
-          { value: "hangout", label: "Hangout" },
+          { value: "descubrir", label: "Descubrir" },
         ]}
       />
 
@@ -132,13 +149,13 @@ export default function FeedPage() {
           </div>
         ))}
 
-      {tab === "hangout" && (
+      {tab === "descubrir" && (
         <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-bold">Hangout</h2>
+              <h2 className="font-display text-xl font-bold">Descubrir salas</h2>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                Entra, escucha y vuelve a formar parte de la conversación.
+                Explora todas las salas públicas y únete a las que te llamen la atención.
               </p>
             </div>
             <Link
@@ -149,38 +166,36 @@ export default function FeedPage() {
             </Link>
           </div>
 
-          {favoriteRooms.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Favoritos</h3>
-              <div className="flex flex-col gap-2">
-                {favoriteRooms.map((room) => (
-                  <ChatRoomListItem key={room.id} room={room} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {directRooms.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Mensajes directos</h3>
-              <div className="flex flex-col gap-2">
-                {directRooms.map((room) => (
-                  <ChatRoomListItem key={room.id} room={room} />
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setRoomSort("recent")}
+              className={`rounded-full px-4 py-1.5 text-xs font-medium cursor-pointer ${
+                roomSort === "recent"
+                  ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-muted)]"
+              }`}
+            >
+              Recientes
+            </button>
+            <button
+              onClick={() => setRoomSort("popular")}
+              className={`rounded-full px-4 py-1.5 text-xs font-medium cursor-pointer ${
+                roomSort === "popular"
+                  ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-muted)]"
+              }`}
+            >
+              Populares
+            </button>
+          </div>
 
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h3>
-            {publicRooms.length === 0 ? (
+            {discoverRooms.length === 0 ? (
               <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No hay salas activas. Enciende la primera.</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {publicRooms.map((room) => (
-                  <ChatRoomListItem key={room.id} room={room} />
-                ))}
-              </div>
+              discoverRooms.map((room) => (
+                <ChatRoomListItem key={room.id} room={room} onJoin={handleJoin} joining={joiningId === room.id} />
+              ))
             )}
           </div>
 

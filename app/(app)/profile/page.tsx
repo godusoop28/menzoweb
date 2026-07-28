@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
 import { getMyRealId } from "@/lib/api";
@@ -54,7 +55,9 @@ export default function ProfilePage() {
   const myWall = wallMessagesForProfile(state.social, LOCAL_USER_ID);
   const mySaved = savedPosts(state.social, LOCAL_USER_ID);
 
-  return (
+  const hasBackground = !!(profile.backgroundUri || profile.backgroundColor);
+
+  const content = (
     <div className="menzo-fade-in mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
       <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
         {profile.coverUri ? (
@@ -155,6 +158,13 @@ export default function ProfilePage() {
           ))}
       </div>
     </div>
+  );
+
+  if (!hasBackground) return content;
+  return (
+    <ScreenBackground src={profile.backgroundUri} color={profile.backgroundColor}>
+      {content}
+    </ScreenBackground>
   );
 }
 

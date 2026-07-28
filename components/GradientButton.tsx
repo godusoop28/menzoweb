@@ -1,5 +1,6 @@
 "use client";
 
+import { useAccent } from "@/lib/AccentContext";
 import { gradientCss, Gradients, type GradientId } from "@/lib/theme";
 
 type Props = {
@@ -27,10 +28,12 @@ export function GradientButton({
   type = "button",
   disabled,
   loading,
-  gradient = "fire",
+  gradient,
   size = "lg",
   fullWidth = true,
 }: Props) {
+  const accent = useAccent();
+  const resolvedGradient = gradient ?? accent.gradientId;
   const isDisabled = disabled || loading;
   return (
     <button
@@ -45,8 +48,8 @@ export function GradientButton({
           : "cursor-pointer hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0"
       } flex items-center justify-center gap-2`}
       style={{
-        background: gradientCss(gradient),
-        boxShadow: isDisabled ? undefined : `0 8px 24px -6px ${GLOW_COLOR[gradient]}`,
+        background: gradientCss(resolvedGradient),
+        boxShadow: isDisabled ? undefined : `0 8px 24px -6px ${GLOW_COLOR[resolvedGradient]}`,
       }}
     >
       {loading ? (

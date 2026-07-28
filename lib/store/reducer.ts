@@ -11,6 +11,7 @@ export function createDefaultSocialState(): SocialState {
     rooms: [],
     messages: [],
     wallMessages: [],
+    wallComments: [],
     events: [],
     notifications: [],
     following: [],
@@ -25,7 +26,15 @@ export function createDefaultState(): AppState {
 
 type MergeableSocialState = Pick<
   SocialState,
-  "users" | "posts" | "comments" | "messages" | "wallMessages" | "rooms" | "events" | "notifications"
+  | "users"
+  | "posts"
+  | "comments"
+  | "messages"
+  | "wallMessages"
+  | "wallComments"
+  | "rooms"
+  | "events"
+  | "notifications"
 >;
 
 export type Action =
@@ -100,6 +109,7 @@ export function appReducer(state: AppState, action: Action): AppState {
           comments: p.comments ? mergeById(state.social.comments, p.comments) : state.social.comments,
           messages: p.messages ? mergeById(state.social.messages, p.messages) : state.social.messages,
           wallMessages: p.wallMessages ? mergeById(state.social.wallMessages, p.wallMessages) : state.social.wallMessages,
+          wallComments: p.wallComments ? mergeById(state.social.wallComments, p.wallComments) : state.social.wallComments,
           rooms: p.rooms ? mergeById(state.social.rooms, p.rooms) : state.social.rooms,
           events: p.events ? mergeById(state.social.events, p.events) : state.social.events,
           notifications: p.notifications ? mergeById(state.social.notifications, p.notifications) : state.social.notifications,

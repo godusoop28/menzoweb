@@ -7,6 +7,7 @@ import type {
   Notification,
   Post,
   UserProfile,
+  WallComment,
   WallMessage,
 } from "@/lib/types";
 
@@ -19,6 +20,7 @@ export type SocialState = {
   rooms: ChatRoom[];
   messages: Message[];
   wallMessages: WallMessage[];
+  wallComments: WallComment[];
   events: CommunityEvent[];
   notifications: Notification[];
   following: string[];

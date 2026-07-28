@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { GradientButton } from "@/components/GradientButton";
 import { BackIcon } from "@/components/icons";
 import { PostCard } from "@/components/PostCard";
+import { ScreenBackground } from "@/components/ScreenBackground";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
 import { useAppState } from "@/lib/AppStateContext";
@@ -59,6 +60,7 @@ export default function MemberProfilePage() {
   }
 
   const isFollowing = state.social.following.includes(user.id);
+  const isFriend = isFollowing && !!user.followsMe;
   const posts = postsByAuthor(state.social, user.id);
   const wall = wallMessagesForProfile(state.social, user.id);
 
@@ -70,7 +72,9 @@ export default function MemberProfilePage() {
     if (roomId) router.push(`/chat/${roomId}`);
   }
 
-  return (
+  const hasBackground = !!(user.backgroundUri || user.backgroundColor);
+
+  const content = (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
       <button onClick={() => router.back()} className="mb-4 flex items-center gap-2 text-sm text-[var(--color-text-secondary)] cursor-pointer">
         <BackIcon size={20} />
@@ -109,7 +113,14 @@ export default function MemberProfilePage() {
           </div>
 
           <div>
-            <h1 className="font-display text-xl font-bold">{user.displayName}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-xl font-bold">{user.displayName}</h1>
+              {isFriend && (
+                <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-cyan)]">
+                  Amigos
+                </span>
+              )}
+            </div>
             {!!user.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{user.statusText}</p>}
           </div>
 
@@ -146,6 +157,13 @@ export default function MemberProfilePage() {
           ))}
       </div>
     </div>
+  );
+
+  if (!hasBackground) return content;
+  return (
+    <ScreenBackground src={user.backgroundUri} color={user.backgroundColor}>
+      {content}
+    </ScreenBackground>
   );
 }
 

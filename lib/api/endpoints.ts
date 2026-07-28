@@ -23,9 +23,11 @@ import type {
   SendMessageRequest,
   SettingsDto,
   UpdateProfileRequest,
+  UpdateRoomRequest,
   UpdateSettingsRequest,
   UploadResponseDto,
   UserProfileDto,
+  WallCommentDto,
   WallMessageDto,
 } from "./types";
 
@@ -67,6 +69,12 @@ export const usersApi = {
     apiFetch<WallMessageDto>(`/api/users/${id}/wall`, { method: "POST", body: { body } }),
   posts: (id: string, page = 0, size = 20) =>
     apiFetch<PageResponse<PostDto>>(`/api/users/${id}/posts${qs({ page, size })}`),
+  wallComments: (messageId: string) => apiFetch<WallCommentDto[]>(`/api/wall/${messageId}/comments`),
+  addWallComment: (messageId: string, body: string) =>
+    apiFetch<WallCommentDto>(`/api/wall/${messageId}/comments`, { method: "POST", body: { body } }),
+  likeWallComment: (commentId: string) => apiFetch<void>(`/api/wall/comments/${commentId}/like`, { method: "PUT" }),
+  unlikeWallComment: (commentId: string) =>
+    apiFetch<void>(`/api/wall/comments/${commentId}/like`, { method: "DELETE" }),
 };
 
 export const lookupsApi = {
@@ -98,9 +106,13 @@ export const postsApi = {
 
 export const chatApi = {
   rooms: () => apiFetch<ChatRoomDto[]>("/api/chat/rooms"),
+  discover: (sort: "recent" | "popular" = "recent") =>
+    apiFetch<ChatRoomDto[]>(`/api/chat/rooms/discover${qs({ sort })}`),
   getRoom: (id: string) => apiFetch<ChatRoomDto>(`/api/chat/rooms/${id}`),
   openDirect: (userId: string) => apiFetch<ChatRoomDto>(`/api/chat/rooms/dm/${userId}`, { method: "POST" }),
   createRoom: (body: CreateRoomRequest) => apiFetch<ChatRoomDto>("/api/chat/rooms", { method: "POST", body }),
+  updateRoom: (id: string, body: UpdateRoomRequest) =>
+    apiFetch<ChatRoomDto>(`/api/chat/rooms/${id}`, { method: "PATCH", body }),
   join: (id: string) => apiFetch<void>(`/api/chat/rooms/${id}/join`, { method: "POST" }),
   leave: (id: string) => apiFetch<void>(`/api/chat/rooms/${id}/leave`, { method: "POST" }),
   favorite: (id: string) => apiFetch<void>(`/api/chat/rooms/${id}/favorite`, { method: "PUT" }),
