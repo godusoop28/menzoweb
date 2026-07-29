@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 
 import "./globals.css";
@@ -20,6 +20,12 @@ export const metadata: Metadata = {
   title: "Menzo",
   description: "Conecta, comparte y descubre gente con tus mismos intereses.",
   icons: { icon: "/branding/favicon.png" },
+};
+
+// viewportFit: "cover" es lo que hace que env(safe-area-inset-*) deje de valer 0 en iOS Safari —
+// sin esto, todo el padding de safe-area en la app (input del chat, tab bar, etc.) es inerte.
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

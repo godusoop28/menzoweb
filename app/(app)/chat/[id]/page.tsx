@@ -148,115 +148,120 @@ export default function ChatRoomPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col px-4 md:px-8">
-      <div
-        className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-cover bg-center py-3 backdrop-blur-md"
-        style={{
-          backgroundColor: "rgba(7,9,13,0.95)",
-          backgroundImage: room.coverUri
-            ? `linear-gradient(rgba(7,9,13,0.55), rgba(7,9,13,0.75)), url(${room.coverUri})`
-            : undefined,
-        }}
-      >
-        <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
-          <BackIcon />
-        </button>
-        {room.type === "direct" && room.peer ? (
-          <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={32} showOnline online={room.peer.isOnline} />
-        ) : (
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, var(--color-cyan), var(--color-blue))" }}
-          >
-            {headerTitle.charAt(0).toUpperCase()}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{headerTitle}</p>
-          {!!headerSubtitle && (
-            <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
+      {/* Header y barra de voz van juntos en un solo contenedor sticky — antes la barra de voz
+          (con el botón de mute y los participantes) era un bloque aparte que se iba con el
+          scroll de los mensajes, así que había que subir/bajar para volver a encontrarla. */}
+      <div className="sticky top-0 z-10">
+        <div
+          className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-cover bg-center py-3 backdrop-blur-md"
+          style={{
+            backgroundColor: "rgba(7,9,13,0.95)",
+            backgroundImage: room.coverUri
+              ? `linear-gradient(rgba(7,9,13,0.55), rgba(7,9,13,0.75)), url(${room.coverUri})`
+              : undefined,
+          }}
+        >
+          <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
+            <BackIcon />
+          </button>
+          {room.type === "direct" && room.peer ? (
+            <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={32} showOnline online={room.peer.isOnline} />
+          ) : (
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+              style={{ background: "linear-gradient(135deg, var(--color-cyan), var(--color-blue))" }}
+            >
+              {headerTitle.charAt(0).toUpperCase()}
+            </span>
           )}
-        </div>
-        <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
-        <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
-        {room.type === "public" && (
-          <Link
-            href={`/chat/${id}/members`}
-            aria-label="Ver miembros"
-            title="Miembros"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
-          >
-            <UsersIcon size={15} />
-          </Link>
-        )}
-        <button
-          onClick={() => coverInputRef.current?.click()}
-          aria-label="Cambiar portada de la sala"
-          title="Cambiar portada"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
-        >
-          <CameraIcon size={15} />
-        </button>
-        <button
-          onClick={() => backgroundInputRef.current?.click()}
-          aria-label="Cambiar fondo de la conversación"
-          title="Cambiar fondo del chat"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
-        >
-          <ImageIcon size={15} />
-        </button>
-        <button
-          onClick={voice.connected ? voice.leave : voice.join}
-          disabled={voice.connecting}
-          aria-label={voice.connected ? "Salir del live" : "Unirse al live"}
-          title={voice.connected ? "Salir del live" : "Unirse al live"}
-          className={`relative flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-60 cursor-pointer ${
-            voice.connected ? "bg-[var(--color-coral)]" : "bg-black/40 hover:bg-black/60"
-          }`}
-        >
-          {voice.connected && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />}
-          <span>Live</span>
-          {voice.participants.length > 0 && <span className="font-normal normal-case">{voice.participants.length}</span>}
-        </button>
-      </div>
-
-      {(voice.connected || voice.participants.length > 0) && (
-        <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2.5">
-          <div className="flex flex-1 flex-wrap items-center gap-3">
-            {voice.participants.map((p) => {
-              const level = voice.speakingLevels.get(p.id) ?? 0;
-              return (
-                <div key={p.id} className="flex flex-col items-center gap-1">
-                  <span
-                    className="flex items-center justify-center rounded-full transition-transform duration-150 ease-out"
-                    style={{
-                      transform: `scale(${1 + level * 0.22})`,
-                      boxShadow: level > 0.05 ? `0 0 ${6 + level * 14}px ${level * 3}px ${accent.color}80` : undefined,
-                    }}
-                  >
-                    <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={40} />
-                  </span>
-                  <span className="max-w-[64px] truncate text-[11px] font-medium">{p.displayName}</span>
-                </div>
-              );
-            })}
-            {voice.participants.length === 0 && (
-              <span className="text-xs text-[var(--color-text-muted)]">Nadie en la voz todavía</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{headerTitle}</p>
+            {!!headerSubtitle && (
+              <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
             )}
           </div>
-          {voice.connected && (
-            <button
-              onClick={voice.toggleMute}
-              aria-label={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
-              title={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
-                voice.muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
-              }`}
+          <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
+          <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
+          {room.type === "public" && (
+            <Link
+              href={`/chat/${id}/members`}
+              aria-label="Ver miembros"
+              title="Miembros"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
             >
-              {voice.muted ? "🔇" : "🎤"}
-            </button>
+              <UsersIcon size={15} />
+            </Link>
           )}
+          <button
+            onClick={() => coverInputRef.current?.click()}
+            aria-label="Cambiar portada de la sala"
+            title="Cambiar portada"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+          >
+            <CameraIcon size={15} />
+          </button>
+          <button
+            onClick={() => backgroundInputRef.current?.click()}
+            aria-label="Cambiar fondo de la conversación"
+            title="Cambiar fondo del chat"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+          >
+            <ImageIcon size={15} />
+          </button>
+          <button
+            onClick={voice.connected ? voice.leave : voice.join}
+            disabled={voice.connecting}
+            aria-label={voice.connected ? "Salir del live" : "Unirse al live"}
+            title={voice.connected ? "Salir del live" : "Unirse al live"}
+            className={`relative flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-60 cursor-pointer ${
+              voice.connected ? "bg-[var(--color-coral)]" : "bg-black/40 hover:bg-black/60"
+            }`}
+          >
+            {voice.connected && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />}
+            <span>Live</span>
+            {voice.participants.length > 0 && <span className="font-normal normal-case">{voice.participants.length}</span>}
+          </button>
         </div>
-      )}
+
+        {(voice.connected || voice.participants.length > 0) && (
+          <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2.5">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
+              {voice.participants.map((p) => {
+                const level = voice.speakingLevels.get(p.id) ?? 0;
+                return (
+                  <div key={p.id} className="flex flex-col items-center gap-1">
+                    <span
+                      className="flex items-center justify-center rounded-full transition-transform duration-150 ease-out"
+                      style={{
+                        transform: `scale(${1 + level * 0.22})`,
+                        boxShadow: level > 0.05 ? `0 0 ${6 + level * 14}px ${level * 3}px ${accent.color}80` : undefined,
+                      }}
+                    >
+                      <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={40} />
+                    </span>
+                    <span className="max-w-[64px] truncate text-[11px] font-medium">{p.displayName}</span>
+                  </div>
+                );
+              })}
+              {voice.participants.length === 0 && (
+                <span className="text-xs text-[var(--color-text-muted)]">Nadie en la voz todavía</span>
+              )}
+            </div>
+            {voice.connected && (
+              <button
+                onClick={voice.toggleMute}
+                aria-label={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
+                title={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
+                  voice.muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
+                }`}
+              >
+                {voice.muted ? "🔇" : "🎤"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <div
         className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
@@ -280,7 +285,7 @@ export default function ChatRoomPage() {
       </div>
 
       {showNewMessagesPill && (
-        <div className="sticky bottom-36 z-20 flex justify-center md:bottom-16">
+        <div className="sticky bottom-[calc(9rem+env(safe-area-inset-bottom))] z-20 flex justify-center md:bottom-16">
           <button
             onClick={() => scrollToBottom(true)}
             style={{ background: accent.color }}
@@ -291,7 +296,7 @@ export default function ChatRoomPage() {
         </div>
       )}
 
-      <div className="sticky bottom-20 z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
         <textarea
           value={draft}
           onChange={(e) => {

@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex h-screen w-full max-w-[1100px] overflow-hidden">
+    <div className="mx-auto flex h-dvh w-full max-w-[1100px] overflow-hidden">
       {/* Sidebar — solo escritorio */}
       <aside className="hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6">
         <Link href="/" className="group flex items-center gap-2.5 px-2">
@@ -164,11 +164,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <main className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
       </div>
 
       {/* Tab bar — solo móvil */}
-      <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 backdrop-blur-md md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
@@ -177,7 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               style={active ? { color: accent.color } : undefined}
-              className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+              className={`relative flex flex-1 flex-col items-center gap-1 pt-2.5 pb-2.5 text-[11px] font-medium transition-colors ${
                 active ? "" : "text-[var(--color-text-muted)]"
               }`}
             >
