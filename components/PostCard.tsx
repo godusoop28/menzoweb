@@ -11,6 +11,7 @@ import type { Post } from "@/lib/types";
 import { AbstractArtwork } from "./AbstractArtwork";
 import { Avatar } from "./Avatar";
 import { BookmarkIcon, CommentIcon, HeartIcon } from "./icons";
+import { PollCard } from "./PollCard";
 
 const typeLabel: Record<Post["type"], string> = {
   text: "",
@@ -67,6 +68,8 @@ export function PostCard({ post }: { post: Post }) {
           )
         )}
       </Link>
+
+      {post.type === "poll" && <PollCard post={post} />}
 
       {post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

@@ -72,7 +72,7 @@ type AppStateContextValue = {
     ensurePostLoaded: (postId: string) => Promise<void>;
     loadPostComments: (postId: string) => Promise<void>;
     addComment: (postId: string, body: string) => void;
-    votePoll: (postId: string, optionId: string) => void;
+    votePoll: (postId: string, optionId: string) => Promise<void>;
     ensureUserLoaded: (userId: string) => Promise<void>;
     loadProfileWall: (profileId: string) => Promise<void>;
     addWallMessage: (profileId: string, body: string, imageUri?: string, imageFile?: File) => Promise<void>;
@@ -502,10 +502,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         .catch((error) => console.warn("[menzo/api] addComment failed", error));
     }
 
-    function votePoll(postId: string, optionId: string) {
-      dispatch({ type: "VOTE_POLL", payload: { postId, optionId } });
+    /** Antes esto actualizaba el estado local de forma optimista (sin esperar al servidor) y
+     * descartaba la respuesta real del voto — si la petición fallaba, la UI se quedaba mostrando
+     * un voto que nunca se guardó, sin ningún aviso. Ahora no toca el estado global hasta tener la
+     * respuesta real del servidor (con los conteos reales), así que nunca hay nada que revertir: el
+     * componente que llama a esto mantiene su propio estado de "votando" mientras espera. */
+    async function votePoll(postId: string, optionId: string) {
       if (!hasSession()) return;
-      postsApi.vote(postId, optionId).catch((error) => console.warn("[menzo/api] votePoll failed", error));
+      const dto = await postsApi.vote(postId, optionId);
+      dispatch({ type: "MERGE_SOCIAL", payload: { posts: [mapPost(dto, getMyRealId())] } });
     }
 
     async function ensureUserLoaded(userId: string) {

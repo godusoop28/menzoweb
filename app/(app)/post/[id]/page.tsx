@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, BookmarkIcon, HeartIcon, SendIcon } from "@/components/icons";
+import { PollCard } from "@/components/PollCard";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findPost, findUser } from "@/lib/store/selectors";
@@ -44,7 +45,6 @@ export default function PostDetailPage() {
   const author = findUser(state.social, post.authorId);
   const liked = post.likes.includes(LOCAL_USER_ID);
   const saved = post.bookmarkedBy.includes(LOCAL_USER_ID);
-  const totalVotes = post.pollOptions?.reduce((sum, o) => sum + o.votes.length, 0) ?? 0;
 
   function submitComment() {
     const trimmed = commentDraft.trim();
@@ -80,31 +80,7 @@ export default function PostDetailPage() {
         <img src={post.imageUri} alt="" className="w-full rounded-2xl object-cover" />
       )}
 
-      {post.pollOptions && (
-        <div className="flex flex-col gap-2">
-          {post.pollOptions.map((option) => {
-            const votes = option.votes.length;
-            const pct = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
-            const votedForThis = option.votes.includes(LOCAL_USER_ID);
-            return (
-              <button
-                key={option.id}
-                onClick={() => actions.votePoll(post.id, option.id)}
-                className={`relative overflow-hidden rounded-xl border bg-[var(--color-surface-secondary)] p-3 text-left cursor-pointer ${
-                  votedForThis ? "border-[var(--color-orange)]" : "border-[var(--color-border-soft)]"
-                }`}
-              >
-                <span className="absolute inset-y-0 left-0 bg-[var(--color-orange)]/20" style={{ width: `${pct}%` }} />
-                <span className="relative flex items-center justify-between">
-                  <span className="text-sm font-medium">{option.label}</span>
-                  <span className="text-sm text-[var(--color-text-secondary)]">{pct}%</span>
-                </span>
-              </button>
-            );
-          })}
-          <p className="text-xs text-[var(--color-text-muted)]">{totalVotes} votos</p>
-        </div>
-      )}
+      {post.type === "poll" && <PollCard post={post} />}
 
       {post.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

@@ -25,7 +25,14 @@ export function MemberCard({ user, variant = "row" }: { user: DemoUser; variant?
         level={user.level}
       />
       <div className={isColumn ? "" : "min-w-0 flex-1"}>
-        <p className="truncate text-sm font-medium">{user.displayName}</p>
+        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+          <span className="truncate">{user.displayName}</span>
+          {!isColumn && user.areFriends && (
+            <span className="shrink-0 rounded-full bg-[var(--color-surface-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-cyan)]">
+              Amigo
+            </span>
+          )}
+        </p>
         <p className="truncate text-xs text-[var(--color-text-muted)]">
           {user.isOnline ? user.activityStatus || "En línea" : "Desconectado"}
         </p>

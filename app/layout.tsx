@@ -24,8 +24,13 @@ export const metadata: Metadata = {
 
 // viewportFit: "cover" es lo que hace que env(safe-area-inset-*) deje de valer 0 en iOS Safari —
 // sin esto, todo el padding de safe-area en la app (input del chat, tab bar, etc.) es inerte.
+// interactiveWidget: "resizes-visual" hace que Chrome Android encoja window.visualViewport (no el
+// layout viewport) cuando aparece el teclado — sin esto, dvh no se entera del teclado en Android y
+// cualquier posicionamiento "sticky" cerca del fondo queda en un punto arbitrario. useAppHeight()
+// (ver lib/useAppHeight.ts) escucha ese visualViewport y expone --app-height para el chat.
 export const viewport: Viewport = {
   viewportFit: "cover",
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

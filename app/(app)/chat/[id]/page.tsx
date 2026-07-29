@@ -8,7 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { BackIcon, CameraIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingBubble } from "@/components/TypingBubble";
-import { chatApi, getMyRealId } from "@/lib/api";
+import { chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -54,6 +54,7 @@ export default function ChatRoomPage() {
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
   const { typingUsers, publishTyping, removalReason } = useRoomSocket(id);
   const [memberRoles, setMemberRoles] = useState<Map<string, RoomRole>>(new Map());
+  const [peerAreFriends, setPeerAreFriends] = useState(false);
 
   useEffect(() => {
     if (!removalReason) return;
@@ -77,6 +78,19 @@ export default function ChatRoomPage() {
       .catch((error) => console.warn("[menzo/web] loadRoomMembers failed", error));
   }, [id, room?.type]);
 
+  // room.peer viene con los datos livianos del DTO de la sala (sin info de relación) — para saber
+  // si es amigo hay que pedir su perfil completo aparte, solo cuando el chat es directo. La JSX
+  // que lo muestra ya filtra por room.type === "direct", así que no hace falta resetear a false
+  // al cambiar de sala — un valor previo nunca se renderiza fuera de un chat directo.
+  const directPeerId = room?.type === "direct" ? room.peer?.id : undefined;
+  useEffect(() => {
+    if (!directPeerId) return;
+    usersApi
+      .getById(directPeerId)
+      .then((dto) => setPeerAreFriends(mapUserProfile(dto, getMyRealId()).areFriends ?? false))
+      .catch((error) => console.warn("[menzo/web] loadPeerProfile failed", error));
+  }, [directPeerId]);
+
   useEffect(() => {
     if (!id) return;
     actions.loadRoomMessages(id);
@@ -89,11 +103,13 @@ export default function ChatRoomPage() {
     setShowNewMessagesPill(false);
   }
 
-  // Sigue el contenedor de scroll real (el <main> compartido del app shell, ver AppShell.tsx) para
-  // saber si el usuario está cerca del fondo antes de decidir si un mensaje nuevo debe forzar el
-  // scroll o solo mostrar el aviso "Nuevos mensajes".
+  // Sigue el contenedor de scroll real — antes era el <main> compartido del app shell, pero esa
+  // ruta ya no scrollea (ver AppShell.tsx): /chat/[id] tiene su propia región de scroll, solo para
+  // los mensajes, así que este ref apunta directo a ella en vez de buscar un <main> ancestro.
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const container = listEndRef.current?.closest("main");
+    const container = messagesScrollRef.current;
     if (!container) return;
     function handleScroll() {
       if (!container) return;
@@ -179,11 +195,12 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col px-4 md:px-8">
-      {/* Header y barra de voz van juntos en un solo contenedor sticky — antes la barra de voz
-          (con el botón de mute y los participantes) era un bloque aparte que se iba con el
-          scroll de los mensajes, así que había que subir/bajar para volver a encontrarla. */}
-      <div className="sticky top-0 z-10">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
+      {/* Header y barra de voz van juntos, arriba de la única región con scroll — antes estaban
+          "sticky" dentro del scroll compartido de toda la página, lo que rompía por completo en
+          móvil apenas el teclado cambiaba el viewport visual (ver AppShell.tsx: esta ruta ya no
+          comparte scroll con el resto de la app, así que un simple flujo normal alcanza). */}
+      <div className="shrink-0 px-4 md:px-8">
         <div
           className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-cover bg-center py-3 backdrop-blur-md"
           style={{
@@ -207,7 +224,14 @@ export default function ChatRoomPage() {
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{headerTitle}</p>
+            <p className="flex items-center gap-1.5 truncate font-semibold">
+              <span className="truncate">{headerTitle}</span>
+              {room.type === "direct" && peerAreFriends && (
+                <span className="shrink-0 rounded-full bg-[var(--color-surface-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-cyan)]">
+                  Amigos
+                </span>
+              )}
+            </p>
             {!!headerSubtitle && (
               <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
             )}
@@ -295,66 +319,81 @@ export default function ChatRoomPage() {
         )}
       </div>
 
-      <div
-        className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
-        style={
-          room.backgroundUri
-            ? {
-                backgroundImage: `linear-gradient(rgba(7,9,13,0.62), rgba(7,9,13,0.62)), url(${room.backgroundUri})`,
-              }
-            : undefined
-        }
-      >
-        {messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
-        ) : (
-          messages.map((m, i) => {
-            const prev = messages[i - 1];
-            const showDateSeparator = !prev || !isSameDay(prev.createdAt, m.createdAt);
-            const grouped =
-              !!prev &&
-              !showDateSeparator &&
-              m.type !== "system" &&
-              prev.type === m.type &&
-              prev.authorId === m.authorId &&
-              new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60 * 1000;
-            return (
-              <Fragment key={m.id}>
-                {showDateSeparator && (
-                  <div className="flex justify-center py-1">
-                    <span className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                      {dateSeparatorLabel(m.createdAt)}
-                    </span>
-                  </div>
-                )}
-                <ChatBubble
-                  message={m}
-                  author={findUser(state.social, m.authorId)}
-                  isOwn={m.authorId === LOCAL_USER_ID}
-                  role={memberRoles.get(m.authorId)}
-                  grouped={grouped}
-                />
-              </Fragment>
-            );
-          })
+      {/* Única región con scroll de toda la pantalla — header y composer quedan afuera de este div
+          (son hermanos "shrink-0" del contenedor flex-col de más arriba), así nunca compiten por
+          el mismo espacio de scroll ni el composer puede terminar flotando en medio de la
+          conversación, que era la causa real del bug: antes esta zona NO tenía su propio scroll,
+          así que el <main> compartido de toda la app scrolleaba de punta a punta (header + todos
+          los mensajes + composer) y el composer "sticky" quedaba fijo a un <main> cuya altura no
+          se enteraba del teclado en Android — el resultado visual era el composer atrapado a mitad
+          de camino, con mensajes visibles arriba y abajo suyo. */}
+      <div ref={messagesScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-8">
+        <div
+          className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
+          style={
+            room.backgroundUri
+              ? {
+                  backgroundImage: `linear-gradient(rgba(7,9,13,0.62), rgba(7,9,13,0.62)), url(${room.backgroundUri})`,
+                }
+              : undefined
+          }
+        >
+          {messages.length === 0 ? (
+            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
+          ) : (
+            messages.map((m, i) => {
+              const prev = messages[i - 1];
+              const showDateSeparator = !prev || !isSameDay(prev.createdAt, m.createdAt);
+              const grouped =
+                !!prev &&
+                !showDateSeparator &&
+                m.type !== "system" &&
+                prev.type === m.type &&
+                prev.authorId === m.authorId &&
+                new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60 * 1000;
+              return (
+                <Fragment key={m.id}>
+                  {showDateSeparator && (
+                    <div className="flex justify-center py-1">
+                      <span className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                        {dateSeparatorLabel(m.createdAt)}
+                      </span>
+                    </div>
+                  )}
+                  <ChatBubble
+                    message={m}
+                    author={findUser(state.social, m.authorId)}
+                    isOwn={m.authorId === LOCAL_USER_ID}
+                    role={memberRoles.get(m.authorId)}
+                    grouped={grouped}
+                  />
+                </Fragment>
+              );
+            })
+          )}
+          <TypingBubble typingUsers={typingUsers} />
+          <div ref={listEndRef} />
+        </div>
+
+        {/* "sticky" acá SÍ es correcto: su contenedor de scroll es esta misma región de mensajes,
+            no toda la página, así que "bottom" se resuelve contra el borde real y visible. */}
+        {showNewMessagesPill && (
+          <div className="sticky bottom-3 z-20 flex justify-center">
+            <button
+              onClick={() => scrollToBottom(true)}
+              style={{ background: accent.color }}
+              className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-[var(--color-text-on-accent)] shadow-lg cursor-pointer"
+            >
+              Nuevos mensajes ↓
+            </button>
+          </div>
         )}
-        <TypingBubble typingUsers={typingUsers} />
-        <div ref={listEndRef} />
       </div>
 
-      {showNewMessagesPill && (
-        <div className="sticky bottom-[calc(9rem+env(safe-area-inset-bottom))] z-20 flex justify-center md:bottom-16">
-          <button
-            onClick={() => scrollToBottom(true)}
-            style={{ background: accent.color }}
-            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-[var(--color-text-on-accent)] shadow-lg cursor-pointer"
-          >
-            Nuevos mensajes ↓
-          </button>
-        </div>
-      )}
-
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
+      <div
+        className="flex shrink-0 items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 px-4 py-3 backdrop-blur-md md:px-8"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         <textarea
           value={draft}
           onChange={(e) => {
@@ -369,13 +408,13 @@ export default function ChatRoomPage() {
           }}
           placeholder="Escribe un mensaje…"
           rows={1}
-          className="flex-1 resize-none rounded-2xl border border-transparent bg-[var(--color-surface-secondary)] px-4 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-orange)] placeholder:text-[var(--color-text-muted)]"
+          className="max-h-32 flex-1 resize-none overflow-y-auto rounded-2xl border border-transparent bg-[var(--color-surface-secondary)] px-4 py-2.5 text-base outline-none transition-colors focus:border-[var(--color-orange)] placeholder:text-[var(--color-text-muted)] md:text-sm"
         />
         <button
           onClick={handleSend}
           disabled={!draft.trim() || sending}
           style={{ background: accent.color, boxShadow: `0 4px 14px -2px ${accent.color}80` }}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-text-on-accent)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-text-on-accent)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
           aria-label="Enviar mensaje"
         >
           <SendIcon />

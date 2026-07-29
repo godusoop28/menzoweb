@@ -61,7 +61,11 @@ export default function MemberProfilePage() {
   }
 
   const isFollowing = state.social.following.includes(user.id);
-  const isFriend = isFollowing && !!user.followsMe;
+  const followsMe = !!user.followsMe;
+  const isFriend = isFollowing && followsMe;
+  // "Siguiendo" y "Amigos" nunca se muestran a la vez (ver punto 16 del pedido) — una vez que hay
+  // amistad, el botón pasa a describir la acción real (dejar de seguir) en vez de repetir el badge.
+  const followButtonLabel = isFriend ? "Dejar de seguir" : isFollowing ? "Siguiendo" : followsMe ? "Seguir también" : "Seguir";
   const posts = postsByAuthor(state.social, user.id);
   const wall = wallMessagesForProfile(state.social, user.id);
 
@@ -97,7 +101,7 @@ export default function MemberProfilePage() {
             </div>
             <div className="flex gap-2">
               <GradientButton
-                label={isFollowing ? "Siguiendo" : "Seguir"}
+                label={followButtonLabel}
                 onClick={() => actions.toggleFollow(user.id)}
                 gradient={isFollowing ? "community" : "fire"}
                 size="md"
@@ -116,10 +120,17 @@ export default function MemberProfilePage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-display text-xl font-bold">{user.displayName}</h1>
-              {isFriend && (
+              {isFriend ? (
                 <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-cyan)]">
                   Amigos
                 </span>
+              ) : (
+                !isFollowing &&
+                followsMe && (
+                  <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">
+                    Te sigue
+                  </span>
+                )
               )}
             </div>
             {!!user.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{user.statusText}</p>}
