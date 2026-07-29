@@ -221,7 +221,9 @@ export function appReducer(state: AppState, action: Action): AppState {
     }
 
     case "SEND_MESSAGE":
-      return { ...state, social: { ...state.social, messages: [...state.social.messages, action.payload] } };
+      // mergeById (no un append crudo) — el eco del mismo mensaje puede llegar por WebSocket
+      // casi al mismo tiempo que responde el POST; sin dedupear por id quedaría dos veces.
+      return { ...state, social: { ...state.social, messages: mergeById(state.social.messages, [action.payload]) } };
 
     case "TOGGLE_FAVORITE_ROOM": {
       const { roomId } = action.payload;
