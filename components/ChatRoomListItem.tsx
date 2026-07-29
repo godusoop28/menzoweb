@@ -34,15 +34,20 @@ export function ChatRoomListItem({
     >
       {room.type === "direct" && room.peer ? (
         <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={48} showOnline online={room.peer.isOnline} />
-      ) : room.coverUri ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={room.coverUri} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover shadow-md" />
       ) : (
-        <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-md"
-          style={{ background: gradientCss(room.gradient) }}
-        >
-          <ChatIcon size={20} />
+        <span className="flex shrink-0 flex-col items-center gap-1">
+          {room.coverUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={room.coverUri} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
+          ) : (
+            <span
+              className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md"
+              style={{ background: gradientCss(room.gradient) }}
+            >
+              <ChatIcon size={20} />
+            </span>
+          )}
+          <span className="text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sala pública</span>
         </span>
       )}
       <span className="min-w-0 flex-1">

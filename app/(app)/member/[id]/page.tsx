@@ -124,6 +124,13 @@ export default function MemberProfilePage() {
             {!!user.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{user.statusText}</p>}
           </div>
 
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-yellow)]">
+              <span aria-hidden>★</span>
+              Nivel {user.level}
+            </span>
+          </div>
+
           <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
             <Stat value={user.reputation} label="Reputación" />
             <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />

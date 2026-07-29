@@ -4,10 +4,12 @@ import { useState } from "react";
 
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { GradientButton } from "@/components/GradientButton";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 
 export default function ChatListPage() {
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -38,9 +40,10 @@ export default function ChatListPage() {
         <h1 className="font-display text-2xl font-bold">Mis chats</h1>
         <button
           onClick={() => setShowCreate((v) => !v)}
-          className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium cursor-pointer"
+          style={{ background: accent.color }}
+          className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] cursor-pointer"
         >
-          Crear sala
+          + Crear sala
         </button>
       </div>
 

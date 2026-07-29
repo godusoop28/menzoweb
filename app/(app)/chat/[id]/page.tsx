@@ -145,19 +145,9 @@ export default function ChatRoomPage() {
         {messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
         ) : (
-          messages.map((m, i) => {
-            const prev = messages[i - 1];
-            const showAvatar = !prev || prev.authorId !== m.authorId;
-            return (
-              <ChatBubble
-                key={m.id}
-                message={m}
-                author={findUser(state.social, m.authorId)}
-                isOwn={m.authorId === LOCAL_USER_ID}
-                showAvatar={showAvatar}
-              />
-            );
-          })
+          messages.map((m) => (
+            <ChatBubble key={m.id} message={m} author={findUser(state.social, m.authorId)} isOwn={m.authorId === LOCAL_USER_ID} />
+          ))
         )}
         <div ref={listEndRef} />
       </div>

@@ -9,6 +9,7 @@ import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
 
@@ -17,6 +18,7 @@ type RoomSort = "recent" | "popular";
 
 export default function FeedPage() {
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
@@ -160,9 +162,10 @@ export default function FeedPage() {
             </div>
             <Link
               href="/chat"
-              className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium whitespace-nowrap"
+              style={{ background: accent.color }}
+              className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--color-text-on-accent)]"
             >
-              Crear sala
+              + Crear sala
             </Link>
           </div>
 
