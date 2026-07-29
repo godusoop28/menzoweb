@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
 import { getMyRealId } from "@/lib/api";
@@ -21,7 +22,6 @@ export default function ProfilePage() {
   const { state, actions } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("posts");
-  const [wallDraft, setWallDraft] = useState("");
   const profile = state.profile;
 
   useEffect(() => {
@@ -39,13 +39,6 @@ export default function ProfilePage() {
     } finally {
       setRefreshing(false);
     }
-  }
-
-  function submitWallNote() {
-    const trimmed = wallDraft.trim();
-    if (!trimmed) return;
-    actions.addWallMessage(LOCAL_USER_ID, trimmed);
-    setWallDraft("");
   }
 
   if (!profile) return null;
@@ -129,22 +122,7 @@ export default function ProfilePage() {
 
         {tab === "wall" && (
           <>
-            <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3">
-              <input
-                value={wallDraft}
-                onChange={(e) => setWallDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitWallNote()}
-                placeholder={`Escribe algo para ${profile.displayName}…`}
-                className="flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-              />
-              <button
-                onClick={submitWallNote}
-                disabled={!wallDraft.trim()}
-                className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs font-medium disabled:opacity-50 cursor-pointer"
-              >
-                Publicar
-              </button>
-            </div>
+            <WallComposer profileId={LOCAL_USER_ID} placeholder={`Escribe algo para ${profile.displayName}…`} />
             {myWall.length === 0 ? (
               <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Este muro todavía espera su primer recuerdo.</p>
             ) : (

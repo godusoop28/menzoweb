@@ -1,4 +1,4 @@
-import type { Comment, CommunityEvent, Post, UserProfile, WallMessage } from "@/lib/types";
+import type { Comment, CommunityEvent, Post, UserProfile, WallComment, WallMessage } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./localUser";
 import type { AppState, RecentlyViewedEntry, SocialState } from "./types";
@@ -49,6 +49,8 @@ export type Action =
   | { type: "CREATE_POST"; payload: Post }
   | { type: "ADD_COMMENT"; payload: Comment }
   | { type: "ADD_WALL_MESSAGE"; payload: WallMessage }
+  | { type: "ADD_WALL_COMMENT"; payload: WallComment }
+  | { type: "REMOVE_WALL_COMMENT"; payload: { id: string; wallMessageId: string } }
   | { type: "TOGGLE_FOLLOW"; payload: { userId: string } }
   | { type: "SEND_MESSAGE"; payload: import("@/lib/types").Message }
   | { type: "TOGGLE_FAVORITE_ROOM"; payload: { roomId: string } }
@@ -201,6 +203,39 @@ export function appReducer(state: AppState, action: Action): AppState {
 
     case "ADD_WALL_MESSAGE":
       return { ...state, social: { ...state.social, wallMessages: [action.payload, ...state.social.wallMessages] } };
+
+    case "ADD_WALL_COMMENT": {
+      const comment = action.payload;
+      // El mismo comentario puede llegar dos veces (respuesta del POST + eco por WebSocket) — solo
+      // se suma al contador de la publicación la primera vez que se ve ese id.
+      const isNew = !state.social.wallComments.some((c) => c.id === comment.id);
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          wallComments: mergeById(state.social.wallComments, [comment]),
+          wallMessages: isNew
+            ? state.social.wallMessages.map((m) =>
+                m.id === comment.wallMessageId ? { ...m, commentCount: m.commentCount + 1 } : m
+              )
+            : state.social.wallMessages,
+        },
+      };
+    }
+
+    case "REMOVE_WALL_COMMENT": {
+      const { id, wallMessageId } = action.payload;
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          wallComments: state.social.wallComments.filter((c) => c.id !== id),
+          wallMessages: state.social.wallMessages.map((m) =>
+            m.id === wallMessageId ? { ...m, commentCount: Math.max(0, m.commentCount - 1) } : m
+          ),
+        },
+      };
+    }
 
     case "TOGGLE_FOLLOW": {
       const { userId } = action.payload;

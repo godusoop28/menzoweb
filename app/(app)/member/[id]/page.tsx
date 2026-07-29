@@ -9,6 +9,7 @@ import { GradientButton } from "@/components/GradientButton";
 import { BackIcon } from "@/components/icons";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
 import { useAppState } from "@/lib/AppStateContext";
@@ -156,12 +157,16 @@ export default function MemberProfilePage() {
             posts.map((post) => <PostCard key={post.id} post={post} />)
           ))}
 
-        {tab === "wall" &&
-          (wall.length === 0 ? (
-            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Este muro todavía espera su primer recuerdo.</p>
-          ) : (
-            wall.map((message) => <WallMessageCard key={message.id} message={message} />)
-          ))}
+        {tab === "wall" && (
+          <>
+            <WallComposer profileId={user.id} placeholder={`Escribe algo para ${user.displayName}…`} />
+            {wall.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Este muro todavía espera su primer recuerdo.</p>
+            ) : (
+              wall.map((message) => <WallMessageCard key={message.id} message={message} />)
+            )}
+          </>
+        )}
       </div>
     </div>
   );

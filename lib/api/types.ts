@@ -226,6 +226,7 @@ export type WallMessageDto = {
   profileId: string;
   author: UserSummaryDto;
   body: string;
+  imageUri: string | null;
   createdAt: string;
   commentCount: number;
 };
@@ -233,11 +234,19 @@ export type WallMessageDto = {
 export type WallCommentDto = {
   id: string;
   wallMessageId: string;
+  parentCommentId: string | null;
   author: UserSummaryDto;
   body: string;
+  imageUri: string | null;
   createdAt: string;
   likeCount: number;
   likedByMe: boolean;
+};
+
+export type WallCommentEventDto = {
+  type: "created" | "deleted";
+  comment: WallCommentDto | null;
+  deletedCommentId: string | null;
 };
 
 export type CommunityConfigDto = {

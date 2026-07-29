@@ -75,9 +75,16 @@ type AppStateContextValue = {
     votePoll: (postId: string, optionId: string) => void;
     ensureUserLoaded: (userId: string) => Promise<void>;
     loadProfileWall: (profileId: string) => Promise<void>;
-    addWallMessage: (profileId: string, body: string) => void;
-    loadWallComments: (wallMessageId: string) => Promise<void>;
-    addWallComment: (wallMessageId: string, body: string) => Promise<void>;
+    addWallMessage: (profileId: string, body: string, imageUri?: string, imageFile?: File) => Promise<void>;
+    loadWallComments: (wallMessageId: string, page?: number) => Promise<{ hasNext: boolean } | null>;
+    addWallComment: (
+      wallMessageId: string,
+      body: string,
+      options?: { imageUri?: string; imageFile?: File; parentCommentId?: string }
+    ) => Promise<void>;
+    deleteWallComment: (commentId: string, wallMessageId: string) => Promise<void>;
+    receiveWallComment: (dto: import("@/lib/api").WallCommentDto) => void;
+    removeWallComment: (commentId: string, wallMessageId: string) => void;
     toggleWallCommentLike: (commentId: string, wallMessageId: string) => Promise<void>;
     toggleFollow: (userId: string) => void;
     openDirectMessage: (userId: string) => Promise<string | null>;
@@ -531,35 +538,76 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    function addWallMessage(profileId: string, body: string) {
+    async function addWallMessage(profileId: string, body: string, imageUri?: string, imageFile?: File) {
       if (!hasSession()) return;
       const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
       if (!targetId) return;
-      usersApi
-        .postWall(targetId, body)
-        .then((dto) => dispatch({ type: "ADD_WALL_MESSAGE", payload: mapWallMessage(dto, getMyRealId()) }))
-        .catch((error) => console.warn("[menzo/api] addWallMessage failed", error));
-    }
-
-    async function loadWallComments(wallMessageId: string) {
       try {
-        const dtos = await usersApi.wallComments(wallMessageId);
-        const myRealId = getMyRealId();
-        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: dtos.map((dto) => mapWallComment(dto, myRealId)) } });
+        const uploaded = await ensureUploaded(imageUri, imageFile);
+        const dto = await usersApi.postWall(targetId, body, uploaded);
+        dispatch({ type: "ADD_WALL_MESSAGE", payload: mapWallMessage(dto, getMyRealId()) });
       } catch (error) {
-        console.warn("[menzo/api] loadWallComments failed", error);
+        console.warn("[menzo/api] addWallMessage failed", error);
+        showToast("No pudimos publicar en el muro. Inténtalo de nuevo.");
       }
     }
 
-    async function addWallComment(wallMessageId: string, body: string) {
+    async function loadWallComments(wallMessageId: string, page = 0) {
+      try {
+        const result = await usersApi.wallComments(wallMessageId, page);
+        const myRealId = getMyRealId();
+        dispatch({
+          type: "MERGE_SOCIAL",
+          payload: {
+            wallComments: result.items.map((dto) => mapWallComment(dto, myRealId)),
+            users: result.items.map((dto) => mapUserSummary(dto.author, myRealId)),
+          },
+        });
+        return { hasNext: result.hasNext };
+      } catch (error) {
+        console.warn("[menzo/api] loadWallComments failed", error);
+        return null;
+      }
+    }
+
+    async function addWallComment(
+      wallMessageId: string,
+      body: string,
+      options?: { imageUri?: string; imageFile?: File; parentCommentId?: string }
+    ) {
       if (!hasSession()) return;
       try {
-        const dto = await usersApi.addWallComment(wallMessageId, body);
-        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: [mapWallComment(dto, getMyRealId())] } });
+        const uploaded = await ensureUploaded(options?.imageUri, options?.imageFile);
+        const dto = await usersApi.addWallComment(wallMessageId, body, uploaded, options?.parentCommentId);
+        dispatch({ type: "ADD_WALL_COMMENT", payload: mapWallComment(dto, getMyRealId()) });
       } catch (error) {
         console.warn("[menzo/api] addWallComment failed", error);
         showToast("No pudimos publicar el comentario. Inténtalo de nuevo.");
       }
+    }
+
+    async function deleteWallComment(commentId: string, wallMessageId: string) {
+      if (!hasSession()) return;
+      try {
+        await usersApi.deleteWallComment(commentId);
+        dispatch({ type: "REMOVE_WALL_COMMENT", payload: { id: commentId, wallMessageId } });
+      } catch (error) {
+        console.warn("[menzo/api] deleteWallComment failed", error);
+        showToast("No pudimos borrar el comentario. Inténtalo de nuevo.");
+      }
+    }
+
+    /** Un comentario empujado por WebSocket (propio o ajeno) — ADD_WALL_COMMENT ya dedupea por id,
+     * así que si este mismo comentario ya se agregó de forma optimista via addWallComment() no se
+     * duplica ni se cuenta dos veces. */
+    function receiveWallComment(dto: import("@/lib/api").WallCommentDto) {
+      const myRealId = getMyRealId();
+      dispatch({ type: "MERGE_SOCIAL", payload: { users: [mapUserSummary(dto.author, myRealId)] } });
+      dispatch({ type: "ADD_WALL_COMMENT", payload: mapWallComment(dto, myRealId) });
+    }
+
+    function removeWallComment(commentId: string, wallMessageId: string) {
+      dispatch({ type: "REMOVE_WALL_COMMENT", payload: { id: commentId, wallMessageId } });
     }
 
     async function toggleWallCommentLike(commentId: string, wallMessageId: string) {
@@ -571,9 +619,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         } else {
           await usersApi.likeWallComment(commentId);
         }
-        const dtos = await usersApi.wallComments(wallMessageId);
+        const result = await usersApi.wallComments(wallMessageId);
         const myRealId = getMyRealId();
-        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: dtos.map((dto) => mapWallComment(dto, myRealId)) } });
+        dispatch({ type: "MERGE_SOCIAL", payload: { wallComments: result.items.map((dto) => mapWallComment(dto, myRealId)) } });
       } catch (error) {
         console.warn("[menzo/api] toggleWallCommentLike failed", error);
       }
@@ -713,6 +761,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addWallMessage,
       loadWallComments,
       addWallComment,
+      deleteWallComment,
+      receiveWallComment,
+      removeWallComment,
       toggleWallCommentLike,
       toggleFollow,
       openDirectMessage,

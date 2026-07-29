@@ -156,6 +156,7 @@ export type WallMessage = {
   profileId: string;
   authorId: string;
   body: string;
+  imageUri?: string;
   createdAt: string;
   commentCount: number;
 };
@@ -163,8 +164,10 @@ export type WallMessage = {
 export type WallComment = {
   id: string;
   wallMessageId: string;
+  parentCommentId?: string;
   authorId: string;
   body: string;
+  imageUri?: string;
   createdAt: string;
   likeCount: number;
   likedByMe: boolean;
