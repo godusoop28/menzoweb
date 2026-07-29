@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, CameraIcon, ImageIcon, SendIcon } from "@/components/icons";
+import { BackIcon, CameraIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingBubble } from "@/components/TypingBubble";
 import { useAccent } from "@/lib/AccentContext";
@@ -12,23 +13,37 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import { useToast } from "@/lib/ToastContext";
 import { useVoiceRoom } from "@/lib/voice/useVoiceRoom";
+
+const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
 export default function ChatRoomPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const showToast = useToast();
   const voice = useVoiceRoom(id);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+  const [showNewMessagesPill, setShowNewMessagesPill] = useState(false);
 
   const room = findRoom(state.social, id);
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
-  const { typingUsers, publishTyping } = useRoomSocket(id);
+  const { typingUsers, publishTyping, removalReason } = useRoomSocket(id);
+
+  useEffect(() => {
+    if (!removalReason) return;
+    showToast(removalReason === "banned" ? "Fuiste baneado de esta sala." : "Fuiste expulsado de esta sala.");
+    router.push("/chat");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removalReason]);
 
   useEffect(() => {
     if (!id) return;
@@ -36,9 +51,55 @@ export default function ChatRoomPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  function scrollToBottom(smooth: boolean) {
+    listEndRef.current?.scrollIntoView({ block: "end", behavior: smooth ? "smooth" : "auto" });
+    isNearBottomRef.current = true;
+    setShowNewMessagesPill(false);
+  }
+
+  // Sigue el contenedor de scroll real (el <main> compartido del app shell, ver AppShell.tsx) para
+  // saber si el usuario está cerca del fondo antes de decidir si un mensaje nuevo debe forzar el
+  // scroll o solo mostrar el aviso "Nuevos mensajes".
   useEffect(() => {
-    listEndRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, typingUsers.length]);
+    const container = listEndRef.current?.closest("main");
+    if (!container) return;
+    function handleScroll() {
+      if (!container) return;
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      isNearBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX;
+      if (isNearBottomRef.current) setShowNewMessagesPill(false);
+    }
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [id]);
+
+  // Cambiar de sala SIEMPRE debe caer al fondo, sin importar si la nueva sala tiene la misma
+  // cantidad de mensajes que la anterior — esa coincidencia es justo lo que rompía el scroll antes
+  // (el efecto solo dependía de messages.length, así que a veces nunca se volvía a disparar).
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- imperative scroll-position sync on room switch, not derived render state; must run synchronously before paint
+    scrollToBottom(false);
+    prevMessageCountRef.current = messages.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Mensaje propio: siempre baja. Mensaje ajeno: solo baja si ya estábamos cerca del fondo; si no,
+  // se muestra el aviso "Nuevos mensajes" en vez de arrancar al usuario de lo que estaba leyendo.
+  useLayoutEffect(() => {
+    const prevCount = prevMessageCountRef.current;
+    const newCount = messages.length;
+    if (newCount > prevCount) {
+      const lastMessage = messages[newCount - 1];
+      if (lastMessage?.authorId === LOCAL_USER_ID || isNearBottomRef.current) {
+        scrollToBottom(false);
+      } else {
+        setShowNewMessagesPill(true);
+      }
+    }
+    prevMessageCountRef.current = newCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
 
   async function handleSend() {
     const trimmed = draft.trim();
@@ -47,7 +108,7 @@ export default function ChatRoomPage() {
     try {
       await actions.sendMessage(id, trimmed);
       setDraft("");
-      requestAnimationFrame(() => listEndRef.current?.scrollIntoView({ block: "end" }));
+      requestAnimationFrame(() => scrollToBottom(true));
     } catch (error) {
       console.warn("[menzo/web] sendMessage failed", error);
     } finally {
@@ -117,6 +178,16 @@ export default function ChatRoomPage() {
         </div>
         <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
         <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
+        {room.type === "public" && (
+          <Link
+            href={`/chat/${id}/members`}
+            aria-label="Ver miembros"
+            title="Miembros"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          >
+            <UsersIcon size={15} />
+          </Link>
+        )}
         <button
           onClick={() => coverInputRef.current?.click()}
           aria-label="Cambiar portada de la sala"
@@ -207,6 +278,18 @@ export default function ChatRoomPage() {
         <TypingBubble typingUsers={typingUsers} />
         <div ref={listEndRef} />
       </div>
+
+      {showNewMessagesPill && (
+        <div className="sticky bottom-36 z-20 flex justify-center md:bottom-16">
+          <button
+            onClick={() => scrollToBottom(true)}
+            style={{ background: accent.color }}
+            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-[var(--color-text-on-accent)] shadow-lg cursor-pointer"
+          >
+            Nuevos mensajes ↓
+          </button>
+        </div>
+      )}
 
       <div className="sticky bottom-20 z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
         <textarea

@@ -17,6 +17,7 @@ const NAV_ITEMS = [
 ];
 
 const SECONDARY_ITEMS = [
+  { href: "/chat/public", label: "Chats públicos", icon: ChatIcon },
   { href: "/search", label: "Buscar", icon: SearchIcon },
   { href: "/events", label: "Eventos", icon: CalendarIcon },
   { href: "/notifications", label: "Notificaciones", icon: BellIcon },

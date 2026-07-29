@@ -144,6 +144,8 @@ export type CreateRoomRequest = {
   icon?: string;
 };
 
+export type RoomRole = "OWNER" | "CO_HOST" | "MEMBER";
+
 export type ChatRoomDto = {
   id: string;
   slug: string | null;
@@ -160,8 +162,26 @@ export type ChatRoomDto = {
   onlineCount: number;
   favorite: boolean;
   joined: boolean;
+  role: RoomRole | null;
+  live: boolean;
   createdAt: string;
   lastMessage: ChatRoomLastMessageDto | null;
+};
+
+export type RoomMemberDto = { user: UserSummaryDto; role: RoomRole; joinedAt: string };
+
+export type BanDto = { user: UserSummaryDto; reason: string | null; createdAt: string; bannedBy: UserSummaryDto | null };
+
+export type ModerationActionRequest = { reason?: string };
+
+export type RoomModerationEvent = {
+  type: "ROLE_CHANGED" | "KICKED" | "BANNED" | "INVITED";
+  roomId: string;
+  targetUserId: string;
+  targetDisplayName: string;
+  actorUserId: string;
+  actorDisplayName: string;
+  newRole: RoomRole | null;
 };
 
 export type UpdateRoomRequest = {

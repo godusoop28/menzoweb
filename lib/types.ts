@@ -104,6 +104,7 @@ export type Message = {
 };
 
 export type ChatRoomType = "public" | "direct";
+export type ChatRoomRole = "owner" | "co_host" | "member";
 
 export type ChatPeer = {
   id: string;
@@ -128,6 +129,8 @@ export type ChatRoom = {
   onlineCount: number;
   favorite: boolean;
   joined: boolean;
+  role: ChatRoomRole | null;
+  live: boolean;
   createdAt: string;
   peer?: ChatPeer;
   lastMessage?: ChatRoomLastMessage;
@@ -139,6 +142,10 @@ export type ChatRoomLastMessage = {
   senderId: string;
   createdAt: string;
 };
+
+export type RoomMember = { user: DemoUser; role: ChatRoomRole; joinedAt: string };
+
+export type RoomBan = { user: DemoUser; reason: string | null; createdAt: string; bannedBy: DemoUser | null };
 
 export type WallMessage = {
   id: string;

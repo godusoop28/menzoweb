@@ -36,17 +36,24 @@ export function ChatRoomListItem({
         <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={48} showOnline online={room.peer.isOnline} />
       ) : (
         <span className="flex shrink-0 flex-col items-center gap-1">
-          {room.coverUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={room.coverUri} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
-          ) : (
-            <span
-              className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md"
-              style={{ background: gradientCss(room.gradient) }}
-            >
-              <ChatIcon size={20} />
-            </span>
-          )}
+          <span className="relative">
+            {room.coverUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={room.coverUri} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
+            ) : (
+              <span
+                className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md"
+                style={{ background: gradientCss(room.gradient) }}
+              >
+                <ChatIcon size={20} />
+              </span>
+            )}
+            {room.live && (
+              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-[var(--color-coral)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow">
+                Live
+              </span>
+            )}
+          </span>
           <span className="text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sala pública</span>
         </span>
       )}
