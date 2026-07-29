@@ -8,6 +8,7 @@ import { useAppState } from "@/lib/AppStateContext";
 
 import { Avatar } from "./Avatar";
 import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
+import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: HomeIcon },
@@ -190,6 +191,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+
+      <PersistentVoiceBubble />
     </div>
   );
 }

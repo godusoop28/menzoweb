@@ -65,6 +65,7 @@ type AppStateContextValue = {
     toggleFavoriteRoom: (roomId: string) => void;
     joinRoom: (roomId: string) => Promise<void>;
     loadDiscoverRooms: (sort?: "recent" | "popular") => Promise<void>;
+    loadLiveRooms: () => Promise<void>;
     updateRoomCover: (roomId: string, coverUri: string, file?: File) => Promise<void>;
     updateRoomBackground: (roomId: string, backgroundUri: string, file?: File) => Promise<void>;
     refreshSocial: () => Promise<void>;
@@ -413,6 +414,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    async function loadLiveRooms() {
+      try {
+        const dtos = await chatApi.liveRooms();
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: dtos.map((dto) => mapChatRoom(dto, myRealId)) } });
+      } catch (error) {
+        console.warn("[menzo/api] loadLiveRooms failed", error);
+      }
+    }
+
     async function updateRoomCover(roomId: string, coverUri: string, file?: File) {
       if (!hasSession()) return;
       try {
@@ -689,6 +700,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleFavoriteRoom,
       joinRoom,
       loadDiscoverRooms,
+      loadLiveRooms,
       updateRoomCover,
       updateRoomBackground,
       refreshSocial,

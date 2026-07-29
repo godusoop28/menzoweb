@@ -14,7 +14,7 @@ import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { useToast } from "@/lib/ToastContext";
-import { useVoiceRoom } from "@/lib/voice/useVoiceRoom";
+import { useVoiceRoomContext } from "@/lib/voice/VoiceRoomContext";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
@@ -24,7 +24,20 @@ export default function ChatRoomPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
   const showToast = useToast();
-  const voice = useVoiceRoom(id);
+  const voiceCtx = useVoiceRoomContext();
+  // El provider de voz es global (sobrevive a la navegación) — acá se recorta a "¿esta sala
+  // específica está en vivo para mí?" para que el resto de esta pantalla no tenga que cambiar.
+  const isThisRoomLive = voiceCtx.activeRoomId === id;
+  const voice = {
+    connected: voiceCtx.connected && isThisRoomLive,
+    connecting: voiceCtx.connecting && isThisRoomLive,
+    muted: voiceCtx.muted,
+    participants: isThisRoomLive ? voiceCtx.participants : [],
+    speakingLevels: isThisRoomLive ? voiceCtx.speakingLevels : new Map<string, number>(),
+    join: () => (id ? voiceCtx.join(id) : Promise.resolve()),
+    leave: voiceCtx.leave,
+    toggleMute: voiceCtx.toggleMute,
+  };
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);

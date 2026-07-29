@@ -7,6 +7,7 @@ import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityHero } from "@/components/CommunityHero";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
+import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
@@ -32,6 +33,15 @@ export default function FeedPage() {
     if (tab === "descubrir") actions.loadDiscoverRooms(roomSort);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, roomSort]);
+
+  useEffect(() => {
+    actions.loadLiveRooms();
+    const interval = setInterval(() => actions.loadLiveRooms(), 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const liveRooms = useMemo(() => state.social.rooms.filter((r) => r.type === "public" && r.live), [state.social.rooms]);
 
   const discoverRooms = useMemo(() => {
     const publicRooms = state.social.rooms.filter((r) => r.type === "public");
@@ -80,6 +90,8 @@ export default function FeedPage() {
       </div>
 
       <CommunityHero previewMembers={onlineMembers} />
+
+      <LiveRoomsCarousel rooms={liveRooms} />
 
       <SegmentedTabs
         value={tab}
