@@ -44,15 +44,15 @@ export default function OnboardingConfirmPage() {
     <div className="flex min-h-[80vh] flex-col justify-between gap-8">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-bold">Tu lugar sigue aquí.</h1>
-          <p className="text-[var(--color-text-secondary)]">Bienvenido de vuelta, {draft.displayName}.</p>
+          <h1 className="font-display text-3xl font-bold">Tu perfil está listo.</h1>
+          <p className="text-[var(--color-text-secondary)]">Bienvenido a Menzo, {draft.displayName}.</p>
         </div>
 
         <div className="menzo-fade-in rounded-3xl p-0.5 shadow-2xl" style={{ background: gradientCss(aura.gradient) }}>
           <div className="flex flex-col items-center gap-1 rounded-[calc(1.5rem-2px)] bg-black/40 px-8 py-10 backdrop-blur-sm">
             <Avatar name={draft.displayName} avatarUri={draft.avatarUri} gradient={draft.avatarGradient} size={96} showOnline online />
             <p className="mt-3 text-xl font-semibold text-white">{draft.displayName}</p>
-            <p className="text-sm text-white/75">Acaba de regresar · Aura {aura.name}</p>
+            <p className="text-sm text-white/75">Nuevo en Menzo · Aura {aura.name}</p>
           </div>
         </div>
 

@@ -106,7 +106,7 @@ export default function SettingsPage() {
         </>
       )}
 
-      <p className="text-xs text-[var(--color-text-muted)]">Menzo Web · Volver también es avanzar.</p>
+      <p className="text-xs text-[var(--color-text-muted)]">Menzo Web · Conecta. Comparte. Crea.</p>
     </div>
   );
 }

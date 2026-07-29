@@ -6,8 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, CameraIcon, ImageIcon, SendIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { TypingBubble } from "@/components/TypingBubble";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { useVoiceRoom } from "@/lib/voice/useVoiceRoom";
@@ -26,18 +28,17 @@ export default function ChatRoomPage() {
 
   const room = findRoom(state.social, id);
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
+  const { typingUsers, publishTyping } = useRoomSocket(id);
 
   useEffect(() => {
     if (!id) return;
     actions.loadRoomMessages(id);
-    const interval = setInterval(() => actions.loadRoomMessages(id), 5000);
-    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [messages.length, typingUsers.length]);
 
   async function handleSend() {
     const trimmed = draft.trim();
@@ -135,36 +136,38 @@ export default function ChatRoomPage() {
         <button
           onClick={voice.connected ? voice.leave : voice.join}
           disabled={voice.connecting}
-          aria-label={voice.connected ? "Salir de la voz" : "Unirse a la voz"}
-          title={voice.connected ? "Salir de la voz" : "Unirse a la voz"}
-          style={voice.connected ? { background: accent.color } : undefined}
-          className={`relative flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-60 cursor-pointer ${
-            voice.connected ? "" : "bg-black/40 hover:bg-black/60"
+          aria-label={voice.connected ? "Salir del live" : "Unirse al live"}
+          title={voice.connected ? "Salir del live" : "Unirse al live"}
+          className={`relative flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-60 cursor-pointer ${
+            voice.connected ? "bg-[var(--color-coral)]" : "bg-black/40 hover:bg-black/60"
           }`}
         >
-          <span aria-hidden>🎙️</span>
-          {voice.participants.length > 0 && <span>{voice.participants.length}</span>}
+          {voice.connected && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />}
+          <span>Live</span>
+          {voice.participants.length > 0 && <span className="font-normal normal-case">{voice.participants.length}</span>}
         </button>
       </div>
 
       {(voice.connected || voice.participants.length > 0) && (
         <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2.5">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            {voice.participants.map((p) => (
-              <div key={p.id} className="flex items-center gap-1.5 rounded-full bg-[var(--color-surface-secondary)] py-1 pl-1 pr-2.5">
-                <span
-                  className="rounded-full"
-                  style={
-                    voice.speakingUserIds.has(p.id)
-                      ? { boxShadow: `0 0 0 2px ${accent.color}` }
-                      : undefined
-                  }
-                >
-                  <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={24} />
-                </span>
-                <span className="text-xs font-medium">{p.displayName}</span>
-              </div>
-            ))}
+          <div className="flex flex-1 flex-wrap items-center gap-3">
+            {voice.participants.map((p) => {
+              const level = voice.speakingLevels.get(p.id) ?? 0;
+              return (
+                <div key={p.id} className="flex flex-col items-center gap-1">
+                  <span
+                    className="flex items-center justify-center rounded-full transition-transform duration-150 ease-out"
+                    style={{
+                      transform: `scale(${1 + level * 0.22})`,
+                      boxShadow: level > 0.05 ? `0 0 ${6 + level * 14}px ${level * 3}px ${accent.color}80` : undefined,
+                    }}
+                  >
+                    <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={40} />
+                  </span>
+                  <span className="max-w-[64px] truncate text-[11px] font-medium">{p.displayName}</span>
+                </div>
+              );
+            })}
             {voice.participants.length === 0 && (
               <span className="text-xs text-[var(--color-text-muted)]">Nadie en la voz todavía</span>
             )}
@@ -201,13 +204,17 @@ export default function ChatRoomPage() {
             <ChatBubble key={m.id} message={m} author={findUser(state.social, m.authorId)} isOwn={m.authorId === LOCAL_USER_ID} />
           ))
         )}
+        <TypingBubble typingUsers={typingUsers} />
         <div ref={listEndRef} />
       </div>
 
       <div className="sticky bottom-20 z-10 flex items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 py-3 backdrop-blur-md md:bottom-0">
         <textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (e.target.value.trim()) publishTyping();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

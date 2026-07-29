@@ -6,14 +6,17 @@ import AgoraRTC, { type IAgoraRTCClient, type IMicrophoneAudioTrack } from "agor
 import { getMyRealId, mapUserSummary, voiceApi } from "@/lib/api";
 import type { DemoUser } from "@/lib/types";
 
-const SPEAKING_VOLUME_THRESHOLD = 5;
+/** Nivel de Agora (0-100) normalizado a 0-1 para que la UI no tenga que conocer la escala del SDK. */
+function normalizeLevel(level: number): number {
+  return Math.max(0, Math.min(1, level / 100));
+}
 
 export function useVoiceRoom(roomId: string | undefined) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [muted, setMuted] = useState(false);
   const [participants, setParticipants] = useState<DemoUser[]>([]);
-  const [speakingUserIds, setSpeakingUserIds] = useState<Set<string>>(new Set());
+  const [speakingLevels, setSpeakingLevels] = useState<Map<string, number>>(new Map());
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const trackRef = useRef<IMicrophoneAudioTrack | null>(null);
 
@@ -46,7 +49,7 @@ export function useVoiceRoom(roomId: string | undefined) {
       await client.leave().catch(() => {});
     }
     setConnected(false);
-    setSpeakingUserIds(new Set());
+    setSpeakingLevels(new Map());
   }, []);
 
   const join = useCallback(async () => {
@@ -59,11 +62,11 @@ export function useVoiceRoom(roomId: string | undefined) {
 
       client.enableAudioVolumeIndicator();
       client.on("volume-indicator", (volumes) => {
-        const speaking = new Set<string>();
+        const levels = new Map<string, number>();
         for (const v of volumes) {
-          if (v.level > SPEAKING_VOLUME_THRESHOLD) speaking.add(String(v.uid));
+          levels.set(String(v.uid), normalizeLevel(v.level));
         }
-        setSpeakingUserIds(speaking);
+        setSpeakingLevels(levels);
       });
       client.on("user-published", async (user, mediaType) => {
         await client.subscribe(user, mediaType);
@@ -113,5 +116,5 @@ export function useVoiceRoom(roomId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  return { connected, connecting, muted, participants, speakingUserIds, join, leave, toggleMute };
+  return { connected, connecting, muted, participants, speakingLevels, join, leave, toggleMute };
 }

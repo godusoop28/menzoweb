@@ -18,7 +18,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Menzo",
-  description: "Volver también es avanzar.",
+  description: "Conecta, comparte y descubre gente con tus mismos intereses.",
   icons: { icon: "/branding/favicon.png" },
 };
 

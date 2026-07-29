@@ -26,9 +26,9 @@ export default function OnboardingNamePage() {
     <div className="flex min-h-[80vh] flex-col justify-between gap-8">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-bold">¿Cómo quieres que te recuerden?</h1>
+          <h1 className="font-display text-3xl font-bold">¿Cómo quieres que te conozcan?</h1>
           <p className="text-[var(--color-text-secondary)]">
-            Puede ser tu antiguo apodo, tu nombre actual o una identidad completamente nueva.
+            Puede ser tu apodo de siempre, tu nombre actual o una identidad completamente nueva.
           </p>
         </div>
 
@@ -55,7 +55,7 @@ export default function OnboardingNamePage() {
             <Avatar name={trimmed} gradient="fire" size={64} />
             <div>
               <p className="text-lg font-semibold">{trimmed}</p>
-              <p className="text-sm text-[var(--color-text-muted)]">Acaba de regresar</p>
+              <p className="text-sm text-[var(--color-text-muted)]">Nuevo en Menzo</p>
             </div>
           </div>
         )}

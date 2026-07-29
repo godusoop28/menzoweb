@@ -115,7 +115,7 @@ export default function FeedPage() {
             >
               <div className="absolute inset-0 bg-[rgba(7,9,13,0.3)]" />
               <div className="relative flex flex-col gap-0.5 text-white">
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/85">El reencuentro brilla más aquí</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/85">Lo mejor de la semana</span>
                 <h2 className="font-display text-2xl font-bold">Destacados</h2>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function FeedPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <h3 className="font-display text-lg font-bold">Recuerdos que regresaron</h3>
+              <h3 className="font-display text-lg font-bold">También te puede interesar</h3>
               <div className="flex snap-x gap-4 overflow-x-auto pb-1">
                 {[...featured].reverse().map((post) => (
                   <div key={`memory-${post.id}`} className="w-[220px] shrink-0 snap-start">

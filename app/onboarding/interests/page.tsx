@@ -16,7 +16,7 @@ export default function OnboardingInterestsPage() {
     <div className="flex min-h-[80vh] flex-col justify-between gap-8">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-bold">¿Qué te sigue haciendo sentir en casa?</h1>
+          <h1 className="font-display text-3xl font-bold">¿Qué te interesa?</h1>
           <p className="text-[var(--color-text-secondary)]">Elige entre 1 y 5 intereses.</p>
         </div>
 

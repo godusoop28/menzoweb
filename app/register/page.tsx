@@ -49,7 +49,7 @@ export default function RegisterPage() {
     <ScreenBackground src="/backgrounds/background-onboarding.png" overlay={0.62}>
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-8 px-6 py-12">
         <div className="menzo-fade-in flex flex-col gap-2 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-orange)]">Hay nombres que nunca se olvidan</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-orange)]">Únete a Menzo</p>
           <h1 className="font-display text-3xl font-bold">Crea tu cuenta</h1>
           <p className="text-[var(--color-text-secondary)]">La necesitas para guardar tu perfil y volver a entrar después.</p>
         </div>

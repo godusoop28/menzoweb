@@ -60,6 +60,7 @@ type AppStateContextValue = {
     }) => Promise<void>;
     sendMessage: (roomId: string, body: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
+    receiveRoomMessage: (dto: import("@/lib/api").MessageDto) => void;
     createRoom: (payload: { name: string; description?: string; topic?: string }) => Promise<string | null>;
     toggleFavoriteRoom: (roomId: string) => void;
     joinRoom: (roomId: string) => Promise<void>;
@@ -359,6 +360,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.warn("[menzo/api] loadRoomMessages failed", error);
       }
+    }
+
+    /** Un mensaje empujado por WebSocket (propio o ajeno) — MERGE_SOCIAL ya deduplica por id, así
+     * que si este mismo mensaje ya se agregó de forma optimista via sendMessage() no se duplica. */
+    function receiveRoomMessage(dto: import("@/lib/api").MessageDto) {
+      const myRealId = getMyRealId();
+      const users = dto.author ? [mapUserSummary(dto.author, myRealId)] : [];
+      dispatch({ type: "MERGE_SOCIAL", payload: { messages: [mapMessage(dto, myRealId)], users } });
     }
 
     async function createRoom(payload: { name: string; description?: string; topic?: string }): Promise<string | null> {
@@ -675,6 +684,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       createPost,
       sendMessage,
       loadRoomMessages,
+      receiveRoomMessage,
       createRoom,
       toggleFavoriteRoom,
       joinRoom,
