@@ -10,12 +10,14 @@ import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import { useVoiceRoom } from "@/lib/voice/useVoiceRoom";
 
 export default function ChatRoomPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const voice = useVoiceRoom(id);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
@@ -130,7 +132,57 @@ export default function ChatRoomPage() {
         >
           <ImageIcon size={15} />
         </button>
+        <button
+          onClick={voice.connected ? voice.leave : voice.join}
+          disabled={voice.connecting}
+          aria-label={voice.connected ? "Salir de la voz" : "Unirse a la voz"}
+          title={voice.connected ? "Salir de la voz" : "Unirse a la voz"}
+          style={voice.connected ? { background: accent.color } : undefined}
+          className={`relative flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-60 cursor-pointer ${
+            voice.connected ? "" : "bg-black/40 hover:bg-black/60"
+          }`}
+        >
+          <span aria-hidden>🎙️</span>
+          {voice.participants.length > 0 && <span>{voice.participants.length}</span>}
+        </button>
       </div>
+
+      {(voice.connected || voice.participants.length > 0) && (
+        <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2.5">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {voice.participants.map((p) => (
+              <div key={p.id} className="flex items-center gap-1.5 rounded-full bg-[var(--color-surface-secondary)] py-1 pl-1 pr-2.5">
+                <span
+                  className="rounded-full"
+                  style={
+                    voice.speakingUserIds.has(p.id)
+                      ? { boxShadow: `0 0 0 2px ${accent.color}` }
+                      : undefined
+                  }
+                >
+                  <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={24} />
+                </span>
+                <span className="text-xs font-medium">{p.displayName}</span>
+              </div>
+            ))}
+            {voice.participants.length === 0 && (
+              <span className="text-xs text-[var(--color-text-muted)]">Nadie en la voz todavía</span>
+            )}
+          </div>
+          {voice.connected && (
+            <button
+              onClick={voice.toggleMute}
+              aria-label={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
+              title={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
+                voice.muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
+              }`}
+            >
+              {voice.muted ? "🔇" : "🎤"}
+            </button>
+          )}
+        </div>
+      )}
 
       <div
         className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
