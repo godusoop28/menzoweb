@@ -12,7 +12,7 @@ import { Colors, gradientCss } from "@/lib/theme";
 import type { AuraId } from "@/lib/types";
 import { collapseSpaces, isValidDisplayName, NAME_MAX } from "@/lib/validation";
 
-const BACKGROUND_COLORS = [
+const BACKGROUND_COLORS: string[] = [
   Colors.orange,
   Colors.coral,
   Colors.blue,
@@ -225,6 +225,24 @@ export default function EditProfilePage() {
                   aria-label={`Fondo color ${color}`}
                 />
               ))}
+              <label
+                className="relative h-8 w-8 shrink-0 cursor-pointer rounded-full border-2 border-dashed border-[var(--color-border-strong)]"
+                style={
+                  backgroundColor && !BACKGROUND_COLORS.includes(backgroundColor) ? { background: backgroundColor, borderStyle: "solid" } : undefined
+                }
+                title="Elegir cualquier color"
+              >
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
+                  {backgroundColor && !BACKGROUND_COLORS.includes(backgroundColor) ? "" : "+"}
+                </span>
+                <input
+                  type="color"
+                  value={backgroundColor || "#111111"}
+                  onChange={(e) => handlePickBackgroundColor(e.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  aria-label="Elegir cualquier color de fondo"
+                />
+              </label>
               <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
               <button
                 onClick={() => backgroundInputRef.current?.click()}

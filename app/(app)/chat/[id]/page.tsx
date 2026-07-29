@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, CameraIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingBubble } from "@/components/TypingBubble";
+import { chatApi, getMyRealId } from "@/lib/api";
+import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import { dateSeparatorLabel, isSameDay } from "@/lib/time";
 import { useToast } from "@/lib/ToastContext";
 import { useVoiceRoomContext } from "@/lib/voice/VoiceRoomContext";
 
@@ -50,6 +53,7 @@ export default function ChatRoomPage() {
   const room = findRoom(state.social, id);
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
   const { typingUsers, publishTyping, removalReason } = useRoomSocket(id);
+  const [memberRoles, setMemberRoles] = useState<Map<string, RoomRole>>(new Map());
 
   useEffect(() => {
     if (!removalReason) return;
@@ -57,6 +61,21 @@ export default function ChatRoomPage() {
     router.push("/chat");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [removalReason]);
+
+  useEffect(() => {
+    if (!id || room?.type !== "public") return;
+    chatApi
+      .members(id)
+      .then((dtos) => {
+        const myRealId = getMyRealId();
+        const map = new Map<string, RoomRole>();
+        for (const dto of dtos) {
+          map.set(dto.user.id === myRealId ? LOCAL_USER_ID : dto.user.id, dto.role);
+        }
+        setMemberRoles(map);
+      })
+      .catch((error) => console.warn("[menzo/web] loadRoomMembers failed", error));
+  }, [id, room?.type]);
 
   useEffect(() => {
     if (!id) return;
@@ -289,9 +308,35 @@ export default function ChatRoomPage() {
         {messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
         ) : (
-          messages.map((m) => (
-            <ChatBubble key={m.id} message={m} author={findUser(state.social, m.authorId)} isOwn={m.authorId === LOCAL_USER_ID} />
-          ))
+          messages.map((m, i) => {
+            const prev = messages[i - 1];
+            const showDateSeparator = !prev || !isSameDay(prev.createdAt, m.createdAt);
+            const grouped =
+              !!prev &&
+              !showDateSeparator &&
+              m.type !== "system" &&
+              prev.type === m.type &&
+              prev.authorId === m.authorId &&
+              new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60 * 1000;
+            return (
+              <Fragment key={m.id}>
+                {showDateSeparator && (
+                  <div className="flex justify-center py-1">
+                    <span className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                      {dateSeparatorLabel(m.createdAt)}
+                    </span>
+                  </div>
+                )}
+                <ChatBubble
+                  message={m}
+                  author={findUser(state.social, m.authorId)}
+                  isOwn={m.authorId === LOCAL_USER_ID}
+                  role={memberRoles.get(m.authorId)}
+                  grouped={grouped}
+                />
+              </Fragment>
+            );
+          })
         )}
         <TypingBubble typingUsers={typingUsers} />
         <div ref={listEndRef} />
