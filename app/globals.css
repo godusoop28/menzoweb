@@ -109,3 +109,40 @@ textarea {
 .menzo-typing-dot {
   animation: menzo-typing-dot 1.2s ease-in-out infinite;
 }
+
+/* Animaciones discretas de MenziDjBrand (sección 13 del pedido: nunca animar toda la imagen de
+   forma exagerada, y siempre respetar prefers-reduced-motion). */
+@keyframes menzi-dj-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes menzi-dj-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.menzi-dj-breathe {
+  animation: menzi-dj-breathe 2.8s ease-in-out infinite;
+}
+
+.menzi-dj-bar {
+  animation: menzi-dj-bar 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menzi-dj-breathe,
+  .menzi-dj-bar {
+    animation: none;
+  }
+}

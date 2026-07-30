@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BackIcon } from "@/components/icons";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { MemberCard } from "@/components/MemberCard";
 import { getMyRealId, mapDemoUser, usersApi } from "@/lib/api";
 import type { UserProfileDto } from "@/lib/api/types";
@@ -43,9 +44,12 @@ export default function ConnectionsPage() {
       {users === null ? (
         <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Cargando…</p>
       ) : users.length === 0 ? (
-        <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">
-          {isFollowers ? "Todavía no tiene seguidores." : "Todavía no sigue a nadie."}
-        </p>
+        <MenziIllustrationState
+          image="/illustrations/menzi/menzi-friends.webp"
+          alt="Menzi rodeado de otras criaturas y corazones"
+          description={isFollowers ? "Todavía no tiene seguidores." : "Todavía no sigue a nadie."}
+          size="small"
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {users.map((user) => (

@@ -15,6 +15,8 @@ import {
   VolumeIcon,
   VolumeMuteIcon,
 } from "@/components/icons";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
+import { MenziDjBrand, type MenziDjMode } from "@/components/music/MenziDjBrand";
 import { Sheet } from "@/components/ui/Sheet";
 import { ApiError } from "@/lib/api";
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
@@ -97,26 +99,44 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
     }
   }
 
+  const brandMode: MenziDjMode = session?.status === "error" ? "error" : session?.status === "playing" ? "playing" : session?.status === "paused" ? "paused" : "idle";
+
   return (
     <Sheet open onClose={onClose} title="Menzi DJ" subtitle={room.name} widthClassName="max-w-xl">
       <div className="flex flex-col gap-4">
-        {/* Reproduciendo ahora — el reproductor real de YouTube flota aparte (ver
-            MenziDjPlayerHost); acá se muestra la info + controles sincronizados. */}
-        <div className="flex gap-3 rounded-2xl bg-[var(--color-surface-secondary)] p-3">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black">
-            {session?.currentThumbnailUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={session.currentThumbnailUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[var(--color-text-muted)]">
-                <MusicNoteIcon size={22} />
-              </div>
-            )}
+        <MenziDjBrand mode={brandMode} />
+
+        {session?.status === "error" && (
+          <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-coral)]/30 bg-[var(--color-coral)]/10 p-3">
+            <p className="min-w-0 flex-1 text-sm text-[var(--color-coral)]">No pudimos conectar con YouTube. Puede ser un problema temporal.</p>
+            <button
+              onClick={() => music.refresh()}
+              className="shrink-0 rounded-full bg-[var(--color-coral)] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
+            >
+              Reintentar
+            </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{session?.currentTitle || "Nada sonando todavía"}</p>
-            <p className="truncate text-xs text-[var(--color-text-muted)]">{session?.currentChannelTitle || "Buscá una canción para empezar"}</p>
-            {session?.currentVideoId && (
+        )}
+
+        {/* Reproduciendo ahora — el reproductor real de YouTube flota aparte (ver
+            MenziDjPlayerHost); acá se muestra la info + controles sincronizados. Sin canción
+            todavía, la miniatura real se reemplaza por la ilustración de bienvenida (nunca
+            compiten entre sí, ver sección 6 del pedido). */}
+        {session?.currentVideoId ? (
+          <div className="flex gap-3 rounded-2xl bg-[var(--color-surface-secondary)] p-3">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black">
+              {session.currentThumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.currentThumbnailUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[var(--color-text-muted)]">
+                  <MusicNoteIcon size={22} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{session.currentTitle}</p>
+              <p className="truncate text-xs text-[var(--color-text-muted)]">{session.currentChannelTitle}</p>
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--color-surface-elevated)]">
                 <div
                   className="h-full rounded-full bg-[var(--color-cyan)]"
@@ -125,14 +145,21 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
                   }}
                 />
               </div>
-            )}
-            {session?.currentVideoId && (
               <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">
                 {formatDuration(displayPosition)} / {formatDuration(session.durationSeconds)}
               </p>
-            )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <MenziIllustrationState
+            image="/illustrations/menzi/menzi-dj-hero.webp"
+            alt="Menzi con audífonos y notas musicales"
+            title="Menzi DJ"
+            description="Busca una canción o pega un enlace para comenzar."
+            size="small"
+            priority
+          />
+        )}
 
         {/* Controles — sincronizados para todos si sos OWNER/CO_HOST; volumen local para todos. */}
         <div className="flex items-center justify-center gap-3">

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BellIcon, CalendarIcon, ChatIcon, CheckIcon, CommentIcon, HeartIcon, ProfileIcon } from "@/components/icons";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAppState } from "@/lib/AppStateContext";
 import { relativeTime } from "@/lib/time";
 import type { Notification, NotificationCategory } from "@/lib/types";
@@ -78,7 +79,14 @@ export default function NotificationsPage() {
 
       <div className="flex flex-col gap-2">
         {notifications.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todo está tranquilo por ahora.</p>
+          <MenziIllustrationState
+            image="/illustrations/menzi/menzi-notifications.webp"
+            alt="Menzi junto a una campana de notificaciones"
+            title="Todo está tranquilo"
+            description="Aquí aparecerán tus mensajes, invitaciones y novedades."
+            size="medium"
+            priority
+          />
         ) : (
           notifications.map((n) => {
             const Icon = categoryIcon[n.category] ?? BellIcon;

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 type ConfirmDialogProps = {
   open: boolean;
   title: string;
@@ -8,6 +10,9 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   busy?: boolean;
   danger?: boolean;
+  /** Ilustración opcional de acompañamiento (p. ej. Menzi antes de iniciar un LIVE) — decorativa,
+   * nunca reemplaza el título/descripción reales del diálogo. */
+  image?: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -22,6 +27,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancelar",
   busy,
   danger,
+  image,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -31,6 +37,9 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
       <div className="relative flex w-full max-w-sm flex-col gap-4 rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 shadow-2xl">
+        {image && (
+          <Image src={image} alt="" width={640} height={640} className="mx-auto h-16 w-16 object-contain" />
+        )}
         <div>
           <h2 className="font-display text-lg font-bold">{title}</h2>
           {description && <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{description}</p>}

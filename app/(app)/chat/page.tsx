@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { GradientButton } from "@/components/GradientButton";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 
@@ -59,6 +60,17 @@ export default function ChatListPage() {
         </div>
       )}
 
+      {myRooms.length === 0 && (
+        <MenziIllustrationState
+          image="/illustrations/menzi/menzi-chat.webp"
+          alt=""
+          title="Todavía no hay chats"
+          description="Únete a una sala pública o inicia una conversación directa para empezar."
+          size="medium"
+          priority
+        />
+      )}
+
       {favoriteRooms.length > 0 && (
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Favoritos</h2>
@@ -81,18 +93,20 @@ export default function ChatListPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h2>
-        {publicRooms.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Tus próximas historias comienzan aquí.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {publicRooms.map((room) => (
-              <ChatRoomListItem key={room.id} room={room} />
-            ))}
-          </div>
-        )}
-      </div>
+      {myRooms.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h2>
+          {publicRooms.length === 0 ? (
+            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Tus próximas historias comienzan aquí.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {publicRooms.map((room) => (
+                <ChatRoomListItem key={room.id} room={room} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

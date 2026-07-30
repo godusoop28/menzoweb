@@ -6,6 +6,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, SendIcon, SettingsIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
 import { LiveRoomPanel } from "@/components/live/LiveRoomPanel";
 import { RoomInfoModal } from "@/components/room/RoomInfoModal";
@@ -320,7 +321,13 @@ export default function ChatRoomPage() {
           }
         >
           {messages.length === 0 ? (
-            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Aún no hay mensajes aquí. Sé el primero en escribir algo.</p>
+            <MenziIllustrationState
+              image="/illustrations/menzi/menzi-chat.webp"
+              alt=""
+              title="Aún no hay mensajes aquí"
+              description="Sé el primero en escribir algo."
+              size="small"
+            />
           ) : (
             messages.map((m, i) => {
               const prev = messages[i - 1];
@@ -413,6 +420,7 @@ export default function ChatRoomPage() {
         description="Vas a encender una llamada en vivo en esta sala. Los miembros van a poder escuchar y pedir para hablar."
         confirmLabel="Iniciar"
         busy={startingLive}
+        image="/illustrations/menzi/menzi-live-voice.webp"
         onConfirm={handleConfirmStartLive}
         onCancel={() => setConfirmStartLive(false)}
       />

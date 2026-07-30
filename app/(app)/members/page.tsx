@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { MemberCard } from "@/components/MemberCard";
 import { getMyRealId, mapDemoUser, usersApi } from "@/lib/api";
 import type { UserProfileDto } from "@/lib/api/types";
@@ -77,7 +78,13 @@ export default function MembersPage() {
       {loading ? (
         <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Cargando miembros…</p>
       ) : members.length === 0 ? (
-        <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay miembros para mostrar.</p>
+        <MenziIllustrationState
+          image="/illustrations/menzi/menzi-friends.webp"
+          alt="Menzi rodeado de otras criaturas y corazones"
+          title="Conecta con tu comunidad"
+          description="Cuando dos personas se siguen mutuamente, aparecen como amigos."
+          size="medium"
+        />
       ) : (
         <>
           {online.length > 0 && (

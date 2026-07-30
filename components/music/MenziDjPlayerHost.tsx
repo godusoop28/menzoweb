@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-import { MusicNoteIcon, PauseIcon, PlayIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
+import { PauseIcon, PlayIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
+import { MenziDjBrand } from "@/components/music/MenziDjBrand";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
 
@@ -59,9 +60,10 @@ export function MenziDjPlayerHost() {
           className="fixed bottom-24 left-4 z-[71] flex w-[220px] cursor-pointer items-center gap-2 rounded-full bg-[var(--color-surface-elevated)] py-1.5 pl-16 pr-2 text-left shadow-2xl ring-1 ring-[var(--color-border-strong)] md:bottom-6"
         >
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-cyan)]">
-              <MusicNoteIcon size={10} /> Menzi DJ
-            </p>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-cyan)]">
+              <MenziDjBrand mode={music.session?.status === "playing" ? "playing" : "paused"} compact size={14} />
+              Menzi DJ
+            </div>
             <p className="truncate text-xs font-medium">{music.session?.currentTitle || "Reproduciendo…"}</p>
           </div>
           {(live.myRole === "host" || live.myRole === "co_host") && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, SettingsIcon, UsersIcon } from "@/components/icons";
+import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
@@ -113,19 +114,14 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
         {/* Escenario */}
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
           {!isConnectedHere ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <p className="text-sm text-[var(--color-text-muted)]">
-                {live.connecting ? "Conectando…" : "Conectate para escuchar este LIVE."}
-              </p>
-              {!live.connecting && (
-                <button
-                  onClick={() => live.join(room.id)}
-                  style={{ background: "var(--color-coral)" }}
-                  className="rounded-full px-5 py-2 text-sm font-bold text-white cursor-pointer"
-                >
-                  Escuchar
-                </button>
-              )}
+            <div className="flex h-full flex-col items-center justify-center">
+              <MenziIllustrationState
+                image="/illustrations/menzi/menzi-live-voice.webp"
+                alt=""
+                description={live.connecting ? "Conectando…" : "Conectate para escuchar este LIVE."}
+                size="medium"
+                action={!live.connecting ? { label: "Escuchar", onClick: () => live.join(room.id) } : undefined}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-x-2 gap-y-4 py-2 sm:grid-cols-4 md:grid-cols-5">

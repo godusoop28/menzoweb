@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -60,7 +61,20 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-6 md:px-8">
-      <h1 className="font-display text-2xl font-bold">Configuración</h1>
+      <div className="flex items-center gap-3">
+        <Image
+          src="/illustrations/menzi/menzi-settings.webp"
+          alt=""
+          width={640}
+          height={640}
+          priority
+          className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+        />
+        <div>
+          <h1 className="font-display text-2xl font-bold">Configuración</h1>
+          <p className="text-xs text-[var(--color-text-muted)]">Tu cuenta, privacidad y notificaciones en un solo lugar.</p>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Cuenta</h2>
