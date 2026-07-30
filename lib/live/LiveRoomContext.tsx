@@ -157,9 +157,13 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  /** Crea el track de micrófono y lo publica ya deshabilitado ("iniciar silenciado por
-   * seguridad", ver sección 17/19 del pedido) — nadie queda con el micrófono caliente sin haberlo
-   * activado a propósito, ni recién aprobado como SPEAKER ni al arrancar un LIVE como HOST.
+  /** Crea el track de micrófono, lo publica TODAVÍA HABILITADO (Agora rechaza con
+   * TRACK_IS_DISABLED cualquier intento de publicar un track ya deshabilitado — hay que llamar
+   * setEnabled/setMuted después de publish, nunca antes) y recién ahí lo deja silenciado con
+   * `setMuted(true)` ("iniciar silenciado por seguridad", ver sección 17/19 del pedido) — nadie
+   * queda con el micrófono caliente sin haberlo activado a propósito, ni recién aprobado como
+   * SPEAKER ni al arrancar un LIVE como HOST. El track publicado nunca se vuelve a publicar de
+   * nuevo durante la sesión: mutear/desmutear después de esto es siempre setMuted, no publish.
    * Si falla (permiso de micrófono denegado, hardware ocupado, etc.) NO deja al llamador creer
    * que puede hablar: limpia el track, marca localAudioPublished=false y deja lastMicrophoneError
    * con un mensaje claro para que la UI pueda ofrecer "reintentar" en vez de un botón mudo. */
@@ -167,9 +171,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     async (client: IAgoraRTCClient, AgoraRTC: typeof import("agora-rtc-sdk-ng").default) => {
       try {
         const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        await micTrack.setEnabled(false);
         micTrackRef.current = micTrack;
         await client.publish([micTrack]);
+        await micTrack.setMuted(true);
         setMicrophonePermission("granted");
         setLocalAudioPublished(true);
         setMuted(true);
@@ -266,7 +270,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         becomeAudience();
         setMyRole(participant.role);
       } else if (event.type === "CHAT_LIVE_MICROPHONE_CHANGED" && !participant.microphoneEnabled) {
-        micTrackRef.current?.setEnabled(false).catch(() => {});
+        // El track sigue publicado — silenciarlo con setMuted, nunca setEnabled(false) (eso
+        // dejaría el track deshabilitado y listo para volver a fallar con TRACK_IS_DISABLED si
+        // se intentara republicar más adelante).
+        micTrackRef.current?.setMuted(true).catch(() => {});
         setMuted(true);
       }
     }
@@ -455,7 +462,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const next = !mutedRef.current;
-      await micTrackRef.current.setEnabled(!next);
+      // El track queda publicado durante toda la sesión — mutear/desmutear es siempre setMuted
+      // sobre ese mismo track, nunca un nuevo publish ni setEnabled (ver publishMicTrack).
+      await micTrackRef.current.setMuted(next);
       setMuted(next);
       liveApi.setMicrophone(roomId, !next).catch(() => {});
     } catch (error) {

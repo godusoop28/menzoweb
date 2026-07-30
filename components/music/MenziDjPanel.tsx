@@ -254,8 +254,23 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
   const showToast = useToast();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<YoutubeSearchResult[] | null>(null);
+  // Distinto de `results` a propósito: un error de red/YouTube NUNCA debe verse como "sin
+  // resultados" (results=[]) — antes el catch hacía setResults([]) y la búsqueda fallida se
+  // mostraba idéntica a una búsqueda real sin coincidencias, ocultando el error real.
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [busyVideoId, setBusyVideoId] = useState<string | null>(null);
+
+  function messageForSearchError(error: unknown): string {
+    if (error instanceof ApiError) {
+      if (error.code === "YOUTUBE_QUOTA_EXCEEDED") return "Se alcanzó el límite de búsquedas de música por hoy. Intentá más tarde.";
+      if (error.code === "YOUTUBE_NOT_CONFIGURED" || error.code === "YOUTUBE_AUTH_ERROR") return "La búsqueda de música no está disponible en este momento.";
+      if (error.code === "YOUTUBE_TIMEOUT") return "YouTube tardó demasiado en responder. Intentá de nuevo.";
+      if (error.code === "LIVE_NOT_ACTIVE") return "El LIVE ya no está activo.";
+      return error.message;
+    }
+    return "No pudimos buscar música en este momento.";
+  }
 
   async function handleSearch() {
     const trimmed = query.trim();
@@ -264,12 +279,14 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
       return;
     }
     setSearching(true);
+    setSearchError(null);
     try {
       const found = await music.searchSongs(trimmed);
       setResults(found);
     } catch (error) {
-      showToast(error instanceof ApiError ? error.message : "No pudimos buscar canciones.");
-      setResults([]);
+      // results se deja como estaba (null o la búsqueda previa) — solo searchError distingue el
+      // estado de error, así el bloque "Sin resultados" nunca aparece para un fallo real.
+      setSearchError(messageForSearchError(error));
     } finally {
       setSearching(false);
     }
@@ -318,11 +335,23 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
         </button>
       </div>
       {searching && <p className="text-center text-sm text-[var(--color-text-muted)]">Buscando…</p>}
-      {results !== null && !searching && results.length === 0 && (
-        <p className="text-center text-sm text-[var(--color-text-muted)]">Sin resultados.</p>
+      {!searching && searchError && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <p className="text-sm text-[var(--color-coral)]">{searchError}</p>
+          <button
+            onClick={handleSearch}
+            className="rounded-full bg-[var(--color-surface-secondary)] px-4 py-1.5 text-xs font-semibold cursor-pointer"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+      {!searching && !searchError && results !== null && results.length === 0 && (
+        <p className="text-center text-sm text-[var(--color-text-muted)]">No encontramos canciones con esa búsqueda.</p>
       )}
       <div className="flex flex-col gap-2">
-        {results?.map((r) => (
+        {!searchError &&
+          results?.map((r) => (
           <div key={r.videoId} className="flex items-center gap-2.5 rounded-xl bg-[var(--color-surface-secondary)] p-2">
             <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
               {r.thumbnailUrl && (
