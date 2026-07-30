@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { CheckIcon, SearchIcon } from "@/components/icons";
+import { CheckIcon, ChevronDownIcon, MenuIcon, SearchIcon } from "@/components/icons";
 import { Sheet } from "@/components/ui/Sheet";
 import { ApiError, chatApi, getMyRealId, mapBan, mapDemoUser, mapRoomMember, usersApi } from "@/lib/api";
 import type { BanDto, RoomMemberDto } from "@/lib/api/types";
@@ -55,15 +55,20 @@ export function RoomSettingsPanel({
   initialTab?: Tab;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isOwner = room.role === "owner";
   const canModerate = room.role === "owner" || room.role === "co_host";
 
   const visibleTabs = TABS.filter((t) => !t.ownerOnly || isOwner);
+  const currentTabLabel = visibleTabs.find((t) => t.id === tab)?.label ?? "";
 
   return (
     <Sheet open onClose={onClose} title="Configuración de la sala" subtitle={room.name} widthClassName="max-w-2xl">
       <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-        <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-40 md:flex-col md:overflow-visible md:pb-0">
+        {/* Escritorio: sidebar fija. Móvil: las 9 secciones no entran en una fila horizontal sin
+            que algunas queden fuera de vista sin aviso — un botón tipo "hamburguesa" que despliega
+            la lista completa es más confiable que un scroll horizontal invisible. */}
+        <nav className="hidden shrink-0 flex-col gap-1 md:flex md:w-40">
           {visibleTabs.map((t) => (
             <button
               key={t.id}
@@ -78,6 +83,39 @@ export function RoomSettingsPanel({
             </button>
           ))}
         </nav>
+
+        <div className="relative shrink-0 md:hidden">
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="flex w-full items-center gap-2 rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2.5 text-sm font-semibold cursor-pointer"
+          >
+            <MenuIcon size={16} />
+            <span className="flex-1 text-left">{currentTabLabel}</span>
+            <ChevronDownIcon size={14} className={mobileMenuOpen ? "rotate-180" : ""} />
+          </button>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMobileMenuOpen(false)} aria-hidden />
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 flex max-h-64 flex-col gap-0.5 overflow-y-auto rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-elevated)] p-1.5 shadow-2xl">
+                {visibleTabs.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setTab(t.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`rounded-xl px-3 py-2.5 text-left text-sm font-medium cursor-pointer ${
+                      tab === t.id ? "bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
+                    } ${t.id === "danger" ? "text-[var(--color-coral)]" : ""}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="min-w-0 flex-1">
           {tab === "general" && <GeneralSection room={room} canEdit={canModerate} isOwner={isOwner} />}
           {tab === "appearance" && <AppearanceSection room={room} canEdit={canModerate} />}

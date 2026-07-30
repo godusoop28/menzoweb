@@ -11,7 +11,8 @@ import { LiveRoomPanel } from "@/components/live/LiveRoomPanel";
 import { RoomInfoModal } from "@/components/room/RoomInfoModal";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { TypingBubble } from "@/components/TypingBubble";
-import { chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ApiError, chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -37,6 +38,8 @@ export default function ChatRoomPage() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "live">("general");
   const [showInfo, setShowInfo] = useState(false);
   const [showLivePanel, setShowLivePanel] = useState(false);
+  const [confirmStartLive, setConfirmStartLive] = useState(false);
+  const [startingLive, setStartingLive] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const prevMessageCountRef = useRef(0);
@@ -178,6 +181,23 @@ export default function ChatRoomPage() {
     }
   }
 
+  /** Iniciar LIVE no debe sentirse como llenar un formulario — arranca de una con un anuncio y
+   * título vacíos (se pueden agregar después desde la tuerca, dentro del LIVE) y solo pide una
+   * confirmación rápida antes de encender la llamada. */
+  async function handleConfirmStartLive() {
+    if (!id || startingLive) return;
+    setStartingLive(true);
+    try {
+      await live.startLive(id);
+      setConfirmStartLive(false);
+      setShowLivePanel(true);
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos iniciar el LIVE.");
+    } finally {
+      setStartingLive(false);
+    }
+  }
+
   const headerTitle = room?.type === "direct" ? room?.peer?.displayName ?? "Conversación" : room?.name ?? "Conversación";
   const headerOnline = room?.type === "direct" ? !!room?.peer?.isOnline : !!room && room.onlineCount > 0;
   const headerSubtitle =
@@ -233,22 +253,29 @@ export default function ChatRoomPage() {
           {isThisRoomLive ? (
             <button
               onClick={() => setShowLivePanel(true)}
-              aria-label={`Abrir LIVE · ${liveParticipantCount} personas`}
+              aria-label={
+                live.activeRoomId === id || !live.connecting
+                  ? `Abrir LIVE · ${liveParticipantCount} personas`
+                  : "Conectando al LIVE"
+              }
               title="Abrir LIVE"
               className="relative flex h-8 items-center gap-1.5 rounded-full bg-[var(--color-coral)] px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors cursor-pointer"
             >
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
-              <span>Live</span>
-              {liveParticipantCount > 0 && <span className="font-normal normal-case">{liveParticipantCount}</span>}
+              {live.activeRoomId !== id && live.connecting ? (
+                <span>Conectando…</span>
+              ) : (
+                <>
+                  <span>Live</span>
+                  {liveParticipantCount > 0 && <span className="font-normal normal-case">{liveParticipantCount}</span>}
+                </>
+              )}
             </button>
           ) : (
             canModerate &&
             room.type === "public" && (
               <button
-                onClick={() => {
-                  setSettingsInitialTab("live");
-                  setShowSettings(true);
-                }}
+                onClick={() => setConfirmStartLive(true)}
                 aria-label="Iniciar LIVE"
                 title="Iniciar LIVE"
                 className="flex h-8 items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-black/60 cursor-pointer"
@@ -380,6 +407,15 @@ export default function ChatRoomPage() {
         <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab={settingsInitialTab} />
       )}
       {showLivePanel && <LiveRoomPanel room={room} onMinimize={() => setShowLivePanel(false)} />}
+      <ConfirmDialog
+        open={confirmStartLive}
+        title="Iniciar LIVE"
+        description="Vas a encender una llamada en vivo en esta sala. Los miembros van a poder escuchar y pedir para hablar."
+        confirmLabel="Iniciar"
+        busy={startingLive}
+        onConfirm={handleConfirmStartLive}
+        onCancel={() => setConfirmStartLive(false)}
+      />
     </div>
   );
 }
