@@ -146,9 +146,19 @@ export type CreateRoomRequest = {
   topic?: string;
   gradient?: string;
   icon?: string;
+  category?: string;
 };
 
 export type RoomRole = "OWNER" | "CO_HOST" | "MEMBER";
+
+export type ChatRoomLiveSummaryDto = {
+  liveSessionId: string;
+  title: string | null;
+  announcement: string | null;
+  participantCount: number;
+  speakerCount: number;
+  host: UserSummaryDto | null;
+};
 
 export type ChatRoomDto = {
   id: string;
@@ -159,8 +169,14 @@ export type ChatRoomDto = {
   gradient: string | null;
   icon: string | null;
   type: "PUBLIC" | "DIRECT";
+  avatarUri: string | null;
   coverUri: string | null;
   backgroundUri: string | null;
+  category: string | null;
+  maxMembers: number | null;
+  requiresApproval: boolean;
+  allowMembersToInvite: boolean;
+  listed: boolean;
   peer: UserSummaryDto | null;
   memberCount: number;
   onlineCount: number;
@@ -168,7 +184,9 @@ export type ChatRoomDto = {
   joined: boolean;
   role: RoomRole | null;
   live: boolean;
+  liveSummary: ChatRoomLiveSummaryDto | null;
   createdAt: string;
+  updatedAt: string | null;
   lastMessage: ChatRoomLastMessageDto | null;
 };
 
@@ -189,9 +207,79 @@ export type RoomModerationEvent = {
 };
 
 export type UpdateRoomRequest = {
-  /** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios. */
+  /** Cadena vacía "" limpia el campo (donde aplica); omitir un campo lo deja sin cambios. */
+  name?: string;
+  description?: string;
+  topic?: string;
+  category?: string;
+  avatarUri?: string;
   coverUri?: string;
   backgroundUri?: string;
+  requiresApproval?: boolean;
+  allowMembersToInvite?: boolean;
+  listed?: boolean;
+  maxMembers?: number | null;
+};
+
+// ---- LIVE moderado (roles, solicitudes para hablar, tokens por rol) -------------------------
+// Aditivo sobre /voice/* (que sigue existiendo tal cual para la app móvil) — ver LiveService en
+// menzoapi para el porqué de la separación.
+
+export type LiveParticipantRole = "HOST" | "CO_HOST" | "SPEAKER" | "AUDIENCE" | "REQUESTED";
+
+export type LiveSessionDto = {
+  id: string;
+  roomId: string;
+  type: string;
+  status: "ACTIVE" | "ENDED";
+  title: string | null;
+  description: string | null;
+  announcement: string | null;
+  startedByUserId: string | null;
+  startedAt: string;
+  participantCount: number;
+  speakerCount: number;
+  agoraChannelName: string;
+  myRole: LiveParticipantRole | null;
+  myMicrophoneEnabled: boolean;
+  hasPendingSpeakRequest: boolean;
+};
+
+export type LiveParticipantDto = {
+  user: UserSummaryDto | null;
+  role: LiveParticipantRole;
+  microphoneEnabled: boolean;
+  requestedToSpeakAt: string | null;
+  joinedAt: string;
+};
+
+export type LiveTokenDto = { appId: string; channelName: string; token: string; uid: string; role: "PUBLISHER" | "SUBSCRIBER" };
+
+export type StartLiveRequest = { title?: string; description?: string; announcement?: string };
+export type UpdateLiveRequest = { title?: string; description?: string; announcement?: string };
+
+export type LiveEventType =
+  | "CHAT_LIVE_STARTED"
+  | "CHAT_LIVE_ENDED"
+  | "CHAT_LIVE_UPDATED"
+  | "CHAT_LIVE_PARTICIPANT_JOINED"
+  | "CHAT_LIVE_PARTICIPANT_LEFT"
+  | "CHAT_LIVE_SPEAKING_REQUESTED"
+  | "CHAT_LIVE_SPEAKING_APPROVED"
+  | "CHAT_LIVE_SPEAKING_REJECTED"
+  | "CHAT_LIVE_PARTICIPANT_PROMOTED"
+  | "CHAT_LIVE_PARTICIPANT_DEMOTED"
+  | "CHAT_LIVE_MICROPHONE_CHANGED"
+  | "CHAT_ROOM_UPDATED"
+  | "CHAT_ROOM_APPEARANCE_UPDATED";
+
+export type LiveEventDto<TPayload = unknown> = {
+  eventId: string;
+  type: LiveEventType;
+  roomId: string;
+  liveSessionId: string | null;
+  occurredAt: string;
+  payload: TPayload;
 };
 
 export type ChatRoomLastMessageDto = {

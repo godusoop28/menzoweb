@@ -3,9 +3,9 @@
 import { Client } from "@stomp/stompjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { API_BASE_URL, getCachedSession } from "@/lib/api";
+import { API_BASE_URL, getCachedSession, getMyRealId, mapChatRoom } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
-import type { RoomModerationEvent } from "@/lib/api/types";
+import type { ChatRoomDto, LiveEventDto, RoomModerationEvent } from "@/lib/api/types";
 
 const TYPING_EXPIRY_MS = 3000;
 const TYPING_PUBLISH_THROTTLE_MS = 2000;
@@ -84,6 +84,13 @@ export function useRoomSocket(roomId: string | undefined) {
           if (event.targetUserId !== session.userId) return;
           if (event.type === "KICKED") setRemovalReason("kicked");
           if (event.type === "BANNED") setRemovalReason("banned");
+        });
+        // Nombre/descripción/apariencia/privacidad cambiados desde el panel de configuración (por
+        // cualquier OWNER/CO_HOST, en cualquier pestaña) — se reflejan acá sin recargar.
+        client.subscribe(`/topic/rooms/${roomId}/room`, (frame) => {
+          const event = JSON.parse(frame.body) as LiveEventDto<ChatRoomDto>;
+          if (event.type !== "CHAT_ROOM_UPDATED" && event.type !== "CHAT_ROOM_APPEARANCE_UPDATED") return;
+          actions.receiveRoomUpdate(mapChatRoom(event.payload, getMyRealId()));
         });
       },
     });

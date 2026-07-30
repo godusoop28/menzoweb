@@ -123,23 +123,41 @@ export type ChatPeer = {
   isOnline: boolean;
 };
 
+export type ChatRoomLiveSummary = {
+  liveSessionId: string;
+  title: string | null;
+  announcement: string | null;
+  participantCount: number;
+  speakerCount: number;
+  host: ChatPeer | null;
+};
+
 export type ChatRoom = {
   id: string;
   type: ChatRoomType;
   name: string;
-  description: string;
+  /** null = sin descripción; nunca "" (ver ChatService.updateRoom/TextSanitizer en el backend). */
+  description: string | null;
   topic: string;
   gradient: GradientId;
   icon: string;
+  avatarUri?: string;
   coverUri?: string;
   backgroundUri?: string;
+  category: string | null;
+  maxMembers: number | null;
+  requiresApproval: boolean;
+  allowMembersToInvite: boolean;
+  listed: boolean;
   memberIds: string[];
   onlineCount: number;
   favorite: boolean;
   joined: boolean;
   role: ChatRoomRole | null;
   live: boolean;
+  liveSummary: ChatRoomLiveSummary | null;
   createdAt: string;
+  updatedAt: string | null;
   peer?: ChatPeer;
   lastMessage?: ChatRoomLastMessage;
 };
@@ -190,4 +208,34 @@ export type Notification = {
   relatedRoomId?: string;
   relatedUserId?: string;
   relatedEventId?: string;
+};
+
+// ---- LIVE moderado ----------------------------------------------------------------------------
+
+export type LiveParticipantRole = "host" | "co_host" | "speaker" | "audience" | "requested";
+
+export type LiveParticipant = {
+  user: DemoUser;
+  role: LiveParticipantRole;
+  microphoneEnabled: boolean;
+  requestedToSpeakAt: string | null;
+  joinedAt: string;
+  /** 0-1, viene de Agora (volume-indicator) — nunca del backend, ver LiveRoomContext. */
+  speakingLevel: number;
+};
+
+export type LiveSessionSummary = {
+  id: string;
+  roomId: string;
+  status: "active" | "ended";
+  title: string | null;
+  description: string | null;
+  announcement: string | null;
+  startedByUserId: string | null;
+  startedAt: string;
+  participantCount: number;
+  speakerCount: number;
+  myRole: LiveParticipantRole | null;
+  myMicrophoneEnabled: boolean;
+  hasPendingSpeakRequest: boolean;
 };

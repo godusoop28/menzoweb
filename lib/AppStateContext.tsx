@@ -61,13 +61,18 @@ type AppStateContextValue = {
     sendMessage: (roomId: string, body: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
     receiveRoomMessage: (dto: import("@/lib/api").MessageDto) => void;
-    createRoom: (payload: { name: string; description?: string; topic?: string }) => Promise<string | null>;
+    createRoom: (payload: { name: string; description?: string; topic?: string; category?: string }) => Promise<string | null>;
     toggleFavoriteRoom: (roomId: string) => void;
     joinRoom: (roomId: string) => Promise<void>;
     loadDiscoverRooms: (sort?: "recent" | "popular") => Promise<void>;
     loadLiveRooms: () => Promise<void>;
-    updateRoomCover: (roomId: string, coverUri: string, file?: File) => Promise<void>;
-    updateRoomBackground: (roomId: string, backgroundUri: string, file?: File) => Promise<void>;
+    updateRoomSettings: (
+      roomId: string,
+      patch: import("@/lib/api").UpdateRoomRequest,
+      files?: { avatar?: File; cover?: File; background?: File }
+    ) => Promise<void>;
+    /** Un ChatRoomUpdated/AppearanceUpdated empujado por WebSocket — MERGE_SOCIAL ya reemplaza por id. */
+    receiveRoomUpdate: (room: ChatRoom) => void;
     refreshSocial: () => Promise<void>;
     ensurePostLoaded: (postId: string) => Promise<void>;
     loadPostComments: (postId: string) => Promise<void>;
@@ -378,7 +383,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "MERGE_SOCIAL", payload: { messages: [mapMessage(dto, myRealId)], users } });
     }
 
-    async function createRoom(payload: { name: string; description?: string; topic?: string }): Promise<string | null> {
+    async function createRoom(payload: {
+      name: string;
+      description?: string;
+      topic?: string;
+      category?: string;
+    }): Promise<string | null> {
       if (!hasSession()) return null;
       try {
         const dto = await chatApi.createRoom(payload);
@@ -431,28 +441,36 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    async function updateRoomCover(roomId: string, coverUri: string, file?: File) {
-      if (!hasSession()) return;
-      try {
-        const uploaded = coverUri === "" ? "" : await ensureUploaded(coverUri, file);
-        const dto = await chatApi.updateRoom(roomId, { coverUri: uploaded });
-        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
-      } catch (error) {
-        console.warn("[menzo/api] updateRoomCover failed", error);
-        showToast("No pudimos actualizar la portada de la sala.");
-      }
+    /** Sube (si hace falta) y limpia cada campo de imagen: "" es la señal explícita de "quitar
+     * imagen" (mismo patrón que backgroundUri en updateProfile) y no debe pasar por
+     * ensureUploaded, que colapsa cualquier valor vacío/falsy a undefined (= "sin cambios" en el
+     * PATCH parcial); undefined significa "no tocar este campo". */
+    async function resolveImageField(uri: string | undefined, file: File | undefined): Promise<string | undefined> {
+      if (uri === undefined) return undefined;
+      if (uri === "") return "";
+      return ensureUploaded(uri, file);
     }
 
-    async function updateRoomBackground(roomId: string, backgroundUri: string, file?: File) {
-      if (!hasSession()) return;
-      try {
-        const uploaded = backgroundUri === "" ? "" : await ensureUploaded(backgroundUri, file);
-        const dto = await chatApi.updateRoom(roomId, { backgroundUri: uploaded });
-        dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
-      } catch (error) {
-        console.warn("[menzo/api] updateRoomBackground failed", error);
-        showToast("No pudimos actualizar el fondo de la sala.");
-      }
+    /** Usado por el panel de configuración (tuerca): un solo PATCH parcial para nombre,
+     * descripción, categoría, apariencia, privacidad y permisos — la validación real de quién
+     * puede cambiar qué vive en el backend (ChatService.updateRoom), acá solo se arma el payload. */
+    async function updateRoomSettings(
+      roomId: string,
+      patch: import("@/lib/api").UpdateRoomRequest,
+      files?: { avatar?: File; cover?: File; background?: File }
+    ) {
+      if (!hasSession()) throw new Error("No hay sesión activa");
+      const [avatarUri, coverUri, backgroundUri] = await Promise.all([
+        resolveImageField(patch.avatarUri, files?.avatar),
+        resolveImageField(patch.coverUri, files?.cover),
+        resolveImageField(patch.backgroundUri, files?.background),
+      ]);
+      const dto = await chatApi.updateRoom(roomId, { ...patch, avatarUri, coverUri, backgroundUri });
+      dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [mapChatRoom(dto, getMyRealId())] } });
+    }
+
+    function receiveRoomUpdate(room: ChatRoom) {
+      dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [room] } });
     }
 
     async function refreshSocial() {
@@ -754,8 +772,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       joinRoom,
       loadDiscoverRooms,
       loadLiveRooms,
-      updateRoomCover,
-      updateRoomBackground,
+      updateRoomSettings,
+      receiveRoomUpdate,
       refreshSocial,
       ensurePostLoaded,
       loadPostComments,

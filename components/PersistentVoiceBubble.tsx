@@ -3,13 +3,13 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAccent } from "@/lib/AccentContext";
-import { useVoiceRoomContext } from "@/lib/voice/VoiceRoomContext";
+import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 
 /** Burbuja flotante estilo "chat head" de Messenger — visible en cualquier pantalla mientras haya
  * un live conectado y no estemos ya mirando la sala de ese live. Tocarla vuelve a la sala; el
  * micrófono y salir están ahí mismo para no tener que volver a la sala solo para silenciarse. */
 export function PersistentVoiceBubble() {
-  const { activeRoomId, connected, participants, muted, leave, toggleMute } = useVoiceRoomContext();
+  const { activeRoomId, connected, participants, muted, canSpeak, leave, toggleMute } = useLiveRoomContext();
   const pathname = usePathname();
   const router = useRouter();
   const accent = useAccent();
@@ -17,7 +17,8 @@ export function PersistentVoiceBubble() {
   if (!connected || !activeRoomId) return null;
   if (pathname === `/chat/${activeRoomId}`) return null;
 
-  const label = participants[0]?.displayName ?? "Sala";
+  const host = participants.find((p) => p.role === "host") ?? participants[0];
+  const label = host?.user.displayName ?? "Sala";
 
   return (
     <div className="fixed bottom-24 right-4 z-30 md:bottom-6">
@@ -45,19 +46,21 @@ export function PersistentVoiceBubble() {
           </span>
           <span className="max-w-[110px] truncate text-xs font-medium">{label}</span>
         </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleMute();
-          }}
-          aria-label={muted ? "Activar micrófono" : "Silenciar micrófono"}
-          title={muted ? "Activar micrófono" : "Silenciar micrófono"}
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
-            muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
-          }`}
-        >
-          {muted ? "🔇" : "🎤"}
-        </button>
+        {canSpeak && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMute();
+            }}
+            aria-label={muted ? "Activar micrófono" : "Silenciar micrófono"}
+            title={muted ? "Activar micrófono" : "Silenciar micrófono"}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
+              muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
+            }`}
+          >
+            {muted ? "🔇" : "🎤"}
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

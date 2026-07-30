@@ -188,19 +188,45 @@ export function mapChatRoom(dto: ChatRoomDto, myRealId: string | null = null): C
     id: dto.id,
     type: isDirect ? "direct" : "public",
     name: dto.name ?? dto.peer?.displayName ?? "Conversación",
-    description: dto.description ?? "",
+    description: dto.description ?? null,
     topic: dto.topic ?? "",
     gradient: toGradient(dto.gradient, "connection"),
     icon: dto.icon ?? "chatbubbles",
+    avatarUri: dto.avatarUri ?? undefined,
     coverUri: dto.coverUri ?? undefined,
     backgroundUri: dto.backgroundUri ?? undefined,
+    category: dto.category ?? null,
+    maxMembers: dto.maxMembers ?? null,
+    requiresApproval: dto.requiresApproval,
+    allowMembersToInvite: dto.allowMembersToInvite,
+    listed: dto.listed,
     memberIds: synthArray(dto.memberCount, dto.joined),
     onlineCount: dto.onlineCount,
     favorite: dto.favorite,
     joined: dto.joined,
     role: dto.role ? (dto.role.toLowerCase() as ChatRoomRole) : null,
     live: dto.live,
+    liveSummary: dto.liveSummary
+      ? {
+          liveSessionId: dto.liveSummary.liveSessionId,
+          title: dto.liveSummary.title,
+          announcement: dto.liveSummary.announcement,
+          participantCount: dto.liveSummary.participantCount,
+          speakerCount: dto.liveSummary.speakerCount,
+          host: dto.liveSummary.host
+            ? {
+                id: alias(dto.liveSummary.host.id, myRealId),
+                displayName: dto.liveSummary.host.displayName,
+                username: dto.liveSummary.host.username,
+                avatarUri: dto.liveSummary.host.avatarUri ?? undefined,
+                avatarGradient: toGradient(dto.liveSummary.host.avatarGradient),
+                isOnline: dto.liveSummary.host.isOnline,
+              }
+            : null,
+        }
+      : null,
     createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt ?? null,
     peer: dto.peer
       ? {
           id: alias(dto.peer.id, myRealId),
@@ -219,6 +245,39 @@ export function mapChatRoom(dto: ChatRoomDto, myRealId: string | null = null): C
           createdAt: dto.lastMessage.createdAt,
         }
       : undefined,
+  };
+}
+
+export function mapLiveSession(dto: import("./types").LiveSessionDto): import("@/lib/types").LiveSessionSummary {
+  return {
+    id: dto.id,
+    roomId: dto.roomId,
+    status: dto.status === "ACTIVE" ? "active" : "ended",
+    title: dto.title,
+    description: dto.description,
+    announcement: dto.announcement,
+    startedByUserId: dto.startedByUserId,
+    startedAt: dto.startedAt,
+    participantCount: dto.participantCount,
+    speakerCount: dto.speakerCount,
+    myRole: dto.myRole ? (dto.myRole.toLowerCase() as import("@/lib/types").LiveParticipantRole) : null,
+    myMicrophoneEnabled: dto.myMicrophoneEnabled,
+    hasPendingSpeakRequest: dto.hasPendingSpeakRequest,
+  };
+}
+
+export function mapLiveParticipant(
+  dto: import("./types").LiveParticipantDto,
+  myRealId: string | null
+): import("@/lib/types").LiveParticipant | null {
+  if (!dto.user) return null;
+  return {
+    user: mapUserSummary(dto.user, myRealId),
+    role: dto.role.toLowerCase() as import("@/lib/types").LiveParticipantRole,
+    microphoneEnabled: dto.microphoneEnabled,
+    requestedToSpeakAt: dto.requestedToSpeakAt,
+    joinedAt: dto.joinedAt,
+    speakingLevel: 0,
   };
 }
 

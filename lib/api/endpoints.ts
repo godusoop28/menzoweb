@@ -12,6 +12,9 @@ import type {
   CreateRoomRequest,
   EventDto,
   InterestDto,
+  LiveParticipantDto,
+  LiveSessionDto,
+  LiveTokenDto,
   LoginRequest,
   MessageDto,
   ModerationActionRequest,
@@ -25,6 +28,8 @@ import type {
   RoomMemberDto,
   SendMessageRequest,
   SettingsDto,
+  StartLiveRequest,
+  UpdateLiveRequest,
   UpdateProfileRequest,
   UpdateRoomRequest,
   UpdateSettingsRequest,
@@ -143,13 +148,53 @@ export const chatApi = {
   bans: (id: string) => apiFetch<BanDto[]>(`/api/chat/rooms/${id}/bans`),
   invite: (id: string, userId: string) =>
     apiFetch<void>(`/api/chat/rooms/${id}/members/${userId}/invite`, { method: "POST" }),
+  transferOwnership: (id: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${id}/transfer-ownership/${userId}`, { method: "POST" }),
+  deleteRoom: (id: string) => apiFetch<void>(`/api/chat/rooms/${id}`, { method: "DELETE" }),
 };
 
+/** Endpoints viejos, sin roles — se mantienen intactos porque menzomovil todavía los usa tal
+ * cual. La web ya no los llama: usa liveApi (LIVE moderado) en su lugar. Ver LiveService en
+ * menzoapi para el porqué de la separación. */
 export const voiceApi = {
   getToken: (roomId: string) => apiFetch<VoiceTokenDto>(`/api/chat/rooms/${roomId}/voice/token`, { method: "POST" }),
   join: (roomId: string) => apiFetch<VoiceParticipantsDto>(`/api/chat/rooms/${roomId}/voice/join`, { method: "POST" }),
   leave: (roomId: string) => apiFetch<VoiceParticipantsDto>(`/api/chat/rooms/${roomId}/voice/leave`, { method: "POST" }),
   participants: (roomId: string) => apiFetch<VoiceParticipantsDto>(`/api/chat/rooms/${roomId}/voice/participants`),
+};
+
+export const liveApi = {
+  // El backend responde 204 sin cuerpo cuando no hay un LIVE activo — apiFetch ya lo traduce a
+  // `undefined` para cualquier T, así que este tipo de retorno refleja eso en vez de inventar un
+  // "null" que la respuesta real nunca envía.
+  state: (roomId: string) => apiFetch<LiveSessionDto | undefined>(`/api/chat/rooms/${roomId}/live`),
+  start: (roomId: string, body?: StartLiveRequest) =>
+    apiFetch<LiveSessionDto>(`/api/chat/rooms/${roomId}/live/start`, { method: "POST", body }),
+  end: (roomId: string) => apiFetch<void>(`/api/chat/rooms/${roomId}/live/end`, { method: "POST" }),
+  update: (roomId: string, body: UpdateLiveRequest) =>
+    apiFetch<LiveSessionDto>(`/api/chat/rooms/${roomId}/live`, { method: "PATCH", body }),
+  join: (roomId: string) => apiFetch<LiveSessionDto>(`/api/chat/rooms/${roomId}/live/join`, { method: "POST" }),
+  leave: (roomId: string) => apiFetch<void>(`/api/chat/rooms/${roomId}/live/leave`, { method: "POST" }),
+  token: (roomId: string) => apiFetch<LiveTokenDto>(`/api/chat/rooms/${roomId}/live/token`),
+  participants: (roomId: string) => apiFetch<LiveParticipantDto[]>(`/api/chat/rooms/${roomId}/live/participants`),
+  setMicrophone: (roomId: string, enabled: boolean) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/microphone`, { method: "POST", body: { enabled } }),
+  requestToSpeak: (roomId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/speaking-requests`, { method: "POST" }),
+  cancelSpeakRequest: (roomId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/speaking-requests/cancel`, { method: "POST" }),
+  speakingRequests: (roomId: string) =>
+    apiFetch<LiveParticipantDto[]>(`/api/chat/rooms/${roomId}/live/speaking-requests`),
+  approveSpeaking: (roomId: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/speaking-requests/${userId}/approve`, { method: "POST" }),
+  rejectSpeaking: (roomId: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/speaking-requests/${userId}/reject`, { method: "POST" }),
+  demoteParticipant: (roomId: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}/demote`, { method: "POST" }),
+  muteParticipant: (roomId: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}/mute`, { method: "POST" }),
+  removeParticipant: (roomId: string, userId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}`, { method: "DELETE" }),
 };
 
 export const communityApi = {

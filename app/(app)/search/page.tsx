@@ -18,7 +18,9 @@ export default function SearchPage() {
     const posts = state.social.posts.filter(
       (p) => matchesQuery(p.body, query) || (p.title && matchesQuery(p.title, query)) || p.tags.some((t) => matchesQuery(t, query))
     );
-    const rooms = state.social.rooms.filter((r) => matchesQuery(r.name, query) || matchesQuery(r.topic, query) || matchesQuery(r.description, query));
+    const rooms = state.social.rooms.filter(
+      (r) => matchesQuery(r.name, query) || matchesQuery(r.topic, query) || matchesQuery(r.description ?? "", query)
+    );
     return { members, posts, rooms };
   }, [query, state.social]);
 

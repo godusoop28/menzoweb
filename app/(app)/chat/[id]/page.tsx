@@ -1,23 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, CameraIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
+import { BackIcon, SendIcon, SettingsIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
+import { LiveRoomPanel } from "@/components/live/LiveRoomPanel";
+import { RoomInfoModal } from "@/components/room/RoomInfoModal";
+import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { TypingBubble } from "@/components/TypingBubble";
 import { chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { dateSeparatorLabel, isSameDay } from "@/lib/time";
 import { useToast } from "@/lib/ToastContext";
-import { useVoiceRoomContext } from "@/lib/voice/VoiceRoomContext";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
@@ -27,25 +30,14 @@ export default function ChatRoomPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
   const showToast = useToast();
-  const voiceCtx = useVoiceRoomContext();
-  // El provider de voz es global (sobrevive a la navegación) — acá se recorta a "¿esta sala
-  // específica está en vivo para mí?" para que el resto de esta pantalla no tenga que cambiar.
-  const isThisRoomLive = voiceCtx.activeRoomId === id;
-  const voice = {
-    connected: voiceCtx.connected && isThisRoomLive,
-    connecting: voiceCtx.connecting && isThisRoomLive,
-    muted: voiceCtx.muted,
-    participants: isThisRoomLive ? voiceCtx.participants : [],
-    speakingLevels: isThisRoomLive ? voiceCtx.speakingLevels : new Map<string, number>(),
-    join: () => (id ? voiceCtx.join(id) : Promise.resolve()),
-    leave: voiceCtx.leave,
-    toggleMute: voiceCtx.toggleMute,
-  };
+  const live = useLiveRoomContext();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "live">("general");
+  const [showInfo, setShowInfo] = useState(false);
+  const [showLivePanel, setShowLivePanel] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const isNearBottomRef = useRef(true);
   const prevMessageCountRef = useRef(0);
   const [showNewMessagesPill, setShowNewMessagesPill] = useState(false);
@@ -96,6 +88,28 @@ export default function ChatRoomPage() {
     actions.loadRoomMessages(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Consultar el estado LIVE apenas se abre el chat (cabecera/anuncio) — no implica unirse al
+  // audio todavía, ver sección 11 del pedido.
+  useEffect(() => {
+    if (!id) return;
+    live.watchRoom(id);
+    return () => live.unwatchRoom(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Si hay un LIVE activo en esta sala y todavía no estoy conectado a ninguno, entrar
+  // automáticamente como AUDIENCE (solo escuchar, sin pedir permiso de micrófono). Si el
+  // navegador bloquea el autoplay, LiveAutoplayBar se encarga de mostrarlo — este efecto no
+  // oculta ese estado ni finge que ya se puede escuchar.
+  useEffect(() => {
+    if (!id || live.watchedRoomId !== id) return;
+    const isActive = live.viewingState?.status === "active";
+    if (isActive && live.activeRoomId !== id && !live.connecting) {
+      live.join(id).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, live.watchedRoomId, live.viewingState?.status, live.activeRoomId, live.connecting]);
 
   function scrollToBottom(smooth: boolean) {
     listEndRef.current?.scrollIntoView({ block: "end", behavior: smooth ? "smooth" : "auto" });
@@ -164,20 +178,6 @@ export default function ChatRoomPage() {
     }
   }
 
-  function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !id) return;
-    actions.updateRoomCover(id, URL.createObjectURL(file), file);
-  }
-
-  function handleBackgroundFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !id) return;
-    actions.updateRoomBackground(id, URL.createObjectURL(file), file);
-  }
-
   const headerTitle = room?.type === "direct" ? room?.peer?.displayName ?? "Conversación" : room?.name ?? "Conversación";
   const headerOnline = room?.type === "direct" ? !!room?.peer?.isOnline : !!room && room.onlineCount > 0;
   const headerSubtitle =
@@ -194,36 +194,30 @@ export default function ChatRoomPage() {
     );
   }
 
+  const isThisRoomLive = live.watchedRoomId === id ? live.viewingState?.status === "active" : room.live;
+  const liveParticipantCount =
+    live.activeRoomId === id ? live.participants.length : (live.watchedRoomId === id ? live.viewingState?.participantCount : room.liveSummary?.participantCount) ?? 0;
+  const canModerate = room.role === "owner" || room.role === "co_host";
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
-      {/* Header y barra de voz van juntos, arriba de la única región con scroll — antes estaban
-          "sticky" dentro del scroll compartido de toda la página, lo que rompía por completo en
-          móvil apenas el teclado cambiaba el viewport visual (ver AppShell.tsx: esta ruta ya no
-          comparte scroll con el resto de la app, así que un simple flujo normal alcanza). */}
+      <LiveAutoplayBar />
+      {/* Cabecera limpia: solo regresar, avatar, nombre, conectados, LIVE (si existe) y la tuerca
+          para quien tenga permisos — el resto de la administración (imagen/portada/fondo/
+          invitaciones/moderación) vive en RoomSettingsPanel, no acá (ver sección 5 del pedido). */}
       <div className="shrink-0 px-4 md:px-8">
-        <div
-          className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-cover bg-center py-3 backdrop-blur-md"
-          style={{
-            backgroundColor: "rgba(7,9,13,0.95)",
-            backgroundImage: room.coverUri
-              ? `linear-gradient(rgba(7,9,13,0.55), rgba(7,9,13,0.75)), url(${room.coverUri})`
-              : undefined,
-          }}
-        >
+        <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[rgba(7,9,13,0.95)] py-3 backdrop-blur-md">
           <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
             <BackIcon />
           </button>
           {room.type === "direct" && room.peer ? (
             <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={32} showOnline online={room.peer.isOnline} />
           ) : (
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, var(--color-cyan), var(--color-blue))" }}
-            >
-              {headerTitle.charAt(0).toUpperCase()}
-            </span>
+            <button onClick={() => setShowInfo(true)} className="cursor-pointer" aria-label="Información de la sala">
+              <Avatar name={headerTitle} avatarUri={room.avatarUri} gradient={room.gradient} size={32} />
+            </button>
           )}
-          <div className="min-w-0 flex-1">
+          <button onClick={() => setShowInfo(true)} className="min-w-0 flex-1 cursor-pointer text-left">
             <p className="flex items-center gap-1.5 truncate font-semibold">
               <span className="truncate">{headerTitle}</span>
               {room.type === "direct" && peerAreFriends && (
@@ -235,88 +229,48 @@ export default function ChatRoomPage() {
             {!!headerSubtitle && (
               <p className={`text-xs ${headerOnline ? "text-[var(--color-green)]" : "text-[var(--color-text-muted)]"}`}>{headerSubtitle}</p>
             )}
-          </div>
-          <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
-          <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
-          {room.type === "public" && (
-            <Link
-              href={`/chat/${id}/members`}
-              aria-label="Ver miembros"
-              title="Miembros"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          </button>
+          {isThisRoomLive ? (
+            <button
+              onClick={() => setShowLivePanel(true)}
+              aria-label={`Abrir LIVE · ${liveParticipantCount} personas`}
+              title="Abrir LIVE"
+              className="relative flex h-8 items-center gap-1.5 rounded-full bg-[var(--color-coral)] px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors cursor-pointer"
             >
-              <UsersIcon size={15} />
-            </Link>
-          )}
-          <button
-            onClick={() => coverInputRef.current?.click()}
-            aria-label="Cambiar portada de la sala"
-            title="Cambiar portada"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
-          >
-            <CameraIcon size={15} />
-          </button>
-          <button
-            onClick={() => backgroundInputRef.current?.click()}
-            aria-label="Cambiar fondo de la conversación"
-            title="Cambiar fondo del chat"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
-          >
-            <ImageIcon size={15} />
-          </button>
-          <button
-            onClick={voice.connected ? voice.leave : voice.join}
-            disabled={voice.connecting}
-            aria-label={voice.connected ? "Salir del live" : "Unirse al live"}
-            title={voice.connected ? "Salir del live" : "Unirse al live"}
-            className={`relative flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-60 cursor-pointer ${
-              voice.connected ? "bg-[var(--color-coral)]" : "bg-black/40 hover:bg-black/60"
-            }`}
-          >
-            {voice.connected && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />}
-            <span>Live</span>
-            {voice.participants.length > 0 && <span className="font-normal normal-case">{voice.participants.length}</span>}
-          </button>
-        </div>
-
-        {(voice.connected || voice.participants.length > 0) && (
-          <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2.5">
-            <div className="flex flex-1 flex-wrap items-center gap-3">
-              {voice.participants.map((p) => {
-                const level = voice.speakingLevels.get(p.id) ?? 0;
-                return (
-                  <div key={p.id} className="flex flex-col items-center gap-1">
-                    <span
-                      className="flex items-center justify-center rounded-full transition-transform duration-150 ease-out"
-                      style={{
-                        transform: `scale(${1 + level * 0.22})`,
-                        boxShadow: level > 0.05 ? `0 0 ${6 + level * 14}px ${level * 3}px ${accent.color}80` : undefined,
-                      }}
-                    >
-                      <Avatar name={p.displayName} avatarUri={p.avatarUri} gradient={p.avatarGradient} size={40} />
-                    </span>
-                    <span className="max-w-[64px] truncate text-[11px] font-medium">{p.displayName}</span>
-                  </div>
-                );
-              })}
-              {voice.participants.length === 0 && (
-                <span className="text-xs text-[var(--color-text-muted)]">Nadie en la voz todavía</span>
-              )}
-            </div>
-            {voice.connected && (
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
+              <span>Live</span>
+              {liveParticipantCount > 0 && <span className="font-normal normal-case">{liveParticipantCount}</span>}
+            </button>
+          ) : (
+            canModerate &&
+            room.type === "public" && (
               <button
-                onClick={voice.toggleMute}
-                aria-label={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
-                title={voice.muted ? "Activar micrófono" : "Silenciar micrófono"}
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
-                  voice.muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
-                }`}
+                onClick={() => {
+                  setSettingsInitialTab("live");
+                  setShowSettings(true);
+                }}
+                aria-label="Iniciar LIVE"
+                title="Iniciar LIVE"
+                className="flex h-8 items-center gap-1.5 rounded-full bg-black/40 px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-black/60 cursor-pointer"
               >
-                {voice.muted ? "🔇" : "🎤"}
+                Iniciar LIVE
               </button>
-            )}
-          </div>
-        )}
+            )
+          )}
+          {canModerate && (
+            <button
+              onClick={() => {
+                setSettingsInitialTab("general");
+                setShowSettings(true);
+              }}
+              aria-label="Configuración de la sala"
+              title="Configuración de la sala"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+            >
+              <SettingsIcon size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Única región con scroll de toda la pantalla — header y composer quedan afuera de este div
@@ -420,6 +374,12 @@ export default function ChatRoomPage() {
           <SendIcon />
         </button>
       </div>
+
+      {showInfo && <RoomInfoModal room={room} onClose={() => setShowInfo(false)} />}
+      {showSettings && (
+        <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab={settingsInitialTab} />
+      )}
+      {showLivePanel && <LiveRoomPanel room={room} onMinimize={() => setShowLivePanel(false)} />}
     </div>
   );
 }
