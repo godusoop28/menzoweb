@@ -80,6 +80,11 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
   // LiveRoomContext) — cualquier función acá abajo que necesite "la sesión actual" lee de
   // sessionRef, nunca de la variable `session` capturada en su propio render.
   const sessionRef = useRef<MusicSessionSummary | null>(null);
+  // Momento (reloj local) en el que se recibió el `session` actual — session.positionSeconds es
+  // la posición que calculó el backend en ESE instante, no un valor que siga avanzando solo (ver
+  // driftIntervalRef más abajo: compararlo tal cual contra player.getCurrentTime() varios segundos
+  // después es lo que hacía que la canción se reiniciara sola).
+  const sessionSnapshotAtRef = useRef<number>(0);
   const playerRef = useRef<YouTubePlayerLike | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const loadedVideoIdRef = useRef<string | null>(null);
@@ -94,6 +99,7 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
   }, [live.activeRoomId]);
   useEffect(() => {
     sessionRef.current = session;
+    sessionSnapshotAtRef.current = Date.now();
   }, [session]);
   useEffect(() => {
     localMutedRef.current = localMuted;
@@ -281,10 +287,15 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       const player = playerRef.current;
       const current = sessionRef.current;
       if (!player || !current || current.status !== "playing") return;
+      // current.positionSeconds quedó fijo en el momento en que llegó este snapshot — hay que
+      // sumarle el tiempo real transcurrido desde entonces para saber dónde debería estar la
+      // canción AHORA, si no, cada tick de este intervalo comparaba contra un valor cada vez más
+      // viejo y terminaba "corrigiendo" hacia atrás una posición que en realidad nunca se atrasó.
+      const expectedPosition = current.positionSeconds + (Date.now() - sessionSnapshotAtRef.current) / 1000;
       const localTime = player.getCurrentTime();
-      const drift = Math.abs(localTime - current.positionSeconds);
+      const drift = Math.abs(localTime - expectedPosition);
       if (drift > DRIFT_THRESHOLD_SECONDS) {
-        player.seekTo(current.positionSeconds, true);
+        player.seekTo(expectedPosition, true);
       }
     }, DRIFT_CHECK_INTERVAL_MS);
 
