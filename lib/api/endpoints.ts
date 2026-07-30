@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type {
+  AddQueueItemRequest,
   AuraDto,
   AuthResponseDto,
   BadgeDto,
@@ -18,14 +19,20 @@ import type {
   LoginRequest,
   MessageDto,
   ModerationActionRequest,
+  MusicSessionDto,
+  MusicSettingsRequest,
   NotificationDto,
   OnboardingRequest,
   PageResponse,
   PostDto,
+  QueueItemDto,
   RecentlyViewedDto,
   RefreshRequest,
   RegisterRequest,
+  ReorderQueueRequest,
+  RequestSongRequest,
   RoomMemberDto,
+  SeekRequest,
   SendMessageRequest,
   SettingsDto,
   StartLiveRequest,
@@ -35,10 +42,12 @@ import type {
   UpdateSettingsRequest,
   UploadResponseDto,
   UserProfileDto,
+  VersionedRequest,
   VoiceParticipantsDto,
   VoiceTokenDto,
   WallCommentDto,
   WallMessageDto,
+  YoutubeSearchResultDto,
 } from "./types";
 
 function qs(params: Record<string, string | number | undefined>) {
@@ -195,6 +204,40 @@ export const liveApi = {
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}/mute`, { method: "POST" }),
   removeParticipant: (roomId: string, userId: string) =>
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}`, { method: "DELETE" }),
+};
+
+export const musicApi = {
+  snapshot: (roomId: string) => apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music`),
+  search: (roomId: string, q: string) =>
+    apiFetch<YoutubeSearchResultDto[]>(`/api/chat/rooms/${roomId}/live/music/search${qs({ q })}`),
+  queue: (roomId: string) => apiFetch<QueueItemDto[]>(`/api/chat/rooms/${roomId}/live/music/queue`),
+  addToQueue: (roomId: string, body: AddQueueItemRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/queue`, { method: "POST", body }),
+  requestSong: (roomId: string, body: RequestSongRequest) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/music/requests`, { method: "POST", body }),
+  approveRequest: (roomId: string, requestId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/music/requests/${requestId}/approve`, { method: "POST" }),
+  rejectRequest: (roomId: string, requestId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/music/requests/${requestId}/reject`, { method: "POST" }),
+  play: (roomId: string, body?: VersionedRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/play`, { method: "POST", body }),
+  pause: (roomId: string, body?: VersionedRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/pause`, { method: "POST", body }),
+  resume: (roomId: string, body?: VersionedRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/resume`, { method: "POST", body }),
+  seek: (roomId: string, body: SeekRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/seek`, { method: "POST", body }),
+  skip: (roomId: string, body?: VersionedRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/skip`, { method: "POST", body }),
+  stop: (roomId: string, body?: VersionedRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/stop`, { method: "POST", body }),
+  updateSettings: (roomId: string, body: MusicSettingsRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/settings`, { method: "PATCH", body }),
+  reorderQueue: (roomId: string, body: ReorderQueueRequest) =>
+    apiFetch<MusicSessionDto>(`/api/chat/rooms/${roomId}/live/music/queue/reorder`, { method: "PATCH", body }),
+  removeQueueItem: (roomId: string, queueItemId: string) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/music/queue/${queueItemId}`, { method: "DELETE" }),
+  clearQueue: (roomId: string) => apiFetch<void>(`/api/chat/rooms/${roomId}/live/music/queue`, { method: "DELETE" }),
 };
 
 export const communityApi = {

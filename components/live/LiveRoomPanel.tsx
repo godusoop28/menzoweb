@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, SettingsIcon, UsersIcon } from "@/components/icons";
+import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, SettingsIcon, UsersIcon } from "@/components/icons";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
+import { MenziDjPanel } from "@/components/music/MenziDjPanel";
 import { useToast } from "@/lib/ToastContext";
 import type { ChatRoom, LiveParticipant, LiveParticipantRole } from "@/lib/types";
 
@@ -41,6 +42,7 @@ function useElapsed(startedAt: string | null | undefined) {
 export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize: () => void }) {
   const live = useLiveRoomContext();
   const [showSettings, setShowSettings] = useState(false);
+  const [showMusic, setShowMusic] = useState(false);
   const [showAudience, setShowAudience] = useState(false);
   const isConnectedHere = live.activeRoomId === room.id;
   const elapsed = useElapsed(live.watchedRoomId === room.id ? live.viewingState?.startedAt : undefined);
@@ -160,8 +162,17 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
         )}
 
         {/* Controles inferiores */}
-        {isConnectedHere && <LiveControls room={room} onOpenSettings={() => setShowSettings(true)} onExit={onMinimize} />}
+        {isConnectedHere && (
+          <LiveControls
+            room={room}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenMusic={() => setShowMusic(true)}
+            onExit={onMinimize}
+          />
+        )}
       </div>
+
+      {showMusic && <MenziDjPanel room={room} onClose={() => setShowMusic(false)} />}
 
       {showSettings && <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab="live" />}
     </div>
@@ -189,19 +200,22 @@ function ControlButton({
   onClick,
   label,
   variant = "neutral",
+  disabled,
   children,
 }: {
   onClick: () => void;
   label: string;
   variant?: ControlVariant;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
-      className={`flex h-12 w-12 items-center justify-center rounded-full cursor-pointer transition-colors ${VARIANT_CLASSES[variant]}`}
+      className={`flex h-12 w-12 items-center justify-center rounded-full cursor-pointer transition-colors disabled:cursor-wait disabled:opacity-70 ${VARIANT_CLASSES[variant]}`}
     >
       {children}
     </button>
@@ -211,10 +225,12 @@ function ControlButton({
 function LiveControls({
   room,
   onOpenSettings,
+  onOpenMusic,
   onExit,
 }: {
   room: ChatRoom;
   onOpenSettings: () => void;
+  onOpenMusic: () => void;
   onExit: () => void;
 }) {
   const live = useLiveRoomContext();
@@ -222,6 +238,13 @@ function LiveControls({
   const [confirmEndForAll, setConfirmEndForAll] = useState(false);
   const [endingForAll, setEndingForAll] = useState(false);
   const canModerate = room.role === "owner" || room.role === "co_host";
+
+  // Única fuente de errores de micrófono (ver LiveRoomContext) — cualquier falla, sea al
+  // publicar el track o al alternar mute, termina acá como un toast legible en vez de un botón
+  // que simplemente no responde.
+  useEffect(() => {
+    if (live.lastMicrophoneError) showToast(live.lastMicrophoneError);
+  }, [live.lastMicrophoneError, showToast]);
 
   async function handleRequestToSpeak() {
     try {
@@ -262,10 +285,17 @@ function LiveControls({
         {live.canSpeak && (
           <ControlButton
             onClick={live.toggleMute}
-            label={live.muted ? "Activar micrófono" : "Silenciar micrófono"}
-            variant={live.muted ? "danger" : "on"}
+            disabled={live.microphoneChanging}
+            label={
+              !live.localAudioPublished
+                ? "Reintentar micrófono"
+                : live.muted
+                  ? "Activar micrófono"
+                  : "Silenciar micrófono"
+            }
+            variant={live.muted || !live.localAudioPublished ? "danger" : "on"}
           >
-            {live.muted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+            {live.muted || !live.localAudioPublished ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
           </ControlButton>
         )}
         {live.myRole === "audience" && (
@@ -284,6 +314,9 @@ function LiveControls({
             <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
           </button>
         )}
+        <ControlButton onClick={onOpenMusic} label="Menzi DJ">
+          <MusicNoteIcon size={18} />
+        </ControlButton>
         {canModerate && (
           <ControlButton onClick={onOpenSettings} label="Solicitudes y moderación">
             <UsersIcon size={18} />

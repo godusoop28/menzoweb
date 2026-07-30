@@ -268,6 +268,97 @@ export function ChevronDownIcon({ size = 14, className = "" }: IconProps) {
   );
 }
 
+export function MusicNoteIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M9 18V5l11-2v13"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="17" cy="16" r="3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function PlayIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`${base} ${className}`}>
+      <path d="M6 4.5v15l14-7.5-14-7.5Z" />
+    </svg>
+  );
+}
+
+export function PauseIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`${base} ${className}`}>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  );
+}
+
+export function SkipNextIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`${base} ${className}`}>
+      <path d="M5 5v14l10-7L5 5Z" />
+      <rect x="17" y="5" width="2.5" height="14" rx="1" />
+    </svg>
+  );
+}
+
+export function SkipPrevIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`${base} ${className}`}>
+      <path d="M19 5v14L9 12l10-7Z" />
+      <rect x="4.5" y="5" width="2.5" height="14" rx="1" />
+    </svg>
+  );
+}
+
+export function StopIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={`${base} ${className}`}>
+      <rect x="5" y="5" width="14" height="14" rx="2" />
+    </svg>
+  );
+}
+
+export function VolumeIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M4 10v4h4l5 4V6L8 10H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M17 9a4.5 4.5 0 0 1 0 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function VolumeMuteIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M4 10v4h4l5 4V6L8 10H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M16 10l4 4M20 10l-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M4 7h16M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function CrownIcon({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

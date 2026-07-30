@@ -239,3 +239,50 @@ export type LiveSessionSummary = {
   myMicrophoneEnabled: boolean;
   hasPendingSpeakRequest: boolean;
 };
+
+// ---- Menzi DJ -----------------------------------------------------------------------------
+
+export type QueueItemStatus = "pending" | "queued" | "playing" | "played" | "skipped" | "rejected" | "removed";
+
+export type QueueItem = {
+  id: string;
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  requestedBy: DemoUser | null;
+  approvedBy: DemoUser | null;
+  position: number | null;
+  status: QueueItemStatus;
+  createdAt: string;
+};
+
+export type MusicSessionSummary = {
+  musicSessionId: string;
+  roomId: string;
+  liveSessionId: string;
+  status: "idle" | "playing" | "paused" | "stopped" | "error";
+  currentQueueItemId: string | null;
+  currentVideoId: string | null;
+  currentTitle: string | null;
+  currentChannelTitle: string | null;
+  currentThumbnailUrl: string | null;
+  durationSeconds: number | null;
+  positionSeconds: number;
+  allowRequests: boolean;
+  version: number;
+  queue: QueueItem[];
+  pendingRequests: QueueItem[];
+  history: QueueItem[];
+};
+
+export type YoutubeSearchResult = {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  embeddable: boolean;
+  live: boolean;
+};

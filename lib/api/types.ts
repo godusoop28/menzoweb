@@ -404,3 +404,92 @@ export type UpdateSettingsRequest = Partial<SettingsDto>;
 
 export type RecentlyViewedDto = { kind: ActivityKind; id: string; viewedAt: string };
 export type UploadResponseDto = { url: string };
+
+// ---- Menzi DJ (música sincronizada del LIVE, YouTube) -----------------------------------------
+// Menzi DJ no es un usuario ni un participante de Agora — es este módulo. Ver MusicService en
+// menzoapi para la arquitectura completa (estado canónico, cola, solicitudes).
+
+export type YoutubeSearchResultDto = {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  embeddable: boolean;
+  live: boolean;
+};
+
+export type QueueItemStatus = "PENDING" | "QUEUED" | "PLAYING" | "PLAYED" | "SKIPPED" | "REJECTED" | "REMOVED";
+
+export type QueueItemDto = {
+  id: string;
+  videoId: string;
+  title: string | null;
+  channelTitle: string | null;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  requestedBy: UserSummaryDto | null;
+  approvedBy: UserSummaryDto | null;
+  position: number | null;
+  status: QueueItemStatus;
+  createdAt: string;
+};
+
+export type MusicSessionStatus = "IDLE" | "PLAYING" | "PAUSED" | "STOPPED" | "ERROR";
+
+export type MusicSessionDto = {
+  musicSessionId: string;
+  roomId: string;
+  liveSessionId: string;
+  status: MusicSessionStatus;
+  currentQueueItemId: string | null;
+  currentVideoId: string | null;
+  currentTitle: string | null;
+  currentChannelTitle: string | null;
+  currentThumbnailUrl: string | null;
+  durationSeconds: number | null;
+  /** Ya calculada por el backend (elapsed desde playbackStartedAt) — nunca calcular esto en el
+   * cliente a partir del reloj local, ver sección 10 del pedido. */
+  positionSeconds: number;
+  allowRequests: boolean;
+  version: number;
+  queue: QueueItemDto[];
+  pendingRequests: QueueItemDto[];
+  history: QueueItemDto[];
+};
+
+export type AddQueueItemRequest = { videoId: string; expectedVersion?: number; playNow?: boolean };
+export type RequestSongRequest = { videoId: string };
+export type SeekRequest = { positionSeconds: number; expectedVersion?: number };
+export type VersionedRequest = { expectedVersion?: number };
+export type ReorderQueueRequest = { orderedQueueItemIds: string[]; expectedVersion?: number };
+export type MusicSettingsRequest = { allowRequests?: boolean };
+
+export type MusicEventType =
+  | "LIVE_MUSIC_SESSION_CREATED"
+  | "LIVE_MUSIC_SEARCH_FAILED"
+  | "LIVE_MUSIC_REQUESTED"
+  | "LIVE_MUSIC_REQUEST_APPROVED"
+  | "LIVE_MUSIC_REQUEST_REJECTED"
+  | "LIVE_MUSIC_QUEUE_UPDATED"
+  | "LIVE_MUSIC_TRACK_ADDED"
+  | "LIVE_MUSIC_STARTED"
+  | "LIVE_MUSIC_PAUSED"
+  | "LIVE_MUSIC_RESUMED"
+  | "LIVE_MUSIC_SEEKED"
+  | "LIVE_MUSIC_SKIPPED"
+  | "LIVE_MUSIC_TRACK_CHANGED"
+  | "LIVE_MUSIC_STOPPED"
+  | "LIVE_MUSIC_SETTINGS_UPDATED"
+  | "LIVE_MUSIC_ERROR";
+
+export type MusicEventDto<TPayload = unknown> = {
+  eventId: string;
+  type: MusicEventType;
+  roomId: string;
+  liveSessionId: string;
+  musicSessionId: string;
+  version: number;
+  occurredAt: string;
+  payload: TPayload;
+};

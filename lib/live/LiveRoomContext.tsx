@@ -33,6 +33,12 @@ type LiveRoomContextValue = {
   connecting: boolean;
   myRole: LiveParticipantRole | null;
   muted: boolean;
+  // Fuente única del estado del micrófono (ver sección 17 del pedido) — el botón de mic en
+  // cualquier componente debe leer estos campos, nunca mantener su propia copia del estado.
+  microphoneChanging: boolean;
+  microphonePermission: "unknown" | "granted" | "denied";
+  localAudioPublished: boolean;
+  lastMicrophoneError: string | null;
   canSpeak: boolean;
   participants: LiveParticipant[];
   speakingLevels: Map<string, number>;
@@ -72,7 +78,11 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [myRole, setMyRole] = useState<LiveParticipantRole | null>(null);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [microphoneChanging, setMicrophoneChanging] = useState(false);
+  const [microphonePermission, setMicrophonePermission] = useState<"unknown" | "granted" | "denied">("unknown");
+  const [localAudioPublished, setLocalAudioPublished] = useState(false);
+  const [lastMicrophoneError, setLastMicrophoneError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<LiveParticipant[]>([]);
   const [speakingLevels, setSpeakingLevels] = useState<Map<string, number>>(new Map());
   const [speakingRequests, setSpeakingRequests] = useState<LiveParticipant[]>([]);
@@ -83,12 +93,20 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const remoteAudioTracksRef = useRef<Map<string, IRemoteAudioTrack>>(new Map());
   const activeRoomIdRef = useRef<string | null>(null);
   const myRoleRef = useRef<LiveParticipantRole | null>(null);
+  // Refs espejo de estado leído dentro de callbacks async (toggleMute, etc.) — un closure de
+  // useCallback puede quedar con un valor viejo si el usuario toca el botón dos veces seguidas
+  // antes de que React re-renderice; leer del ref siempre da el valor más reciente.
+  const mutedRef = useRef(true);
 
   const stompRef = useRef<Client | null>(null);
 
   useEffect(() => {
     myRoleRef.current = myRole;
   }, [myRole]);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   // ---- WebSocket: un cliente STOMP persistente para todo el provider, con suscripciones que se
   // agregan/quitan dinámicamente por sala (watchedRoomId y activeRoomId pueden ser salas
@@ -139,19 +157,40 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  /** Crea el track de micrófono y lo publica ya deshabilitado ("iniciar silenciado por
+   * seguridad", ver sección 17/19 del pedido) — nadie queda con el micrófono caliente sin haberlo
+   * activado a propósito, ni recién aprobado como SPEAKER ni al arrancar un LIVE como HOST.
+   * Si falla (permiso de micrófono denegado, hardware ocupado, etc.) NO deja al llamador creer
+   * que puede hablar: limpia el track, marca localAudioPublished=false y deja lastMicrophoneError
+   * con un mensaje claro para que la UI pueda ofrecer "reintentar" en vez de un botón mudo. */
   const publishMicTrack = useCallback(
     async (client: IAgoraRTCClient, AgoraRTC: typeof import("agora-rtc-sdk-ng").default) => {
-      const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      micTrackRef.current = micTrack;
-      await client.publish([micTrack]);
-      setMuted(false);
+      try {
+        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await micTrack.setEnabled(false);
+        micTrackRef.current = micTrack;
+        await client.publish([micTrack]);
+        setMicrophonePermission("granted");
+        setLocalAudioPublished(true);
+        setMuted(true);
+        setLastMicrophoneError(null);
+      } catch (error) {
+        console.warn("[menzo/live] publishMicTrack failed", error);
+        micTrackRef.current = null;
+        setLocalAudioPublished(false);
+        setMicrophonePermission("denied");
+        setLastMicrophoneError("No pudimos acceder a tu micrófono. Revisá los permisos del navegador.");
+      }
     },
     []
   );
 
   /** Aprobaron mi solicitud para hablar: necesito un token nuevo con privilegio de publisher (el
    * que tenía como audiencia era subscriber-only) y recién ahí crear+publicar el track de mic —
-   * nunca antes, para no pedir permiso de micrófono mientras solo escuchaba. */
+   * nunca antes, para no pedir permiso de micrófono mientras solo escuchaba. El rol cambia a
+   * "speaker" siempre que el servidor lo confirmó, incluso si publishMicTrack falla después — la
+   * persona SÍ es speaker (puede reintentar el micrófono); lo que puede fallar es solo el
+   * hardware local, y localAudioPublished/lastMicrophoneError reflejan eso por separado. */
   const becomeSpeaker = useCallback(
     async (roomId: string) => {
       const client = clientRef.current;
@@ -164,6 +203,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         await publishMicTrack(client, AgoraRTC);
       } catch (error) {
         console.warn("[menzo/live] becomeSpeaker failed", error);
+        setLastMicrophoneError("No pudimos activar tu lugar como hablante. Intentá de nuevo.");
       }
     },
     [publishMicTrack]
@@ -179,7 +219,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       micTrackRef.current.close();
       micTrackRef.current = null;
     }
-    setMuted(false);
+    setMuted(true);
+    setLocalAudioPublished(false);
+    setLastMicrophoneError(null);
     if (client && roomId) {
       try {
         const tokenDto = await liveApi.token(roomId);
@@ -382,13 +424,47 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     if (roomId) await liveApi.leave(roomId).catch(() => {});
   }, [cleanupAgoraClient]);
 
+  /** Flujo completo del botón de micrófono (ver sección 17 del pedido):
+   * 1. Ignora toques mientras ya hay un cambio en curso (evita el bug de doble-toque que dejaba
+   *    el estado inconsistente si el segundo toque leía un `muted` viejo de un closure obsoleto —
+   *    por eso se lee de mutedRef, no del parámetro capturado del useCallback).
+   * 2. Verifica rol real (HOST/CO_HOST/SPEAKER) antes de tocar nada.
+   * 3. Verifica que el track exista; si no, es porque publishMicTrack falló antes — reintenta en
+   *    vez de fallar en silencio.
+   * 4. Aplica el cambio, y si el SDK de Agora lo rechaza, revierte el estado visual y muestra el
+   *    error en vez de dejar el botón mostrando algo que no coincide con lo que Agora hizo. */
   const toggleMute = useCallback(async () => {
-    if (!micTrackRef.current || !activeRoomIdRef.current) return;
-    const next = !muted;
-    await micTrackRef.current.setEnabled(!next);
-    setMuted(next);
-    liveApi.setMicrophone(activeRoomIdRef.current, !next).catch(() => {});
-  }, [muted]);
+    if (microphoneChanging) return;
+    const role = myRoleRef.current;
+    if (!role || !SPEAKING_ROLES.includes(role)) {
+      setLastMicrophoneError("No tenés permiso para hablar en este LIVE.");
+      return;
+    }
+    const roomId = activeRoomIdRef.current;
+    const client = clientRef.current;
+    if (!roomId || !client) return;
+
+    setMicrophoneChanging(true);
+    setLastMicrophoneError(null);
+    try {
+      if (!micTrackRef.current) {
+        // El track nunca se pudo crear (permiso denegado, hardware ocupado) — reintentar en vez
+        // de dejar un botón que no responde.
+        const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
+        await publishMicTrack(client, AgoraRTC);
+        return;
+      }
+      const next = !mutedRef.current;
+      await micTrackRef.current.setEnabled(!next);
+      setMuted(next);
+      liveApi.setMicrophone(roomId, !next).catch(() => {});
+    } catch (error) {
+      console.warn("[menzo/live] toggleMute failed", error);
+      setLastMicrophoneError("No pudimos cambiar el micrófono. Intentá de nuevo.");
+    } finally {
+      setMicrophoneChanging(false);
+    }
+  }, [microphoneChanging, publishMicTrack]);
 
   const unlockAudio = useCallback(() => {
     for (const track of remoteAudioTracksRef.current.values()) {
@@ -495,6 +571,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       connecting,
       myRole,
       muted,
+      microphoneChanging,
+      microphonePermission,
+      localAudioPublished,
+      lastMicrophoneError,
       canSpeak,
       participants,
       speakingLevels,
@@ -526,6 +606,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       connecting,
       myRole,
       muted,
+      microphoneChanging,
+      microphonePermission,
+      localAudioPublished,
+      lastMicrophoneError,
       canSpeak,
       participants,
       speakingLevels,

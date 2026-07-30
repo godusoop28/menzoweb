@@ -9,7 +9,8 @@ import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
  * un live conectado y no estemos ya mirando la sala de ese live. Tocarla vuelve a la sala; el
  * micrófono y salir están ahí mismo para no tener que volver a la sala solo para silenciarse. */
 export function PersistentVoiceBubble() {
-  const { activeRoomId, connected, participants, muted, canSpeak, leave, toggleMute } = useLiveRoomContext();
+  const { activeRoomId, connected, participants, muted, canSpeak, microphoneChanging, localAudioPublished, leave, toggleMute } =
+    useLiveRoomContext();
   const pathname = usePathname();
   const router = useRouter();
   const accent = useAccent();
@@ -52,13 +53,14 @@ export function PersistentVoiceBubble() {
               e.stopPropagation();
               toggleMute();
             }}
-            aria-label={muted ? "Activar micrófono" : "Silenciar micrófono"}
-            title={muted ? "Activar micrófono" : "Silenciar micrófono"}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer ${
-              muted ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
+            disabled={microphoneChanging}
+            aria-label={!localAudioPublished ? "Reintentar micrófono" : muted ? "Activar micrófono" : "Silenciar micrófono"}
+            title={!localAudioPublished ? "Reintentar micrófono" : muted ? "Activar micrófono" : "Silenciar micrófono"}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm cursor-pointer disabled:cursor-wait disabled:opacity-70 ${
+              muted || !localAudioPublished ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-[var(--color-surface-secondary)]"
             }`}
           >
-            {muted ? "🔇" : "🎤"}
+            {muted || !localAudioPublished ? "🔇" : "🎤"}
           </button>
         )}
         <button

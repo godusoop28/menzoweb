@@ -307,6 +307,61 @@ export function mapEvent(dto: EventDto): CommunityEvent {
   };
 }
 
+export function mapQueueItem(
+  dto: import("./types").QueueItemDto,
+  myRealId: string | null
+): import("@/lib/types").QueueItem {
+  return {
+    id: dto.id,
+    videoId: dto.videoId,
+    title: dto.title ?? "",
+    channelTitle: dto.channelTitle ?? "",
+    thumbnailUrl: dto.thumbnailUrl,
+    durationSeconds: dto.durationSeconds,
+    requestedBy: dto.requestedBy ? mapUserSummary(dto.requestedBy, myRealId) : null,
+    approvedBy: dto.approvedBy ? mapUserSummary(dto.approvedBy, myRealId) : null,
+    position: dto.position,
+    status: dto.status.toLowerCase() as import("@/lib/types").QueueItemStatus,
+    createdAt: dto.createdAt,
+  };
+}
+
+export function mapMusicSession(
+  dto: import("./types").MusicSessionDto,
+  myRealId: string | null
+): import("@/lib/types").MusicSessionSummary {
+  return {
+    musicSessionId: dto.musicSessionId,
+    roomId: dto.roomId,
+    liveSessionId: dto.liveSessionId,
+    status: dto.status.toLowerCase() as import("@/lib/types").MusicSessionSummary["status"],
+    currentQueueItemId: dto.currentQueueItemId,
+    currentVideoId: dto.currentVideoId,
+    currentTitle: dto.currentTitle,
+    currentChannelTitle: dto.currentChannelTitle,
+    currentThumbnailUrl: dto.currentThumbnailUrl,
+    durationSeconds: dto.durationSeconds,
+    positionSeconds: dto.positionSeconds,
+    allowRequests: dto.allowRequests,
+    version: dto.version,
+    queue: dto.queue.map((q) => mapQueueItem(q, myRealId)),
+    pendingRequests: dto.pendingRequests.map((q) => mapQueueItem(q, myRealId)),
+    history: dto.history.map((q) => mapQueueItem(q, myRealId)),
+  };
+}
+
+export function mapYoutubeSearchResult(dto: import("./types").YoutubeSearchResultDto): import("@/lib/types").YoutubeSearchResult {
+  return {
+    videoId: dto.videoId,
+    title: dto.title,
+    channelTitle: dto.channelTitle,
+    thumbnailUrl: dto.thumbnailUrl,
+    durationSeconds: dto.durationSeconds,
+    embeddable: dto.embeddable,
+    live: dto.live,
+  };
+}
+
 export function mapNotification(dto: NotificationDto, myRealId: string | null): Notification {
   return {
     id: dto.id,

@@ -7,6 +7,8 @@ import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAppHeight } from "@/lib/useAppHeight";
 
+import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
+import { MenziDjPlayerHost } from "./music/MenziDjPlayerHost";
 import { Avatar } from "./Avatar";
 import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
@@ -218,6 +220,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <PersistentVoiceBubble />
+      <MenziDjPlayerHost />
+      <MenziDjAutoplayBar />
     </div>
   );
 }
