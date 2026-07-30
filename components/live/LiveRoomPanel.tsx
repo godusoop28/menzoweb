@@ -52,7 +52,15 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
   const audience = isConnectedHere ? live.participants.filter((p) => !STAGE_ROLES.includes(p.role)) : [];
   const announcement = live.watchedRoomId === room.id ? live.viewingState?.announcement : room.liveSummary?.announcement;
   const title = (live.watchedRoomId === room.id ? live.viewingState?.title : room.liveSummary?.title) || room.name;
-  const total = isConnectedHere ? live.participants.length : room.liveSummary?.participantCount ?? 0;
+  // Antes usaba room.liveSummary?.participantCount para cualquiera que no estuviera conectado al
+  // audio — ese valor viene del fetch inicial de la lista de salas y nunca se actualiza solo, así
+  // que alguien mirando este panel sin unirse todavía veía un número pegado hasta refrescar.
+  // live.viewingState sí se mantiene al día vía WebSocket (ver watchRoom en LiveRoomContext).
+  const total = isConnectedHere
+    ? live.participants.length
+    : live.watchedRoomId === room.id
+      ? live.viewingState?.participantCount ?? 0
+      : room.liveSummary?.participantCount ?? 0;
   const canModerate = room.role === "owner" || room.role === "co_host";
 
   const backgroundImage = room.coverUri || room.backgroundUri;

@@ -283,31 +283,41 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const watchRoom = useCallback(
     (roomId: string) => {
       setWatchedRoomId(roomId);
-      liveApi
-        .state(roomId)
-        .then((dto) => setViewingState(dto ? mapLiveSession(dto) : null))
-        .catch(() => setViewingState(null));
+
+      // Todo evento CHAT_LIVE_* que pueda cambiar lo que se muestra acá (arrancó, se actualizó, o
+      // alguien entró/salió/pidió-o-dejó-de-hablar) vuelve a pedir el snapshot completo. El
+      // payload de un evento de participante es un LiveParticipantResponse de UNA sola persona —
+      // nunca trajo un participantCount — así que antes esta rama intentaba leer un campo que no
+      // existía, participantCount se quedaba pegado en su valor inicial, y quien solo estaba
+      // mirando la sala (sin unirse al audio) nunca veía el contador moverse sin refrescar.
+      // requestSeq descarta una respuesta que llegue tarde después de una más nueva (dos personas
+      // entrando casi juntas, por ejemplo), para que el contador nunca "rebote" hacia un valor viejo.
+      let requestSeq = 0;
+      function refreshViewingState(onError?: () => void) {
+        const seq = ++requestSeq;
+        liveApi
+          .state(roomId)
+          .then((dto) => {
+            if (seq !== requestSeq) return;
+            setViewingState(dto ? mapLiveSession(dto) : null);
+          })
+          .catch(() => {
+            if (seq === requestSeq) onError?.();
+          });
+      }
+
+      refreshViewingState(() => setViewingState(null));
 
       const unsubscribe = subscribeLiveTopic(roomId, (event) => {
-        if (event.type === "CHAT_LIVE_STARTED" || event.type === "CHAT_LIVE_UPDATED") {
-          liveApi
-            .state(roomId)
-            .then((dto) => setViewingState(dto ? mapLiveSession(dto) : null))
-            .catch(() => {});
-        } else if (event.type === "CHAT_LIVE_ENDED") {
+        if (event.type === "CHAT_LIVE_ENDED") {
           setViewingState((prev) => (prev ? { ...prev, status: "ended" } : prev));
-        } else if (event.type.startsWith("CHAT_LIVE_PARTICIPANT") || event.type.startsWith("CHAT_LIVE_SPEAKING")) {
-          setViewingState((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  participantCount:
-                    typeof (event.payload as { participantCount?: number })?.participantCount === "number"
-                      ? (event.payload as { participantCount: number }).participantCount
-                      : prev.participantCount,
-                }
-              : prev
-          );
+        } else if (
+          event.type === "CHAT_LIVE_STARTED" ||
+          event.type === "CHAT_LIVE_UPDATED" ||
+          event.type.startsWith("CHAT_LIVE_PARTICIPANT") ||
+          event.type.startsWith("CHAT_LIVE_SPEAKING")
+        ) {
+          refreshViewingState();
         }
       });
 
