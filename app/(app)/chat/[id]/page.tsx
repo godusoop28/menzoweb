@@ -221,7 +221,23 @@ export default function ChatRoomPage() {
   const canModerate = room.role === "owner" || room.role === "co_host";
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
+    <div className="relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
+      {/* El fondo de la sala vive acá, anclado a este contenedor de altura estable (h-full, no
+          crece con los mensajes) — antes se aplicaba como bg-cover directo sobre el div de
+          mensajes, cuya altura es auto y crece con la conversación, así que "cover" se
+          recalculaba contra una caja distinta en cada chat: una charla corta daba una caja casi
+          cuadrada, una larga una caja angosta y altísima, y la misma imagen se veía recortada/
+          "estirada" de forma completamente distinta según cuántos mensajes hubiera. object-cover
+          sobre una caja de tamaño fijo (h-full) siempre recorta igual, nunca deforma. Header y
+          composer llevan su propio fondo opaco/blur (ver más abajo) así que igual la tapan donde
+          corresponde. */}
+      {room.backgroundUri && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={room.backgroundUri} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <div className="absolute inset-0 -z-10 bg-[rgba(7,9,13,0.62)]" />
+        </>
+      )}
       <LiveAutoplayBar />
       {/* Cabecera limpia: solo regresar, avatar, nombre, conectados, LIVE (si existe) y la tuerca
           para quien tenga permisos — el resto de la administración (imagen/portada/fondo/
@@ -310,16 +326,7 @@ export default function ChatRoomPage() {
           se enteraba del teclado en Android — el resultado visual era el composer atrapado a mitad
           de camino, con mensajes visibles arriba y abajo suyo. */}
       <div ref={messagesScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-8">
-        <div
-          className="relative flex flex-col gap-2.5 rounded-b-2xl bg-cover bg-center py-4"
-          style={
-            room.backgroundUri
-              ? {
-                  backgroundImage: `linear-gradient(rgba(7,9,13,0.62), rgba(7,9,13,0.62)), url(${room.backgroundUri})`,
-                }
-              : undefined
-          }
-        >
+        <div className="relative flex flex-col gap-2.5 rounded-b-2xl py-4">
           {messages.length === 0 ? (
             <MenziIllustrationState
               image="/illustrations/menzi/menzi-chat.webp"
