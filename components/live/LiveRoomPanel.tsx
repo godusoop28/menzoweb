@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, SettingsIcon, UsersIcon } from "@/components/icons";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ApiError } from "@/lib/api";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { useToast } from "@/lib/ToastContext";
 import type { ChatRoom, LiveParticipant, LiveParticipantRole } from "@/lib/types";
@@ -158,7 +160,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
         )}
 
         {/* Controles inferiores */}
-        {isConnectedHere && <LiveControls room={room} onOpenSettings={() => setShowSettings(true)} />}
+        {isConnectedHere && <LiveControls room={room} onOpenSettings={() => setShowSettings(true)} onExit={onMinimize} />}
       </div>
 
       {showSettings && <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab="live" />}
@@ -171,17 +173,27 @@ function StageSlot({ participant, speakingLevel }: { participant: LiveParticipan
   return <LiveParticipantBubble participant={participant} size={isHost ? 76 : 60} speakingLevel={speakingLevel} />;
 }
 
+type ControlVariant = "neutral" | "on" | "danger";
+
+const VARIANT_CLASSES: Record<ControlVariant, string> = {
+  neutral: "bg-white/10 hover:bg-white/20 text-white",
+  // Estado "encendido/normal" del micrófono — deliberadamente sutil, no debe competir visualmente
+  // con el estado silenciado (que sí necesita saltar a la vista, ver "danger" abajo).
+  on: "bg-white/10 hover:bg-white/20 text-white",
+  // Silenciado (o cualquier acción que corte la llamada) siempre en coral: es el único estado que
+  // realmente necesita llamar la atención acá.
+  danger: "bg-[var(--color-coral)] text-white hover:brightness-110",
+};
+
 function ControlButton({
   onClick,
   label,
-  active,
-  danger,
+  variant = "neutral",
   children,
 }: {
   onClick: () => void;
   label: string;
-  active?: boolean;
-  danger?: boolean;
+  variant?: ControlVariant;
   children: React.ReactNode;
 }) {
   return (
@@ -189,18 +201,27 @@ function ControlButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-11 w-11 items-center justify-center rounded-full text-white cursor-pointer transition-colors ${
-        danger ? "bg-[var(--color-coral)]" : active ? "bg-[var(--color-orange)] text-black" : "bg-white/10 hover:bg-white/20"
-      }`}
+      className={`flex h-12 w-12 items-center justify-center rounded-full cursor-pointer transition-colors ${VARIANT_CLASSES[variant]}`}
     >
       {children}
     </button>
   );
 }
 
-function LiveControls({ room, onOpenSettings }: { room: ChatRoom; onOpenSettings: () => void }) {
+function LiveControls({
+  room,
+  onOpenSettings,
+  onExit,
+}: {
+  room: ChatRoom;
+  onOpenSettings: () => void;
+  onExit: () => void;
+}) {
   const live = useLiveRoomContext();
   const showToast = useToast();
+  const [confirmEndForAll, setConfirmEndForAll] = useState(false);
+  const [endingForAll, setEndingForAll] = useState(false);
+  const canModerate = room.role === "owner" || room.role === "co_host";
 
   async function handleRequestToSpeak() {
     try {
@@ -210,37 +231,90 @@ function LiveControls({ room, onOpenSettings }: { room: ChatRoom; onOpenSettings
     }
   }
 
+  /** "Salir" es personal: me desconecto y cierro el panel, pero el LIVE sigue para los demás. */
+  async function handleExit() {
+    await live.leave();
+    onExit();
+  }
+
+  /** "Finalizar LIVE" corta la llamada para TODOS — pide confirmación aparte porque no se puede
+   * deshacer y afecta a cualquiera que esté escuchando en ese momento. */
+  async function handleEndForAll() {
+    if (endingForAll) return;
+    setEndingForAll(true);
+    try {
+      await live.endLive(room.id);
+      setConfirmEndForAll(false);
+      onExit();
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos finalizar el LIVE.");
+    } finally {
+      setEndingForAll(false);
+    }
+  }
+
   return (
-    <div className="flex shrink-0 items-center justify-center gap-3 px-4 py-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
-      {live.canSpeak && (
-        <ControlButton onClick={live.toggleMute} label={live.muted ? "Activar micrófono" : "Silenciar micrófono"} active={!live.muted}>
-          {live.muted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-        </ControlButton>
-      )}
-      {live.myRole === "audience" && (
+    <>
+      <div
+        className="flex shrink-0 flex-wrap items-center justify-center gap-3 px-4 py-4"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
+        {live.canSpeak && (
+          <ControlButton
+            onClick={live.toggleMute}
+            label={live.muted ? "Activar micrófono" : "Silenciar micrófono"}
+            variant={live.muted ? "danger" : "on"}
+          >
+            {live.muted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+          </ControlButton>
+        )}
+        {live.myRole === "audience" && (
+          <button
+            onClick={handleRequestToSpeak}
+            className="flex h-12 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-white cursor-pointer hover:bg-white/20"
+          >
+            <HandRaiseIcon size={16} /> Solicitar hablar
+          </button>
+        )}
+        {live.myRole === "requested" && (
+          <button
+            onClick={() => live.cancelSpeakRequest()}
+            className="flex h-12 items-center gap-2 rounded-full bg-[var(--color-yellow)]/20 px-4 text-sm font-semibold text-[var(--color-yellow)] cursor-pointer"
+          >
+            <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
+          </button>
+        )}
+        {canModerate && (
+          <ControlButton onClick={onOpenSettings} label="Solicitudes y moderación">
+            <UsersIcon size={18} />
+          </ControlButton>
+        )}
+        {canModerate && (
+          <button
+            onClick={() => setConfirmEndForAll(true)}
+            className="flex h-12 items-center gap-2 rounded-full bg-[var(--color-coral)] px-4 text-sm font-bold text-white cursor-pointer hover:brightness-110"
+          >
+            📞 Finalizar LIVE
+          </button>
+        )}
         <button
-          onClick={handleRequestToSpeak}
-          className="flex h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-white cursor-pointer hover:bg-white/20"
+          onClick={handleExit}
+          className="flex h-12 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-white cursor-pointer hover:bg-white/20"
         >
-          <HandRaiseIcon size={16} /> Solicitar hablar
+          Salir
         </button>
-      )}
-      {live.myRole === "requested" && (
-        <button
-          onClick={() => live.cancelSpeakRequest()}
-          className="flex h-11 items-center gap-2 rounded-full bg-[var(--color-yellow)]/20 px-4 text-sm font-semibold text-[var(--color-yellow)] cursor-pointer"
-        >
-          <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
-        </button>
-      )}
-      {(room.role === "owner" || room.role === "co_host") && (
-        <ControlButton onClick={onOpenSettings} label="Solicitudes y moderación">
-          <UsersIcon size={18} />
-        </ControlButton>
-      )}
-      <ControlButton onClick={live.leave} label="Salir del LIVE" danger>
-        ✕
-      </ControlButton>
-    </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmEndForAll}
+        title="Finalizar LIVE para todos"
+        description="Se cortará la llamada para todas las personas que están escuchando ahora mismo. No se puede deshacer."
+        confirmLabel="Finalizar para todos"
+        busy={endingForAll}
+        danger
+        onConfirm={handleEndForAll}
+        onCancel={() => setConfirmEndForAll(false)}
+      />
+    </>
   );
 }
