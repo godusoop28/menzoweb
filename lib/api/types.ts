@@ -24,6 +24,9 @@ export type ErrorResponse = {
   message: string;
   path: string;
   fieldErrors: Record<string, string> | null;
+  /** Solo viene en 429 (ver MENZI_DJ_RATE_LIMITED) — segundos que hay que esperar antes de
+   * reintentar. null en cualquier otro error. */
+  retryAfterSeconds: number | null;
 };
 
 export type UserSummaryDto = {

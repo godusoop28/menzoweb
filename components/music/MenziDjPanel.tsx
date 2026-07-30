@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CheckIcon,
@@ -263,6 +263,11 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
 
   function messageForSearchError(error: unknown): string {
     if (error instanceof ApiError) {
+      if (error.code === "MENZI_DJ_RATE_LIMITED") {
+        return error.retryAfterSeconds
+          ? `Estás buscando demasiado rápido. Esperá ${error.retryAfterSeconds}s e intentá de nuevo.`
+          : "Estás buscando demasiado rápido. Esperá unos segundos e intentá de nuevo.";
+      }
       if (error.code === "YOUTUBE_QUOTA_EXCEEDED") return "Se alcanzó el límite de búsquedas de música por hoy. Intentá más tarde.";
       if (error.code === "YOUTUBE_NOT_CONFIGURED" || error.code === "YOUTUBE_AUTH_ERROR") return "La búsqueda de música no está disponible en este momento.";
       if (error.code === "YOUTUBE_TIMEOUT") return "YouTube tardó demasiado en responder. Intentá de nuevo.";
@@ -272,12 +277,22 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
     return "No pudimos buscar música en este momento.";
   }
 
+  // Único punto de entrada para disparar una búsqueda (botón y Enter en el input llaman a esta
+  // misma función) — el guard de `searchingRef` es necesario ADEMÁS de `disabled={searching}` en
+  // el botón: React no vuelve a renderizar (y por lo tanto no deshabilita el botón/input) antes de
+  // que termine el evento actual, así que Enter mantenido o Enter+click casi simultáneos podían
+  // disparar dos fetch en paralelo. Un ref se lee/escribe sincrónicamente, sin esperar a un
+  // re-render, así que sí corta el segundo llamado a tiempo.
+  const searchingRef = useRef(false);
+
   async function handleSearch() {
+    if (searchingRef.current) return;
     const trimmed = query.trim();
     if (trimmed.length < 3) {
       showToast("Escribí al menos 3 caracteres para buscar.");
       return;
     }
+    searchingRef.current = true;
     setSearching(true);
     setSearchError(null);
     try {
@@ -288,6 +303,7 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
       // estado de error, así el bloque "Sin resultados" nunca aparece para un fallo real.
       setSearchError(messageForSearchError(error));
     } finally {
+      searchingRef.current = false;
       setSearching(false);
     }
   }
@@ -323,8 +339,9 @@ function SearchTab({ canModerate }: { canModerate: boolean }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          disabled={searching}
           placeholder="Busca una canción o pega un enlace"
-          className="flex-1 rounded-xl border border-transparent bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none focus:border-[var(--color-orange)]"
+          className="flex-1 rounded-xl border border-transparent bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none focus:border-[var(--color-orange)] disabled:opacity-60"
         />
         <button
           onClick={handleSearch}

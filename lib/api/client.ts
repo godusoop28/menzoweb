@@ -8,12 +8,21 @@ export class ApiError extends Error {
   /** Código estable del backend (p. ej. "YOUTUBE_QUOTA_EXCEEDED") — null si no vino uno o si la
    * falla fue de red/timeout local (nunca llegó a golpear al backend). */
   code: string | null;
+  /** Solo viene en 429 (MENZI_DJ_RATE_LIMITED) — null en cualquier otro caso. */
+  retryAfterSeconds: number | null;
 
-  constructor(status: number, message: string, fieldErrors: Record<string, string> | null = null, code: string | null = null) {
+  constructor(
+    status: number,
+    message: string,
+    fieldErrors: Record<string, string> | null = null,
+    code: string | null = null,
+    retryAfterSeconds: number | null = null
+  ) {
     super(message);
     this.status = status;
     this.fieldErrors = fieldErrors;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -181,7 +190,13 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (!response.ok) {
     const err = data as ErrorResponse | undefined;
-    throw new ApiError(response.status, err?.message ?? `Error ${response.status}`, err?.fieldErrors ?? null, err?.code ?? null);
+    throw new ApiError(
+      response.status,
+      err?.message ?? `Error ${response.status}`,
+      err?.fieldErrors ?? null,
+      err?.code ?? null,
+      err?.retryAfterSeconds ?? null
+    );
   }
 
   return data as T;
