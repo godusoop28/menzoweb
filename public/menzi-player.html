@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <!--
+    Página dedicada, servida realmente desde https://menzoweb.vercel.app (no generada in-process
+    por el WebView con loadHtmlString/baseUrl) — ver MENZI_DJ_PLAYER.md en menzomovil. Un
+    documento HTTP(S) real es lo que garantiza que el WebView de Android mande un HTTP Referer
+    válido en los pedidos internos que el iframe de YouTube hace, que es justo lo que el error
+    153 ("missing Referer/API client identity") de la YouTube IFrame Player API reclama cuando
+    falta.
+  -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Menzi DJ Player</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: hidden; }
+    #player { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="player"></div>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    var player = null;
+    var ready = false;
+    var pendingVideoId = null;
+    var pendingStartSeconds = null;
+    var currentVideoId = null;
+    var blockCheckTimer = null;
+
+    // Diagnóstico seguro (Fase 4 del pedido de estabilización) — nunca imprime tokens/claves,
+    // solo el origin/URL de la propia página, que es justo lo que hay que poder confirmar
+    // cuando aparece un error 153.
+    console.log('[MenziDJPlayer] pageUrl=' + window.location.href);
+    console.log('[MenziDJPlayer] documentOrigin=' + window.location.origin);
+    // `origin` en playerVars se toma de window.location.origin más abajo, nunca de un string
+    // hardcodeado aparte — así este log y el que realmente se manda a YouTube SIEMPRE coinciden
+    // por construcción, sin riesgo de que el origin configurado se desincronice del real.
+    console.log('[MenziDJPlayer] configuredOrigin=' + window.location.origin);
+    console.log('[MenziDJPlayer] documentReferrer=' + document.referrer);
+
+    function post(message) {
+      if (window.MenziBridge) {
+        window.MenziBridge.postMessage(JSON.stringify(message));
+      }
+    }
+
+    // No basta con llamar playVideo()/unMute() y asumir que ya suena — un WebView/OEM que
+    // ignore la configuración de "no requiere gesto del usuario" puede aceptar el comando en
+    // silencio sin que el audio realmente arranque. Este margen le da tiempo al player de pasar
+    // por BUFFERING legítimo antes de considerar que quedó bloqueado. [expectMuted] es lo que el
+    // propio comando dejó pedido (un `mute` local del usuario nunca es "bloqueado" — mudo a
+    // propósito no es un fallo); solo cuenta como bloqueado si, pese a esperar audio real, el
+    // player queda parado, mudo o en volumen 0. Nunca se confunde con el error 153 (ver
+    // onError): 153 es que YouTube rechazó el embed antes de que hubiera nada que reproducir.
+    function scheduleBlockCheck(expectMuted) {
+      if (blockCheckTimer) clearTimeout(blockCheckTimer);
+      blockCheckTimer = setTimeout(function () {
+        blockCheckTimer = null;
+        if (!player) return;
+        var s = player.getPlayerState();
+        var stateOk = (s === 1 || s === 3);
+        var muteOk = expectMuted || !player.isMuted();
+        var volumeOk = expectMuted || player.getVolume() > 0;
+        if (!stateOk || !muteOk || !volumeOk) {
+          post({ type: 'autoplayBlocked' });
+        }
+      }, 2500);
+    }
+
+    function cancelBlockCheck() {
+      if (blockCheckTimer) {
+        clearTimeout(blockCheckTimer);
+        blockCheckTimer = null;
+      }
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          playsinline: 1,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          origin: window.location.origin,
+          enablejsapi: 1
+        },
+        events: {
+          onReady: function () {
+            ready = true;
+            post({ type: 'ready' });
+            if (pendingVideoId) {
+              currentVideoId = pendingVideoId;
+              if (typeof pendingStartSeconds === 'number') {
+                player.loadVideoById({ videoId: pendingVideoId, startSeconds: pendingStartSeconds });
+              } else {
+                player.loadVideoById(pendingVideoId);
+              }
+              pendingVideoId = null;
+              pendingStartSeconds = null;
+            }
+          },
+          onStateChange: function (event) {
+            if (event.data === 1) cancelBlockCheck();
+            post({
+              type: 'stateChange',
+              state: event.data,
+              videoId: currentVideoId,
+              currentTime: player.getCurrentTime(),
+              muted: player.isMuted(),
+              volume: player.getVolume()
+            });
+          },
+          onError: function (event) {
+            // 153 es un código real y documentado de la YouTube IFrame Player API — no una
+            // invención ni una página estática sin más: significa que YouTube rechazó el pedido
+            // del embed por no poder identificar el origen/Referer del cliente. Se manda el
+            // origin/referrer reales de ESTA página para poder confirmarlo desde Dart sin
+            // adivinar.
+            post({
+              type: 'error',
+              code: event.data,
+              videoId: currentVideoId,
+              documentOrigin: window.location.origin,
+              documentReferrer: document.referrer
+            });
+          }
+        }
+      });
+    }
+
+    window.handleMenziCommand = function (raw) {
+      var msg;
+      try { msg = JSON.parse(raw); } catch (e) { return; }
+      if (!ready || !player) {
+        if (msg.cmd === 'load') {
+          pendingVideoId = msg.videoId;
+          pendingStartSeconds = typeof msg.startSeconds === 'number' ? msg.startSeconds : null;
+        }
+        return;
+      }
+      switch (msg.cmd) {
+        case 'load':
+          currentVideoId = msg.videoId;
+          // Con posición inicial en el mismo loadVideoById (en vez de cargar y mandar un seek
+          // aparte inmediatamente después) evita una carrera entre dos llamadas JS separadas —
+          // relevante sobre todo para quien entra tarde a una canción ya empezada.
+          if (typeof msg.startSeconds === 'number') {
+            player.loadVideoById({ videoId: msg.videoId, startSeconds: msg.startSeconds });
+          } else {
+            player.loadVideoById(msg.videoId);
+          }
+          break;
+        case 'play':
+          player.playVideo();
+          // `play` solo no cambia el mute — se evalúa contra lo que el player ya tenía.
+          scheduleBlockCheck(player.isMuted());
+          break;
+        case 'pause':
+          cancelBlockCheck();
+          player.pauseVideo();
+          break;
+        case 'seek':
+          player.seekTo(msg.seconds, true);
+          break;
+        case 'mute':
+          // Silencio LOCAL a propósito (el usuario o el estado inicial) — nunca es "bloqueado".
+          cancelBlockCheck();
+          player.mute();
+          break;
+        case 'unmute':
+          player.unMute();
+          if (typeof msg.volume === 'number') player.setVolume(msg.volume);
+          scheduleBlockCheck(false);
+          break;
+        case 'volume':
+          player.setVolume(msg.volume);
+          break;
+        case 'getTime':
+          post({ type: 'time', seconds: player.getCurrentTime(), state: player.getPlayerState() });
+          break;
+        case 'getVideoData':
+          post({
+            type: 'videoData',
+            videoId: currentVideoId,
+            state: player.getPlayerState(),
+            muted: player.isMuted(),
+            volume: player.getVolume(),
+            currentTime: player.getCurrentTime()
+          });
+          break;
+        case 'setRate':
+          // Corrección suave de drift: un empujón de velocidad temporal en vez de un seek
+          // audible para desincronizaciones chicas. setPlaybackRate ajusta al valor soportado
+          // más cercano solo; no hace falta round-trip a getAvailablePlaybackRates() para este
+          // uso (nunca se pide algo lejos de 1.0).
+          player.setPlaybackRate(msg.rate);
+          break;
+      }
+    };
+  </script>
+</body>
+</html>
