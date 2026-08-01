@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <!--
     Página dedicada, servida realmente desde https://menzoweb.vercel.app (no generada in-process
-    por el WebView con loadHtmlString/baseUrl) — ver MENZI_DJ_PLAYER.md en menzomovil. Un
+    por el WebView con loadHtmlString/baseUrl) — ver MENZI_DJ_ARCHITECTURE.md en menzomovil. Un
     documento HTTP(S) real es lo que garantiza que el WebView de Android mande un HTTP Referer
     válido en los pedidos internos que el iframe de YouTube hace, que es justo lo que el error
     153 ("missing Referer/API client identity") de la YouTube IFrame Player API reclama cuando
-    falta.
+    falta. Confirmado con curl que el header llega bien — sigue sin poder confirmarse en el
+    propio Android WebView sin el `onError` real, que es lo que esta página ahora reporta
+    completo (ver más abajo).
   -->
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>Menzi DJ Player</title>
@@ -26,12 +28,20 @@
     var ready = false;
     var pendingVideoId = null;
     var pendingStartSeconds = null;
-    var currentVideoId = null;
+    var requestedVideoId = null;
     var blockCheckTimer = null;
 
-    // Diagnóstico seguro (Fase 4 del pedido de estabilización) — nunca imprime tokens/claves,
-    // solo el origin/URL de la propia página, que es justo lo que hay que poder confirmar
-    // cuando aparece un error 153.
+    // Soporte para abrir esta página directo en un browser normal (Chrome Android, para
+    // comparar contra el WebView de la app) sin depender del bridge de Flutter — ver Fase 5 del
+    // diagnóstico: ?videoId=xxx precarga un video, ?autoplay=0 deja el player mudo y detenido
+    // hasta un toque real, para poder aislar autoplay como variable. Sin params, se comporta
+    // exactamente igual que siempre (autoplay=1) para no afectar el uso real de Menzi DJ.
+    var params = new URLSearchParams(window.location.search);
+    var queryVideoId = params.get('videoId');
+    var queryAutoplay = params.get('autoplay') !== '0';
+
+    // Diagnóstico seguro — nunca imprime tokens/claves, solo el origin/URL/UA de la propia
+    // página, que es justo lo que hay que poder confirmar cuando aparece un error 153.
     console.log('[MenziDJPlayer] pageUrl=' + window.location.href);
     console.log('[MenziDJPlayer] documentOrigin=' + window.location.origin);
     // `origin` en playerVars se toma de window.location.origin más abajo, nunca de un string
@@ -39,11 +49,25 @@
     // por construcción, sin riesgo de que el origin configurado se desincronice del real.
     console.log('[MenziDJPlayer] configuredOrigin=' + window.location.origin);
     console.log('[MenziDJPlayer] documentReferrer=' + document.referrer);
+    console.log('[MenziDJPlayer] userAgent=' + navigator.userAgent);
 
     function post(message) {
+      message.timestamp = Date.now();
       if (window.MenziBridge) {
         window.MenziBridge.postMessage(JSON.stringify(message));
       }
+    }
+
+    // Una excepción dentro de cualquiera de estos NUNCA debe impedir que un onError/
+    // autoplayBlocked salga — sin esto, un getVolume()/isMuted() que tire (p. ej. el player
+    // todavía no terminó de inicializar del todo pese a reportar ready) se tragaba el evento
+    // entero y el bridge no mandaba nada, dejando a Dart sin ninguna pista de qué pasó.
+    function safeGetState() { try { return player ? player.getPlayerState() : null; } catch (e) { return null; } }
+    function safeIsMuted() { try { return player ? player.isMuted() : null; } catch (e) { return null; } }
+    function safeGetVolume() { try { return player ? player.getVolume() : null; } catch (e) { return null; } }
+    function safeGetCurrentTime() { try { return player ? player.getCurrentTime() : null; } catch (e) { return null; } }
+    function safeGetVideoData() {
+      try { return player ? player.getVideoData() : null; } catch (e) { return null; }
     }
 
     // No basta con llamar playVideo()/unMute() y asumir que ya suena — un WebView/OEM que
@@ -54,17 +78,29 @@
     // propósito no es un fallo); solo cuenta como bloqueado si, pese a esperar audio real, el
     // player queda parado, mudo o en volumen 0. Nunca se confunde con el error 153 (ver
     // onError): 153 es que YouTube rechazó el embed antes de que hubiera nada que reproducir.
+    //
+    // La YouTube IFrame Player API NO tiene un evento `onAutoplayBlocked` real — esto es una
+    // detección propia (por eso `scheduleBlockCheck`, no un callback de `events` de YT.Player),
+    // con el mismo payload enriquecido que pidió el diagnóstico para poder comparar ambos casos.
     function scheduleBlockCheck(expectMuted) {
       if (blockCheckTimer) clearTimeout(blockCheckTimer);
       blockCheckTimer = setTimeout(function () {
         blockCheckTimer = null;
         if (!player) return;
-        var s = player.getPlayerState();
+        var s = safeGetState();
+        var muted = safeIsMuted();
+        var volume = safeGetVolume();
         var stateOk = (s === 1 || s === 3);
-        var muteOk = expectMuted || !player.isMuted();
-        var volumeOk = expectMuted || player.getVolume() > 0;
+        var muteOk = expectMuted || muted === false;
+        var volumeOk = expectMuted || (typeof volume === 'number' && volume > 0);
         if (!stateOk || !muteOk || !volumeOk) {
-          post({ type: 'autoplayBlocked' });
+          post({
+            type: 'autoplayBlocked',
+            requestedVideoId: requestedVideoId,
+            playerState: s,
+            muted: muted,
+            volume: volume
+          });
         }
       }, 2500);
     }
@@ -76,12 +112,21 @@
       }
     }
 
+    function loadVideo(videoId, startSeconds) {
+      requestedVideoId = videoId;
+      if (typeof startSeconds === 'number') {
+        player.loadVideoById({ videoId: videoId, startSeconds: startSeconds });
+      } else {
+        player.loadVideoById(videoId);
+      }
+    }
+
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
         width: '100%',
         height: '100%',
         playerVars: {
-          autoplay: 1,
+          autoplay: queryAutoplay ? 1 : 0,
           mute: 1,
           playsinline: 1,
           controls: 0,
@@ -94,13 +139,10 @@
           onReady: function () {
             ready = true;
             post({ type: 'ready' });
-            if (pendingVideoId) {
-              currentVideoId = pendingVideoId;
-              if (typeof pendingStartSeconds === 'number') {
-                player.loadVideoById({ videoId: pendingVideoId, startSeconds: pendingStartSeconds });
-              } else {
-                player.loadVideoById(pendingVideoId);
-              }
+            if (queryVideoId) {
+              loadVideo(queryVideoId);
+            } else if (pendingVideoId) {
+              loadVideo(pendingVideoId, pendingStartSeconds);
               pendingVideoId = null;
               pendingStartSeconds = null;
             }
@@ -110,24 +152,32 @@
             post({
               type: 'stateChange',
               state: event.data,
-              videoId: currentVideoId,
-              currentTime: player.getCurrentTime(),
-              muted: player.isMuted(),
-              volume: player.getVolume()
+              requestedVideoId: requestedVideoId,
+              currentTime: safeGetCurrentTime(),
+              muted: safeIsMuted(),
+              volume: safeGetVolume()
             });
           },
           onError: function (event) {
             // 153 es un código real y documentado de la YouTube IFrame Player API — no una
-            // invención ni una página estática sin más: significa que YouTube rechazó el pedido
-            // del embed por no poder identificar el origen/Referer del cliente. Se manda el
-            // origin/referrer reales de ESTA página para poder confirmarlo desde Dart sin
-            // adivinar.
+            // invención ni algo propio de esta página: significa que YouTube rechazó el pedido
+            // del embed por no poder identificar el origen/Referer del cliente. Se manda todo lo
+            // que hace falta para confirmarlo desde el dispositivo real, sin adivinar ni
+            // depender de curl desde otra máquina.
+            var videoData = safeGetVideoData();
             post({
               type: 'error',
-              code: event.data,
-              videoId: currentVideoId,
+              errorCode: event.data,
+              requestedVideoId: requestedVideoId,
+              actualVideoId: videoData && videoData.video_id ? videoData.video_id : null,
+              pageUrl: window.location.href,
               documentOrigin: window.location.origin,
-              documentReferrer: document.referrer
+              documentReferrer: document.referrer,
+              userAgent: navigator.userAgent,
+              playerState: safeGetState(),
+              muted: safeIsMuted(),
+              volume: safeGetVolume(),
+              currentTime: safeGetCurrentTime()
             });
           }
         }
@@ -146,20 +196,15 @@
       }
       switch (msg.cmd) {
         case 'load':
-          currentVideoId = msg.videoId;
           // Con posición inicial en el mismo loadVideoById (en vez de cargar y mandar un seek
           // aparte inmediatamente después) evita una carrera entre dos llamadas JS separadas —
           // relevante sobre todo para quien entra tarde a una canción ya empezada.
-          if (typeof msg.startSeconds === 'number') {
-            player.loadVideoById({ videoId: msg.videoId, startSeconds: msg.startSeconds });
-          } else {
-            player.loadVideoById(msg.videoId);
-          }
+          loadVideo(msg.videoId, msg.startSeconds);
           break;
         case 'play':
           player.playVideo();
           // `play` solo no cambia el mute — se evalúa contra lo que el player ya tenía.
-          scheduleBlockCheck(player.isMuted());
+          scheduleBlockCheck(safeIsMuted());
           break;
         case 'pause':
           cancelBlockCheck();
@@ -182,16 +227,16 @@
           player.setVolume(msg.volume);
           break;
         case 'getTime':
-          post({ type: 'time', seconds: player.getCurrentTime(), state: player.getPlayerState() });
+          post({ type: 'time', seconds: safeGetCurrentTime(), state: safeGetState() });
           break;
         case 'getVideoData':
           post({
             type: 'videoData',
-            videoId: currentVideoId,
-            state: player.getPlayerState(),
-            muted: player.isMuted(),
-            volume: player.getVolume(),
-            currentTime: player.getCurrentTime()
+            requestedVideoId: requestedVideoId,
+            state: safeGetState(),
+            muted: safeIsMuted(),
+            volume: safeGetVolume(),
+            currentTime: safeGetCurrentTime()
           });
           break;
         case 'setRate':
