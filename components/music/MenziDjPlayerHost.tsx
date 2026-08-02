@@ -63,6 +63,17 @@ export function MenziDjPlayerHost() {
       ? { top: 16, right: 16, width: "min(260px, 40vw)", height: "min(146px, 22vw)" }
       : { bottom: 96, left: 16, width: 56, height: 56 };
     frameClassName += " z-30 rounded-2xl";
+  } else if (music.cinema) {
+    // El iframe sigue viviendo FUERA del sheet (nunca se mueve al DOM del panel — ver
+    // MenziDjContext) — MenziDjPanel mide su propio placeholder reservado y reporta esas
+    // coordenadas acá (getBoundingClientRect ya es relativo al viewport, igual que
+    // `position:fixed`, así que se usan tal cual sin convertir nada). Sin nada reportado
+    // todavía (primer frame, o el panel cerrándose) cae a una posición razonable cerca del
+    // borde superior en vez de desaparecer.
+    frameStyle = music.videoSlotRect
+      ? { top: music.videoSlotRect.top, left: music.videoSlotRect.left, width: music.videoSlotRect.width, height: music.videoSlotRect.height }
+      : { top: 96, left: 16, right: 16, width: "calc(100vw - 32px)", height: "min(50vh, 360px)" };
+    frameClassName += " z-30 rounded-2xl";
   } else if (music.expanded) {
     frameStyle = { top: 16, right: 16, width: "min(260px, 40vw)", height: "min(146px, 22vw)" };
     frameClassName += " z-30 rounded-2xl";

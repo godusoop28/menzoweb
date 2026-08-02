@@ -14,6 +14,7 @@ import {
   SearchIcon,
   SkipNextIcon,
   StopIcon,
+  TheaterIcon,
   TrashIcon,
   VolumeIcon,
   VolumeMuteIcon,
@@ -67,12 +68,40 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
   const canModerate = room.role === "owner" || room.role === "co_host";
   const [tab, setTab] = useState<Tab>("search");
   const showToast = useToast();
+  const cinemaSlotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     music.setExpanded(true);
-    return () => music.setExpanded(false);
+    return () => {
+      music.setExpanded(false);
+      music.setCinema(false);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Mientras el modo cine esté activo, mide dónde quedó el placeholder reservado (después de
+  // cada frame, no solo al montar) y se lo reporta al contexto — así el iframe real, que sigue
+  // viviendo fuera de este sheet, se puede posicionar encima sin depender de los detalles
+  // internos de scroll de <Sheet>. requestAnimationFrame en vez de un listener de scroll: es
+  // robusto ante cualquier causa de movimiento (scroll, resize, cambio de pestaña que cambia la
+  // altura del contenido) sin tener que conocer la estructura interna del modal.
+  useEffect(() => {
+    if (!music.cinema) return;
+    let frame: number;
+    function measure() {
+      const rect = cinemaSlotRef.current?.getBoundingClientRect();
+      if (rect) {
+        music.reportVideoSlotRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+      }
+      frame = requestAnimationFrame(measure);
+    }
+    frame = requestAnimationFrame(measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      music.reportVideoSlotRect(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [music.cinema]);
 
   const session = music.session;
   const displayPosition = useDisplayPosition(session);
@@ -105,7 +134,13 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
   const brandMode: MenziDjMode = session?.status === "error" ? "error" : session?.status === "playing" ? "playing" : session?.status === "paused" ? "paused" : "idle";
 
   return (
-    <Sheet open onClose={onClose} title="DJ Menzi" subtitle={room.name} widthClassName="max-w-xl">
+    <Sheet
+      open
+      onClose={onClose}
+      title="DJ Menzi"
+      subtitle={room.name}
+      widthClassName={music.cinema ? "max-w-3xl" : "max-w-xl"}
+    >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <MenziDjBrand mode={brandMode} />
@@ -118,6 +153,17 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer"
               >
                 {music.videoHidden ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+              </button>
+              <button
+                onClick={() => music.setCinema(!music.cinema)}
+                title={music.cinema ? "Salir de modo cine" : "Modo cine"}
+                aria-label={music.cinema ? "Salir de modo cine" : "Modo cine"}
+                aria-pressed={music.cinema}
+                className={`flex h-9 w-9 items-center justify-center rounded-full cursor-pointer ${
+                  music.cinema ? "bg-[var(--color-cyan)] text-black" : "bg-[var(--color-surface-secondary)]"
+                }`}
+              >
+                <TheaterIcon size={16} />
               </button>
               <button
                 onClick={() => music.setFullscreen(true)}
@@ -143,22 +189,32 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
           </div>
         )}
 
+        {/* Modo cine: este <div> nunca contiene el iframe — es solo el hueco reservado que se
+            mide en el efecto de arriba. El reproductor real (MenziDjPlayerHost) se posiciona
+            encima con `position:fixed`, viendo estas mismas coordenadas. */}
+        {music.cinema && session?.currentVideoId && (
+          <div ref={cinemaSlotRef} className="aspect-video w-full shrink-0 rounded-2xl bg-black" />
+        )}
+
         {/* Reproduciendo ahora — el reproductor real de YouTube flota aparte (ver
             MenziDjPlayerHost); acá se muestra la info + controles sincronizados. Sin canción
             todavía, la miniatura real se reemplaza por la ilustración de bienvenida (nunca
-            compiten entre sí, ver sección 6 del pedido). */}
+            compiten entre sí, ver sección 6 del pedido). En modo cine la miniatura chica no hace
+            falta (el video grande ya la reemplaza), solo el título/progreso. */}
         {session?.currentVideoId ? (
           <div className="flex gap-3 rounded-2xl bg-[var(--color-surface-secondary)] p-3">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black">
-              {session.currentThumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={session.currentThumbnailUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-[var(--color-text-muted)]">
-                  <MusicNoteIcon size={22} />
-                </div>
-              )}
-            </div>
+            {!music.cinema && (
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black">
+                {session.currentThumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.currentThumbnailUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--color-text-muted)]">
+                    <MusicNoteIcon size={22} />
+                  </div>
+                )}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{session.currentTitle}</p>
               <p className="truncate text-xs text-[var(--color-text-muted)]">{session.currentChannelTitle}</p>

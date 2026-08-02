@@ -34,6 +34,15 @@ type MenziDjContextValue = {
    * por CSS. Nunca crea un segundo player. */
   fullscreen: boolean;
   setFullscreen: (value: boolean) => void;
+  /** Modo cine: video ancho arriba del panel, contenido (buscar/cola/historial) scrolleable
+   * debajo — MenziDjPanel reserva ese espacio con un placeholder propio y reporta su posición
+   * real en pantalla acá (ver `videoSlotRect`/`reportVideoSlotRect`) para que el iframe, que
+   * sigue viviendo fuera del sheet (nunca se mueve al DOM del panel), se alinee visualmente sin
+   * tener que reimplementar el modal con el player adentro. */
+  cinema: boolean;
+  setCinema: (value: boolean) => void;
+  videoSlotRect: { top: number; left: number; width: number; height: number } | null;
+  reportVideoSlotRect: (rect: { top: number; left: number; width: number; height: number } | null) => void;
   /** Setter, no el ref crudo — exponer un RefObject directo en el valor del contexto hace que el
    * linter (react-hooks/refs) trate CUALQUIER otro campo leído del mismo objeto como "acceso a un
    * ref durante el render", así que el <div> del player se registra acá en vez de leer
@@ -82,6 +91,23 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(false);
   const [videoHidden, setVideoHidden] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [cinema, setCinemaState] = useState(false);
+  const [videoSlotRect, setVideoSlotRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
+  const setCinema = useCallback((value: boolean) => {
+    setCinemaState(value);
+    if (!value) setVideoSlotRect(null);
+  }, []);
+
+  const reportVideoSlotRect = useCallback((rect: { top: number; left: number; width: number; height: number } | null) => {
+    setVideoSlotRect((prev) => {
+      if (prev === rect) return prev;
+      if (prev && rect && prev.top === rect.top && prev.left === rect.left && prev.width === rect.width && prev.height === rect.height) {
+        return prev;
+      }
+      return rect;
+    });
+  }, []);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
   const [localVolume, setLocalVolumeState] = useState(DEFAULT_VOLUME);
@@ -436,6 +462,10 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       setVideoHidden,
       fullscreen,
       setFullscreen,
+      cinema,
+      setCinema,
+      videoSlotRect,
+      reportVideoSlotRect,
       setPlayerContainer,
       autoplayBlocked,
       unlockAutoplay,
@@ -467,6 +497,10 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       expanded,
       videoHidden,
       fullscreen,
+      cinema,
+      setCinema,
+      videoSlotRect,
+      reportVideoSlotRect,
       setPlayerContainer,
       autoplayBlocked,
       unlockAutoplay,
