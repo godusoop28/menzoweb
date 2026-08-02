@@ -27,10 +27,15 @@ export function LiveParticipantBubble({
   participant,
   size = 64,
   speakingLevel = 0,
+  onModerate,
 }: {
   participant: LiveParticipant;
   size?: number;
   speakingLevel?: number;
+  /** Presente solo cuando quien mira puede moderar a ESTE participante puntual (ver
+   * LiveRoomPanel: nunca sobre uno mismo, y el backend vuelve a validar todo igual). Sin esto la
+   * burbuja sigue siendo puramente presentacional, como antes. */
+  onModerate?: (participant: LiveParticipant) => void;
 }) {
   const ring = ROLE_RING[participant.role];
   const badge = ROLE_BADGE[participant.role];
@@ -38,7 +43,19 @@ export function LiveParticipantBubble({
   const isMutedVisible = participant.role !== "audience" && participant.role !== "requested" && !participant.microphoneEnabled;
 
   return (
-    <div className="flex w-full flex-col items-center gap-1.5">
+    <div
+      className={`flex w-full flex-col items-center gap-1.5 ${onModerate ? "cursor-pointer" : ""}`}
+      role={onModerate ? "button" : undefined}
+      tabIndex={onModerate ? 0 : undefined}
+      onClick={onModerate ? () => onModerate(participant) : undefined}
+      onKeyDown={
+        onModerate
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") onModerate(participant);
+            }
+          : undefined
+      }
+    >
       <div className="relative" style={{ width: size + 10, height: size + 10 }}>
         {ring && (
           <div

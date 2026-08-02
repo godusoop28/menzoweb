@@ -2,17 +2,22 @@
 
 import { useEffect, useState } from "react";
 
-import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, SettingsIcon, UsersIcon } from "@/components/icons";
+import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, SettingsIcon, TrashIcon, UsersIcon } from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ApiError } from "@/lib/api";
+import { Sheet } from "@/components/ui/Sheet";
+import { ApiError, getMyRealId } from "@/lib/api";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { MenziDjPanel } from "@/components/music/MenziDjPanel";
+import { DjMenziOrb } from "@/components/music/DjMenziOrb";
+import { useMenziDjContext } from "@/lib/music/MenziDjContext";
 import { useToast } from "@/lib/ToastContext";
 import type { ChatRoom, LiveParticipant, LiveParticipantRole } from "@/lib/types";
 
 import { LiveParticipantBubble } from "./LiveParticipantBubble";
+
+const STAGE_MODERATION_ROLES: LiveParticipantRole[] = ["speaker", "co_host"];
 
 const STAGE_ROLES: LiveParticipantRole[] = ["host", "co_host", "speaker"];
 
@@ -42,9 +47,12 @@ function useElapsed(startedAt: string | null | undefined) {
  * este overlay, el LiveRoomProvider sigue conectado (ver sección 26 del pedido). */
 export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize: () => void }) {
   const live = useLiveRoomContext();
+  const music = useMenziDjContext();
   const [showSettings, setShowSettings] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
   const [showAudience, setShowAudience] = useState(false);
+  const [moderationTarget, setModerationTarget] = useState<LiveParticipant | null>(null);
+  const myId = getMyRealId();
   const isConnectedHere = live.activeRoomId === room.id;
   const elapsed = useElapsed(live.watchedRoomId === room.id ? live.viewingState?.startedAt : undefined);
 
@@ -132,14 +140,31 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
               />
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-x-2 gap-y-4 py-2 sm:grid-cols-4 md:grid-cols-5">
-              {stage.map((p) => (
-                <StageSlot key={p.user.id} participant={p} speakingLevel={live.speakingLevels.get(p.user.id) ?? 0} />
-              ))}
-              {stage.length === 0 && (
-                <p className="col-span-full py-8 text-center text-sm text-[var(--color-text-muted)]">Nadie está hablando todavía.</p>
+            <>
+              {music.session?.currentVideoId && (
+                <div className="flex justify-center py-2">
+                  <DjMenziOrb
+                    playing={music.session.status === "playing"}
+                    voiceLevel={live.speakingLevels.size > 0 ? Math.max(...live.speakingLevels.values()) : 0}
+                    title={music.session.currentTitle}
+                    onClick={() => setShowMusic(true)}
+                  />
+                </div>
               )}
-            </div>
+              <div className="grid grid-cols-3 gap-x-2 gap-y-4 py-2 sm:grid-cols-4 md:grid-cols-5">
+                {stage.map((p) => (
+                  <StageSlot
+                    key={p.user.id}
+                    participant={p}
+                    speakingLevel={live.speakingLevels.get(p.user.id) ?? 0}
+                    onModerate={canModerate && p.user.id !== myId ? () => setModerationTarget(p) : undefined}
+                  />
+                ))}
+                {stage.length === 0 && (
+                  <p className="col-span-full py-8 text-center text-sm text-[var(--color-text-muted)]">Nadie está hablando todavía.</p>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -156,6 +181,10 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
               <div className="flex max-h-28 flex-wrap gap-x-3 gap-y-2 overflow-y-auto">
                 {audience.map((p) => (
                   <div key={p.user.id} className="flex flex-col items-center gap-1">
+                    {/* La audiencia (roles "audience"/"requested") no tiene acciones de mute/bajar
+                        del escenario — esas solo aplican a quien YA está hablando (host/co_host/
+                        speaker, ver `stage` más arriba). Aprobar/rechazar solicitudes para hablar
+                        vive en RoomSettingsPanel → SpeakingRequestsList, no acá. */}
                     <LiveParticipantBubble participant={p} size={36} speakingLevel={0} />
                   </div>
                 ))}
@@ -179,13 +208,88 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       {showMusic && <MenziDjPanel room={room} onClose={() => setShowMusic(false)} />}
 
       {showSettings && <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab="live" />}
+
+      <ParticipantModerationSheet target={moderationTarget} onClose={() => setModerationTarget(null)} />
     </div>
   );
 }
 
-function StageSlot({ participant, speakingLevel }: { participant: LiveParticipant; speakingLevel: number }) {
+/** Conecta demoteParticipant/muteParticipant/removeParticipant — ya existían en
+ * LiveRoomContext (ver lib/live/LiveRoomContext.tsx) pero ninguna UI los llamaba todavía; en
+ * menzomovil el equivalente ya existe (_ParticipantModTile en live_room_panel.dart), mismos tres
+ * verbos con el mismo significado: "Silenciar" (mute forzado), "Bajar del escenario" (retirar del
+ * chat de voz sin sacarlo del LIVE — vuelve a audience, puede volver a solicitar hablar) y
+ * "Expulsar" (kick real, marca al participante como retirado del LIVE). El backend vuelve a
+ * validar todos los permisos — esto es solo la UI, nunca la única barrera (ver sección 19). */
+function ParticipantModerationSheet({ target, onClose }: { target: LiveParticipant | null; onClose: () => void }) {
+  const live = useLiveRoomContext();
+  const showToast = useToast();
+  const [busy, setBusy] = useState<"mute" | "demote" | "remove" | null>(null);
+
+  async function run(action: "mute" | "demote" | "remove") {
+    if (!target) return;
+    setBusy(action);
+    try {
+      if (action === "mute") await live.muteParticipant(target.user.id);
+      else if (action === "demote") await live.demoteParticipant(target.user.id);
+      else await live.removeParticipant(target.user.id);
+      onClose();
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos completar esa acción de moderación.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Sheet open={!!target} onClose={onClose} title={target?.user.displayName ?? ""} subtitle="Moderación del chat de voz" widthClassName="max-w-sm">
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => run("mute")}
+          disabled={busy !== null}
+          className="flex items-center gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-4 py-3 text-sm font-medium cursor-pointer disabled:opacity-60"
+        >
+          <MicOffIcon size={16} /> Silenciar micrófono
+        </button>
+        {target && STAGE_MODERATION_ROLES.includes(target.role) && (
+          <button
+            onClick={() => run("demote")}
+            disabled={busy !== null}
+            className="flex items-center gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-4 py-3 text-sm font-medium cursor-pointer disabled:opacity-60"
+          >
+            <UsersIcon size={16} /> Retirar del chat de voz
+          </button>
+        )}
+        <button
+          onClick={() => run("remove")}
+          disabled={busy !== null}
+          className="flex items-center gap-3 rounded-xl bg-[var(--color-coral)]/15 px-4 py-3 text-sm font-medium text-[var(--color-coral)] cursor-pointer disabled:opacity-60"
+        >
+          <TrashIcon size={16} /> Expulsar del LIVE
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+function StageSlot({
+  participant,
+  speakingLevel,
+  onModerate,
+}: {
+  participant: LiveParticipant;
+  speakingLevel: number;
+  onModerate?: (participant: LiveParticipant) => void;
+}) {
   const isHost = participant.role === "host";
-  return <LiveParticipantBubble participant={participant} size={isHost ? 76 : 60} speakingLevel={speakingLevel} />;
+  return (
+    <LiveParticipantBubble
+      participant={participant}
+      size={isHost ? 76 : 60}
+      speakingLevel={speakingLevel}
+      onModerate={onModerate}
+    />
+  );
 }
 
 type ControlVariant = "neutral" | "on" | "danger";
@@ -318,7 +422,7 @@ function LiveControls({
             <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
           </button>
         )}
-        <ControlButton onClick={onOpenMusic} label="Menzi DJ">
+        <ControlButton onClick={onOpenMusic} label="DJ Menzi">
           <MusicNoteIcon size={18} />
         </ControlButton>
         {canModerate && (
