@@ -240,7 +240,7 @@ export type LiveSessionSummary = {
   hasPendingSpeakRequest: boolean;
 };
 
-// ---- Menzi DJ -----------------------------------------------------------------------------
+// ---- DJ Menzi -----------------------------------------------------------------------------
 
 export type QueueItemStatus = "pending" | "queued" | "playing" | "played" | "skipped" | "rejected" | "removed";
 

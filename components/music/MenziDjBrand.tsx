@@ -10,13 +10,13 @@ const MODE_IMAGE: Record<MenziDjMode, string> = {
 };
 
 const MODE_LABEL: Record<MenziDjMode, string> = {
-  idle: "Menzi DJ",
+  idle: "DJ Menzi",
   playing: "Reproduciendo",
   paused: "En pausa",
   error: "Error de música",
 };
 
-/** Marca visual de Menzi DJ — nunca aparece como usuario/participante, solo como acompañamiento
+/** Marca visual de DJ Menzi — nunca aparece como usuario/participante, solo como acompañamiento
  * de la función (ver sección 4 del pedido). El halo cian y las barras de ecualizador son la única
  * animación, y solo corren en modo "playing"; ambas respetan prefers-reduced-motion (ver
  * app/globals.css). No sustituye la miniatura real de la canción — se usa junto a ella, nunca en

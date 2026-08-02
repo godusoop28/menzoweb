@@ -14,7 +14,7 @@
     completo (ver más abajo).
   -->
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <title>Menzi DJ Player</title>
+  <title>DJ Menzi Player</title>
   <style>
     html, body { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: hidden; }
     #player { width: 100%; height: 100%; }
@@ -35,7 +35,7 @@
     // comparar contra el WebView de la app) sin depender del bridge de Flutter — ver Fase 5 del
     // diagnóstico: ?videoId=xxx precarga un video, ?autoplay=0 deja el player mudo y detenido
     // hasta un toque real, para poder aislar autoplay como variable. Sin params, se comporta
-    // exactamente igual que siempre (autoplay=1) para no afectar el uso real de Menzi DJ.
+    // exactamente igual que siempre (autoplay=1) para no afectar el uso real de DJ Menzi.
     var params = new URLSearchParams(window.location.search);
     var queryVideoId = params.get('videoId');
     var queryAutoplay = params.get('autoplay') !== '0';
@@ -146,7 +146,7 @@
       // que no limpió el anterior, un bug futuro) terminaría creando un SEGUNDO div#player/iframe
       // superpuesto al primero sin que nada lo note. Esta guarda es la única defensa real posible
       // en este documento — la duplicación que se vio en el dispositivo (Fase de auditoría de
-      // instancias) resultó ser dos WebViews DISTINTOS (el global de Menzi DJ + el de
+      // instancias) resultó ser dos WebViews DISTINTOS (el global de DJ Menzi + el de
       // diagnóstico, ver menzi_dj_player_host.dart/_diagnosticRoute), no dos YT.Player en el
       // mismo documento, pero esto cierra la otra mitad del riesgo igual.
       if (player) {

@@ -31,7 +31,7 @@ type Props = {
 /** Ilustración de marca reutilizable para estados vacíos, encabezados de función y ayudas
  * contextuales — nunca sustituye íconos funcionales (mic, notificaciones, configuración, etc.),
  * ver sección 5 del pedido. Un único componente cubre las 6 categorías de mascota (chat, live,
- * notificaciones, configuración, amigos, Menzi DJ); cada página solo pasa la imagen que le
+ * notificaciones, configuración, amigos, DJ Menzi); cada página solo pasa la imagen que le
  * corresponde. */
 export function MenziIllustrationState({
   image,

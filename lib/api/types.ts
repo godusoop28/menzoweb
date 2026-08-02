@@ -411,8 +411,8 @@ export type UpdateSettingsRequest = Partial<SettingsDto>;
 export type RecentlyViewedDto = { kind: ActivityKind; id: string; viewedAt: string };
 export type UploadResponseDto = { url: string };
 
-// ---- Menzi DJ (música sincronizada del LIVE, YouTube) -----------------------------------------
-// Menzi DJ no es un usuario ni un participante de Agora — es este módulo. Ver MusicService en
+// ---- DJ Menzi (música sincronizada del LIVE, YouTube) -----------------------------------------
+// DJ Menzi no es un usuario ni un participante de Agora — es este módulo. Ver MusicService en
 // menzoapi para la arquitectura completa (estado canónico, cola, solicitudes).
 
 export type YoutubeSearchResultDto = {
