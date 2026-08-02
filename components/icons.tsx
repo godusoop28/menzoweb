@@ -423,3 +423,17 @@ export function ExpandIcon({ size = 18, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function ReplyIcon({ size = 16, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M9 8 4 13l5 5M4 13h9a6 6 0 0 0 6-6V6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

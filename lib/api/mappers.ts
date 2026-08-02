@@ -292,6 +292,7 @@ export function mapMessage(dto: MessageDto, myRealId: string | null): Message {
     receivedAt: Date.now(),
     type: dto.type,
     imageUri: dto.imageUri ?? undefined,
+    replyTo: dto.replyTo,
   };
 }
 

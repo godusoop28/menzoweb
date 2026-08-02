@@ -97,6 +97,13 @@ export type Comment = { id: string; postId: string; authorId: string; body: stri
 
 export type MessageType = "text" | "system";
 
+export type MessageReplyPreview = {
+  id: string;
+  authorName: string | null;
+  bodyPreview: string | null;
+  deleted: boolean;
+};
+
 export type Message = {
   id: string;
   roomId: string;
@@ -109,6 +116,7 @@ export type Message = {
   receivedAt: number;
   type: MessageType;
   imageUri?: string;
+  replyTo: MessageReplyPreview | null;
 };
 
 export type ChatRoomType = "public" | "direct";

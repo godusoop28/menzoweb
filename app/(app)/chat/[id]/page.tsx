@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, SendIcon, SettingsIcon } from "@/components/icons";
+import { BackIcon, CloseIcon, SendIcon, SettingsIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
@@ -35,6 +35,7 @@ export default function ChatRoomPage() {
   const live = useLiveRoomContext();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [pendingReplyTo, setPendingReplyTo] = useState<{ id: string; authorName: string; bodyPreview: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "live">("general");
   const [showInfo, setShowInfo] = useState(false);
@@ -172,8 +173,9 @@ export default function ChatRoomPage() {
     if (!trimmed || sending || !id) return;
     setSending(true);
     try {
-      await actions.sendMessage(id, trimmed);
+      await actions.sendMessage(id, trimmed, pendingReplyTo?.id);
       setDraft("");
+      setPendingReplyTo(null);
       requestAnimationFrame(() => scrollToBottom(true));
     } catch (error) {
       console.warn("[menzo/web] sendMessage failed", error);
@@ -361,6 +363,16 @@ export default function ChatRoomPage() {
                     isOwn={m.authorId === LOCAL_USER_ID}
                     role={memberRoles.get(m.authorId)}
                     grouped={grouped}
+                    onReply={
+                      m.type === "system"
+                        ? undefined
+                        : () =>
+                            setPendingReplyTo({
+                              id: m.id,
+                              authorName: findUser(state.social, m.authorId)?.displayName ?? "Miembro",
+                              bodyPreview: m.imageUri && !m.body ? "Imagen" : m.body,
+                            })
+                    }
                   />
                 </Fragment>
               );
@@ -385,6 +397,22 @@ export default function ChatRoomPage() {
         )}
       </div>
 
+      {pendingReplyTo && (
+        <div className="flex shrink-0 items-center gap-2 bg-[var(--color-background)]/95 px-4 pt-2 backdrop-blur-md md:px-8">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg border-l-2 border-[var(--color-cyan)] bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs">
+            <span className="font-semibold text-[var(--color-cyan)]">Respondiendo a {pendingReplyTo.authorName}</span>
+            <span className="truncate text-[var(--color-text-secondary)]">{pendingReplyTo.bodyPreview}</span>
+          </div>
+          <button
+            onClick={() => setPendingReplyTo(null)}
+            aria-label="Cancelar respuesta"
+            title="Cancelar respuesta"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] cursor-pointer"
+          >
+            <CloseIcon size={14} />
+          </button>
+        </div>
+      )}
       <div
         className="flex shrink-0 items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 px-4 py-3 backdrop-blur-md md:px-8"
         style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}

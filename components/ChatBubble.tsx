@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Avatar } from "./Avatar";
+import { ReplyIcon } from "./icons";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import type { RoomRole } from "@/lib/api/types";
@@ -14,6 +15,7 @@ export function ChatBubble({
   isOwn,
   role,
   grouped,
+  onReply,
 }: {
   message: Message;
   author?: DemoUser;
@@ -22,6 +24,10 @@ export function ChatBubble({
   /** true si el mensaje anterior es del mismo autor, mismo día, y hace poco — oculta avatar/nombre
    * repetidos para que la conversación se lea como una sola racha, no mensajes sueltos. */
   grouped?: boolean;
+  /** Ausente (o el mensaje de sistema) → sin ícono de responder. Web no tiene un gesto de
+   * long-press real como mobile, así que acá el ícono aparece al pasar el mouse (`group-hover`) —
+   * en touch queda siempre tenue pero visible, sin necesitar un timer de long-press a mano. */
+  onReply?: (message: Message) => void;
 }) {
   const accent = useAccent();
 
@@ -38,7 +44,9 @@ export function ChatBubble({
   const badge = role ? ROLE_BADGE[role] : undefined;
 
   return (
-    <div className={`flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}>
+    <div
+      className={`group flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}
+    >
       {grouped ? (
         <div className="w-[30px] shrink-0" aria-hidden />
       ) : author ? (
@@ -66,6 +74,22 @@ export function ChatBubble({
             {badge && <span aria-hidden>{badge}</span>}
           </span>
         )}
+        {message.replyTo && (
+          <div
+            className={`flex flex-col gap-0.5 rounded-lg border-l-2 px-2 py-1 text-xs ${
+              isOwn ? "border-black/30 bg-black/10" : "border-[var(--color-cyan)] bg-black/15"
+            }`}
+          >
+            {message.replyTo.deleted ? (
+              <span className="italic text-[var(--color-text-muted)]">Mensaje eliminado</span>
+            ) : (
+              <>
+                <span className="font-semibold">{message.replyTo.authorName}</span>
+                <span className="truncate opacity-80">{message.replyTo.bodyPreview}</span>
+              </>
+            )}
+          </div>
+        )}
         {!!message.imageUri && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={message.imageUri} alt="" className="h-[150px] w-[200px] rounded-lg object-cover" />
@@ -75,6 +99,16 @@ export function ChatBubble({
           {relativeTime(message.createdAt)}
         </span>
       </div>
+      {onReply && (
+        <button
+          onClick={() => onReply(message)}
+          aria-label="Responder"
+          title="Responder"
+          className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <ReplyIcon size={14} />
+        </button>
+      )}
     </div>
   );
 }

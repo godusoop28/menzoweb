@@ -306,6 +306,13 @@ export type VoiceParticipantsDto = {
   participants: UserSummaryDto[];
 };
 
+export type MessageReplyPreviewDto = {
+  id: string;
+  authorName: string | null;
+  bodyPreview: string | null;
+  deleted: boolean;
+};
+
 export type MessageDto = {
   id: string;
   roomId: string;
@@ -315,9 +322,10 @@ export type MessageDto = {
   body: string;
   imageUri: string | null;
   createdAt: string;
+  replyTo: MessageReplyPreviewDto | null;
 };
 
-export type SendMessageRequest = { body: string; imageUri?: string };
+export type SendMessageRequest = { body: string; imageUri?: string; replyToMessageId?: string };
 
 export type WallMessageDto = {
   id: string;

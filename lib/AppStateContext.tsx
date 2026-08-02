@@ -58,7 +58,7 @@ type AppStateContextValue = {
       imageFile?: File;
       pollOptions?: string[];
     }) => Promise<void>;
-    sendMessage: (roomId: string, body: string) => Promise<void>;
+    sendMessage: (roomId: string, body: string, replyToMessageId?: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
     receiveRoomMessage: (dto: import("@/lib/api").MessageDto) => void;
     createRoom: (payload: { name: string; description?: string; topic?: string; category?: string }) => Promise<string | null>;
@@ -358,9 +358,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }
 
-    async function sendMessage(roomId: string, body: string) {
+    async function sendMessage(roomId: string, body: string, replyToMessageId?: string) {
       if (!hasSession()) return;
-      const dto = await chatApi.sendMessage(roomId, { body });
+      const dto = await chatApi.sendMessage(roomId, { body, replyToMessageId });
       dispatch({ type: "SEND_MESSAGE", payload: mapMessage(dto, getMyRealId()) });
     }
 
