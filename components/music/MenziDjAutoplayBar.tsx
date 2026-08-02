@@ -2,7 +2,7 @@
 
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
 
-/** Igual que LiveAutoplayBar pero para Menzi DJ — el navegador puede bloquear la reproducción
+/** Igual que LiveAutoplayBar pero para DJ Menzi — el navegador puede bloquear la reproducción
  * automática con sonido; nunca se finge que está sonando mientras siga bloqueada (ver sección 14
  * del pedido). */
 export function MenziDjAutoplayBar() {
@@ -12,10 +12,13 @@ export function MenziDjAutoplayBar() {
   return (
     <button
       onClick={unlockAutoplay}
-      className="fixed inset-x-0 top-10 z-[65] flex w-full items-center justify-center gap-2 bg-[var(--color-cyan)] px-4 py-2 text-sm font-semibold text-black cursor-pointer"
+      // z-[46]: un escalón por encima de LiveAutoplayBar (z-[45], mismo motivo — no debe quedar
+      // tapada por LiveRoomPanel) y siempre por encima de esa otra barra en su stacking order,
+      // coherente con que se pinta 10px más abajo en pantalla (top-10) para no superponerse.
+      className="fixed inset-x-0 top-10 z-[46] flex w-full items-center justify-center gap-2 bg-[var(--color-cyan)] px-4 py-2 text-sm font-semibold text-black cursor-pointer"
     >
       <span className="h-2 w-2 animate-pulse rounded-full bg-black/70" aria-hidden />
-      Menzi DJ está reproduciendo música · Toca para escuchar
+      DJ Menzi está reproduciendo música · Toca para escuchar
     </button>
   );
 }
