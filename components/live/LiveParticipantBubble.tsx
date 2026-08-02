@@ -44,14 +44,20 @@ export function LiveParticipantBubble({
 
   return (
     <div
-      className={`flex w-full flex-col items-center gap-1.5 ${onModerate ? "cursor-pointer" : ""}`}
+      className={`flex w-full flex-col items-center gap-1.5 rounded-2xl ${
+        onModerate ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]" : ""
+      }`}
       role={onModerate ? "button" : undefined}
       tabIndex={onModerate ? 0 : undefined}
+      aria-label={onModerate ? `Moderar a ${participant.user.displayName}` : undefined}
       onClick={onModerate ? () => onModerate(participant) : undefined}
       onKeyDown={
         onModerate
           ? (e) => {
-              if (e.key === "Enter" || e.key === " ") onModerate(participant);
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onModerate(participant);
+              }
             }
           : undefined
       }

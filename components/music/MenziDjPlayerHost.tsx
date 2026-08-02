@@ -131,16 +131,28 @@ export function MenziDjPlayerHost() {
               {music.videoHidden ? "Video oculto · toca para mostrar" : music.session?.currentTitle || "Reproduciendo…"}
             </p>
           </div>
+          {/* role="button" en vez de <button>: este pill entero ya es un <button> (línea 114 más
+              arriba) y HTML no permite anidar <button>. tabIndex + onKeyDown replican Enter/Espacio
+              a mano para que siga siendo operable solo con teclado. */}
           {!music.videoHidden && (live.myRole === "host" || live.myRole === "co_host") && (
             <span
               role="button"
               tabIndex={0}
+              aria-label={music.session?.status === "playing" ? "Pausar" : "Reproducir"}
               onClick={(e) => {
                 e.stopPropagation();
                 if (music.session?.status === "playing") music.pauseTrack();
                 else music.resumeTrack();
               }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (music.session?.status === "playing") music.pauseTrack();
+                  else music.resumeTrack();
+                }
+              }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cyan)]"
             >
               {music.session?.status === "playing" ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
             </span>
@@ -153,8 +165,15 @@ export function MenziDjPlayerHost() {
                 e.stopPropagation();
                 music.toggleLocalMute();
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  music.toggleLocalMute();
+                }
+              }}
               aria-label={music.localMuted ? "Activar música" : "Silenciar música"}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cyan)]"
             >
               {music.localMuted ? <VolumeMuteIcon size={14} /> : <VolumeIcon size={14} />}
             </span>
