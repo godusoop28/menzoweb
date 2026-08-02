@@ -424,6 +424,16 @@ export function ExpandIcon({ size = 18, className = "" }: IconProps) {
   );
 }
 
+export function ScreenShareIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <rect x="2.5" y="4.5" width="19" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 21h8M12 17.5V21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9 12.5 12 9.5l3 3M12 9.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ReplyIcon({ size = 16, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

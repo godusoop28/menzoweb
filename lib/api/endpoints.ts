@@ -196,6 +196,8 @@ export const liveApi = {
   participants: (roomId: string) => apiFetch<LiveParticipantDto[]>(`/api/chat/rooms/${roomId}/live/participants`),
   setMicrophone: (roomId: string, enabled: boolean) =>
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/microphone`, { method: "POST", body: { enabled } }),
+  setScreenSharing: (roomId: string, enabled: boolean) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/screen-share`, { method: "POST", body: { enabled } }),
   requestToSpeak: (roomId: string) =>
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/speaking-requests`, { method: "POST" }),
   cancelSpeakRequest: (roomId: string) =>

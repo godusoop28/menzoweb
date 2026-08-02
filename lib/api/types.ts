@@ -276,6 +276,7 @@ export type LiveParticipantDto = {
   user: UserSummaryDto | null;
   role: LiveParticipantRole;
   microphoneEnabled: boolean;
+  screenSharing: boolean;
   requestedToSpeakAt: string | null;
   joinedAt: string;
 };
@@ -297,6 +298,8 @@ export type LiveEventType =
   | "CHAT_LIVE_PARTICIPANT_PROMOTED"
   | "CHAT_LIVE_PARTICIPANT_DEMOTED"
   | "CHAT_LIVE_MICROPHONE_CHANGED"
+  | "CHAT_LIVE_SCREEN_SHARE_STARTED"
+  | "CHAT_LIVE_SCREEN_SHARE_STOPPED"
   | "CHAT_ROOM_UPDATED"
   | "CHAT_ROOM_APPEARANCE_UPDATED";
 

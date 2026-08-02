@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { IRemoteVideoTrack } from "agora-rtc-sdk-ng";
 
-import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, SettingsIcon, TrashIcon, UsersIcon } from "@/components/icons";
+import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, ScreenShareIcon, SettingsIcon, TrashIcon, UsersIcon } from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -141,6 +142,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
             </div>
           ) : (
             <>
+              {live.remoteScreenTrack && <ScreenShareSurface track={live.remoteScreenTrack} />}
               {music.session?.currentVideoId && (
                 <div className="flex justify-center py-2">
                   <DjMenziOrb
@@ -272,6 +274,30 @@ function ParticipantModerationSheet({ target, onClose }: { target: LiveParticipa
   );
 }
 
+/** Superficie de video para la pantalla compartida — Discord no la usa como "toma total" de la
+ * pantalla, sigue mostrando el resto (escenario, audiencia) debajo; acá se hace lo mismo, es un
+ * elemento más arriba del escenario, no un modo aparte. `track.play(el)` es imperativo (Agora
+ * pinta directo en el DOM node, no vía React), así que va en un efecto — nunca se guarda el
+ * elemento en el store ni se re-renderiza el video en cada cambio de estado del panel. */
+function ScreenShareSurface({ track }: { track: IRemoteVideoTrack }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    track.play(el);
+    return () => {
+      track.stop();
+    };
+  }, [track]);
+
+  return (
+    <div className="mb-2 aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-lg">
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
+  );
+}
+
 function StageSlot({
   participant,
   speakingLevel,
@@ -345,7 +371,23 @@ function LiveControls({
   const showToast = useToast();
   const [confirmEndForAll, setConfirmEndForAll] = useState(false);
   const [endingForAll, setEndingForAll] = useState(false);
+  const [screenShareBusy, setScreenShareBusy] = useState(false);
   const canModerate = room.role === "owner" || room.role === "co_host";
+  const myId = getMyRealId();
+  const someoneElseSharing = live.participants.some((p) => p.screenSharing && p.user.id !== myId);
+
+  async function handleToggleScreenShare() {
+    if (screenShareBusy) return;
+    setScreenShareBusy(true);
+    try {
+      if (live.screenSharing) await live.stopScreenShare();
+      else await live.startScreenShare();
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos compartir tu pantalla.");
+    } finally {
+      setScreenShareBusy(false);
+    }
+  }
 
   // Única fuente de errores de micrófono (ver LiveRoomContext) — cualquier falla, sea al
   // publicar el track o al alternar mute, termina acá como un toast legible en vez de un botón
@@ -425,6 +467,22 @@ function LiveControls({
         <ControlButton onClick={onOpenMusic} label="DJ Menzi">
           <MusicNoteIcon size={18} />
         </ControlButton>
+        {canModerate && (
+          <ControlButton
+            onClick={handleToggleScreenShare}
+            disabled={screenShareBusy || (!live.screenSharing && someoneElseSharing)}
+            label={
+              live.screenSharing
+                ? "Dejar de compartir pantalla"
+                : someoneElseSharing
+                  ? "Alguien más está compartiendo pantalla"
+                  : "Compartir pantalla"
+            }
+            variant={live.screenSharing ? "on" : "neutral"}
+          >
+            <ScreenShareIcon size={18} />
+          </ControlButton>
+        )}
         {canModerate && (
           <ControlButton onClick={onOpenSettings} label="Solicitudes y moderación">
             <UsersIcon size={18} />

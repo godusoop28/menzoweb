@@ -2,7 +2,14 @@
 
 import { Client } from "@stomp/stompjs";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { IAgoraRTCClient, IMicrophoneAudioTrack, IRemoteAudioTrack } from "agora-rtc-sdk-ng";
+import type {
+  IAgoraRTCClient,
+  ILocalAudioTrack,
+  ILocalVideoTrack,
+  IMicrophoneAudioTrack,
+  IRemoteAudioTrack,
+  IRemoteVideoTrack,
+} from "agora-rtc-sdk-ng";
 
 import { API_BASE_URL, getCachedSession, getMyRealId, liveApi, mapLiveParticipant, mapLiveSession } from "@/lib/api";
 import type { LiveEventDto, LiveParticipantDto } from "@/lib/api/types";
@@ -46,6 +53,15 @@ type LiveRoomContextValue = {
   autoplayBlocked: boolean;
   unlockAudio: () => void;
 
+  // Screen share — ver sección "compartir pantalla" del provider. `remoteScreenTrack`/
+  // `remoteScreenSharerId` reflejan como mucho UNA persona compartiendo a la vez (uno-a-la-vez
+  // estilo Discord, forzado server-side, ver LiveService.setScreenSharing).
+  screenSharing: boolean;
+  remoteScreenTrack: IRemoteVideoTrack | null;
+  remoteScreenSharerId: string | null;
+  startScreenShare: () => Promise<void>;
+  stopScreenShare: () => Promise<void>;
+
   join: (roomId: string) => Promise<void>;
   leave: () => Promise<void>;
   toggleMute: () => Promise<void>;
@@ -87,16 +103,21 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const [speakingLevels, setSpeakingLevels] = useState<Map<string, number>>(new Map());
   const [speakingRequests, setSpeakingRequests] = useState<LiveParticipant[]>([]);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [remoteScreenShare, setRemoteScreenShare] = useState<{ uid: string; track: IRemoteVideoTrack } | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const remoteAudioTracksRef = useRef<Map<string, IRemoteAudioTrack>>(new Map());
+  const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const screenAudioTrackRef = useRef<ILocalAudioTrack | null>(null);
   const activeRoomIdRef = useRef<string | null>(null);
   const myRoleRef = useRef<LiveParticipantRole | null>(null);
   // Refs espejo de estado leído dentro de callbacks async (toggleMute, etc.) — un closure de
   // useCallback puede quedar con un valor viejo si el usuario toca el botón dos veces seguidas
   // antes de que React re-renderice; leer del ref siempre da el valor más reciente.
   const mutedRef = useRef(true);
+  const screenSharingRef = useRef(false);
 
   const stompRef = useRef<Client | null>(null);
 
@@ -107,6 +128,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     mutedRef.current = muted;
   }, [muted]);
+
+  useEffect(() => {
+    screenSharingRef.current = screenSharing;
+  }, [screenSharing]);
 
   // ---- WebSocket: un cliente STOMP persistente para todo el provider, con suscripciones que se
   // agregan/quitan dinámicamente por sala (watchedRoomId y activeRoomId pueden ser salas
@@ -236,6 +261,80 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /** Solo la mitad local (cerrar el track/despublicar) — no avisa al backend. Se usa tanto desde
+   * `stopScreenShare` (que sí avisa, después de esto) como desde el manejo del evento STOMP
+   * "me cortaron desde otro lado" (ahí el backend YA lo sabe — avisarle de nuevo sería redundante
+   * y, peor, podría pisar el estado de quien tomó el control después). */
+  const closeLocalScreenTrack = useCallback(async () => {
+    const client = clientRef.current;
+    const track = screenTrackRef.current;
+    if (track) {
+      const audioTrack = screenAudioTrackRef.current;
+      if (client) {
+        await client.unpublish(audioTrack ? [track, audioTrack] : [track]).catch(() => {});
+      }
+      track.close();
+      audioTrack?.close();
+      screenTrackRef.current = null;
+      screenAudioTrackRef.current = null;
+    }
+    setScreenSharing(false);
+  }, []);
+
+  const stopScreenShare = useCallback(async () => {
+    const roomId = activeRoomIdRef.current;
+    await closeLocalScreenTrack();
+    if (roomId) await liveApi.setScreenSharing(roomId, false).catch(() => {});
+  }, [closeLocalScreenTrack]);
+
+  /** Publica el track HABILITADO primero (mismo motivo que publishMicTrack: Agora rechaza
+   * publicar un track ya deshabilitado) y recién avisa al backend después de que Agora aceptó
+   * el publish — si el backend rechaza (alguien perdió el rol justo en el medio, carrera rara),
+   * se desarma todo en vez de dejar una captura de pantalla activa que nadie sabe que existe. */
+  const startScreenShare = useCallback(async () => {
+    const client = clientRef.current;
+    const roomId = activeRoomIdRef.current;
+    if (!client || !roomId || screenSharingRef.current) return;
+    const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
+
+    let result: ILocalVideoTrack | [ILocalVideoTrack, ILocalAudioTrack];
+    try {
+      result = await AgoraRTC.createScreenVideoTrack({ encoderConfig: "1080p_1" }, "auto");
+    } catch (error) {
+      // El usuario cerró el selector nativo de pantalla/ventana/pestaña sin elegir nada — no es
+      // un error de la app, no hay nada que mostrar ni reintentar.
+      if ((error as { code?: string } | null)?.code === "PERMISSION_DENIED") return;
+      console.warn("[menzo/live] createScreenVideoTrack failed", error);
+      throw error;
+    }
+    const screenVideoTrack = Array.isArray(result) ? result[0] : result;
+    const screenAudioTrack = Array.isArray(result) ? result[1] : null;
+    screenTrackRef.current = screenVideoTrack;
+    screenAudioTrackRef.current = screenAudioTrack;
+    // Se dispara tanto al tocar "Detener" en la barra nativa del navegador como al cerrar la
+    // pestaña/ventana compartida — en cualquiera de los dos casos hay que avisarle al backend
+    // (por eso stopScreenShare completo, no solo la limpieza local).
+    screenVideoTrack.on("track-ended", () => {
+      stopScreenShare();
+    });
+
+    try {
+      await client.publish(screenAudioTrack ? [screenVideoTrack, screenAudioTrack] : [screenVideoTrack]);
+      await liveApi.setScreenSharing(roomId, true);
+      setScreenSharing(true);
+    } catch (error) {
+      console.warn("[menzo/live] startScreenShare failed", error);
+      await client
+        .unpublish(screenAudioTrack ? [screenVideoTrack, screenAudioTrack] : [screenVideoTrack])
+        .catch(() => {});
+      screenVideoTrack.close();
+      screenAudioTrack?.close();
+      screenTrackRef.current = null;
+      screenAudioTrackRef.current = null;
+      throw error;
+    }
+  }, [stopScreenShare]);
+
   const applyParticipantEvent = useCallback((event: LiveEventDto) => {
     const myRealId = getMyRealId();
     const payload = event.payload as LiveParticipantDto | null;
@@ -275,9 +374,14 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         // se intentara republicar más adelante).
         micTrackRef.current?.setMuted(true).catch(() => {});
         setMuted(true);
+      } else if (event.type === "CHAT_LIVE_SCREEN_SHARE_STOPPED" && screenSharingRef.current) {
+        // El backend ya decidió esto (otro host/co-host tomó el control) — solo la limpieza
+        // local, avisarle de nuevo sería redundante y podría pisar el estado de quien ahora sí
+        // está compartiendo.
+        closeLocalScreenTrack();
       }
     }
-  }, [becomeSpeaker, becomeAudience]);
+  }, [becomeSpeaker, becomeAudience, closeLocalScreenTrack]);
 
   // Watch: solo lectura del estado del LIVE para mostrarlo en la cabecera/anuncio — no une audio.
   const watchRoom = useCallback(
@@ -359,6 +463,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const cleanupAgoraClient = useCallback(async () => {
     micTrackRef.current?.close();
     micTrackRef.current = null;
+    screenTrackRef.current?.close();
+    screenAudioTrackRef.current?.close();
+    screenTrackRef.current = null;
+    screenAudioTrackRef.current = null;
     remoteAudioTracksRef.current.clear();
     const client = clientRef.current;
     if (client) {
@@ -369,6 +477,8 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     setConnected(false);
     setSpeakingLevels(new Map());
     setAutoplayBlocked(false);
+    setScreenSharing(false);
+    setRemoteScreenShare(null);
   }, []);
 
   const join = useCallback(
@@ -403,10 +513,20 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
           if (mediaType === "audio" && user.audioTrack) {
             remoteAudioTracksRef.current.set(String(user.uid), user.audioTrack);
             user.audioTrack.play();
+          } else if (mediaType === "video" && user.videoTrack) {
+            // No se hace .play() acá (a diferencia del audio) — un video necesita un elemento del
+            // DOM real para pintarse, que todavía no existe en este punto; lo provee la UI
+            // (LiveRoomPanel) recién cuando monta la superficie, leyendo remoteScreenTrack.
+            setRemoteScreenShare({ uid: String(user.uid), track: user.videoTrack });
           }
         });
-        client.on("user-unpublished", (user) => {
-          remoteAudioTracksRef.current.delete(String(user.uid));
+        client.on("user-unpublished", (user, mediaType) => {
+          if (mediaType === "audio") {
+            remoteAudioTracksRef.current.delete(String(user.uid));
+          } else if (mediaType === "video") {
+            const uid = String(user.uid);
+            setRemoteScreenShare((prev) => (prev?.uid === uid ? null : prev));
+          }
         });
 
         await client.join(tokenDto.appId, tokenDto.channelName, tokenDto.token, tokenDto.uid);
@@ -600,6 +720,11 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       speakingRequests,
       autoplayBlocked,
       unlockAudio,
+      screenSharing,
+      remoteScreenTrack: remoteScreenShare?.track ?? null,
+      remoteScreenSharerId: remoteScreenShare?.uid ?? null,
+      startScreenShare,
+      stopScreenShare,
       join,
       leave,
       toggleMute,
@@ -635,6 +760,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       speakingRequests,
       autoplayBlocked,
       unlockAudio,
+      screenSharing,
+      remoteScreenShare,
+      startScreenShare,
+      stopScreenShare,
       join,
       leave,
       toggleMute,

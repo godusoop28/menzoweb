@@ -276,6 +276,7 @@ export function mapLiveParticipant(
     user: mapUserSummary(dto.user, myRealId),
     role: dto.role.toLowerCase() as import("@/lib/types").LiveParticipantRole,
     microphoneEnabled: dto.microphoneEnabled,
+    screenSharing: dto.screenSharing,
     requestedToSpeakAt: dto.requestedToSpeakAt,
     joinedAt: dto.joinedAt,
     speakingLevel: 0,

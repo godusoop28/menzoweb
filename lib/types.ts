@@ -230,6 +230,7 @@ export type LiveParticipant = {
   user: DemoUser;
   role: LiveParticipantRole;
   microphoneEnabled: boolean;
+  screenSharing: boolean;
   requestedToSpeakAt: string | null;
   joinedAt: string;
   /** 0-1, viene de Agora (volume-indicator) — nunca del backend, ver LiveRoomContext. */
