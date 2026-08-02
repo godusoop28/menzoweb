@@ -4,6 +4,7 @@ import { Avatar } from "./Avatar";
 import { ReplyIcon } from "./icons";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
+import { gradientCss } from "@/lib/theme";
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
 
@@ -42,6 +43,10 @@ export function ChatBubble({
   }
 
   const badge = role ? ROLE_BADGE[role] : undefined;
+  // Cada persona tiene su propio color de burbuja (estilo Amino/Discord: la sala se siente viva,
+  // no todo el mismo gris) — se deriva del mismo `avatarGradient` que ya pinta su avatar, como un
+  // wash muy sutil de fondo más una franja sólida al costado, nunca opaco encima del texto.
+  const authorTint = !isOwn && author ? gradientCss(author.avatarGradient) : undefined;
 
   return (
     <div
@@ -57,11 +62,22 @@ export function ChatBubble({
         <Avatar name="?" gradient="fire" size={30} />
       )}
       <div
-        className={`flex flex-col gap-1 rounded-2xl px-4 py-2 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] ${
-          isOwn ? "rounded-tr-md text-[var(--color-text-on-accent)]" : "rounded-tl-md bg-[var(--color-surface-secondary)]"
+        className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] px-4 py-2 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
+          isOwn
+            ? "rounded-tr-lg text-[var(--color-text-on-accent)]"
+            : "rounded-tl-lg border-l-[3px] bg-[var(--color-surface-secondary)]/90"
         }`}
-        style={isOwn ? { background: accent.color } : undefined}
+        style={
+          isOwn
+            ? { background: accent.color }
+            : authorTint
+              ? { borderLeftColor: authorTint }
+              : undefined
+        }
       >
+        {authorTint && !isOwn && (
+          <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.09]" style={{ background: authorTint }} aria-hidden />
+        )}
         {!isOwn && !grouped && (
           <span className="flex items-center gap-1 text-xs font-bold text-[var(--color-cyan)]">
             {author ? (

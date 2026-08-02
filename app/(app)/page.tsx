@@ -106,9 +106,9 @@ export default function FeedPage() {
       {tab === "recientes" && (
         <>
           <CreatePostComposer />
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {posts.length === 0 ? (
-              <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
+              <p className="col-span-full py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
             ) : (
               posts.map((post) => <PostCard key={post.id} post={post} />)
             )}

@@ -27,25 +27,40 @@ export function ChatRoomListItem({
         : undefined
       : room.description || room.topic;
 
+  // Cada fila tiene su propia "personalidad de color" (estilo comunidad de Amino) en vez de ser
+  // todas el mismo gris plano — el wash es deliberadamente sutil (baja opacidad) para no pisar la
+  // legibilidad del texto, y sube un poco al pasar el mouse como señal de interactividad extra.
+  const tintGradient = room.type === "direct" ? room.peer?.avatarGradient : room.gradient;
+  const tintCss = tintGradient ? gradientCss(tintGradient) : undefined;
+
   return (
     <Link
       href={`/chat/${room.id}`}
-      className="flex items-center gap-4 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-secondary)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
+      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
     >
+      {tintCss && (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.13] transition-opacity duration-200 group-hover:opacity-[0.22]"
+          style={{ background: tintCss }}
+          aria-hidden
+        />
+      )}
       {room.type === "direct" && room.peer ? (
-        <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={48} showOnline online={room.peer.isOnline} />
+        <span className="relative shrink-0">
+          <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={52} showOnline online={room.peer.isOnline} />
+        </span>
       ) : (
-        <span className="flex shrink-0 flex-col items-center gap-1">
+        <span className="relative flex shrink-0 flex-col items-center gap-1">
           <span className="relative">
             {room.coverUri ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={room.coverUri} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
+              <img src={room.coverUri} alt="" className="h-[52px] w-[52px] rounded-2xl object-cover shadow-md" />
             ) : (
               <span
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md"
+                className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl text-white shadow-md"
                 style={{ background: gradientCss(room.gradient) }}
               >
-                <ChatIcon size={20} />
+                <ChatIcon size={22} />
               </span>
             )}
             {room.live && (
@@ -57,8 +72,8 @@ export function ChatRoomListItem({
           <span className="text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Sala pública</span>
         </span>
       )}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{title}</span>
+      <span className="relative min-w-0 flex-1">
+        <span className="block truncate font-display font-bold">{title}</span>
         <span className="block truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
       </span>
       {onJoin && room.type === "public" && !room.joined ? (
@@ -69,12 +84,12 @@ export function ChatRoomListItem({
             onJoin(room.id);
           }}
           disabled={joining}
-          className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-medium disabled:opacity-50 cursor-pointer"
+          className="relative shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-medium disabled:opacity-50 cursor-pointer"
         >
           {joining ? "…" : "Unirse"}
         </button>
       ) : (
-        room.favorite && <span className="shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>
+        room.favorite && <span className="relative shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>
       )}
     </Link>
   );

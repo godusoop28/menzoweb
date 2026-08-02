@@ -246,8 +246,12 @@ export default function ChatRoomPage() {
           invitaciones/moderación) vive en RoomSettingsPanel, no acá (ver sección 5 del pedido). */}
       <div className="shrink-0 px-4 md:px-8">
         <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] bg-[rgba(7,9,13,0.95)] py-3 backdrop-blur-md">
-          <button onClick={() => router.push("/chat")} className="cursor-pointer text-[var(--color-text-secondary)]" aria-label="Volver">
-            <BackIcon />
+          <button
+            onClick={() => router.push("/chat")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+            aria-label="Volver"
+          >
+            <BackIcon size={18} />
           </button>
           {room.type === "direct" && room.peer ? (
             <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={32} showOnline online={room.peer.isOnline} />
