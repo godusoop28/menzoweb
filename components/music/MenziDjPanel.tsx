@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   CheckIcon,
+  ExpandIcon,
+  EyeIcon,
+  EyeOffIcon,
   MusicNoteIcon,
   PauseIcon,
   PlayIcon,
@@ -102,9 +105,31 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
   const brandMode: MenziDjMode = session?.status === "error" ? "error" : session?.status === "playing" ? "playing" : session?.status === "paused" ? "paused" : "idle";
 
   return (
-    <Sheet open onClose={onClose} title="Menzi DJ" subtitle={room.name} widthClassName="max-w-xl">
+    <Sheet open onClose={onClose} title="DJ Menzi" subtitle={room.name} widthClassName="max-w-xl">
       <div className="flex flex-col gap-4">
-        <MenziDjBrand mode={brandMode} />
+        <div className="flex items-center justify-between">
+          <MenziDjBrand mode={brandMode} />
+          {session?.currentVideoId && (
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                onClick={() => music.setVideoHidden(!music.videoHidden)}
+                title={music.videoHidden ? "Mostrar video" : "Ocultar video (la música sigue sonando)"}
+                aria-label={music.videoHidden ? "Mostrar video" : "Ocultar video"}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer"
+              >
+                {music.videoHidden ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+              </button>
+              <button
+                onClick={() => music.setFullscreen(true)}
+                title="Pantalla completa"
+                aria-label="Pantalla completa"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] cursor-pointer"
+              >
+                <ExpandIcon size={16} />
+              </button>
+            </div>
+          )}
+        </div>
 
         {session?.status === "error" && (
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-coral)]/30 bg-[var(--color-coral)]/10 p-3">
@@ -154,7 +179,7 @@ export function MenziDjPanel({ room, onClose }: { room: ChatRoom; onClose: () =>
           <MenziIllustrationState
             image="/illustrations/menzi/menzi-dj-hero.webp"
             alt="Menzi con audífonos y notas musicales"
-            title="Menzi DJ"
+            title="DJ Menzi"
             description="Busca una canción o pega un enlace para comenzar."
             size="small"
             priority

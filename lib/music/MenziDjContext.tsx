@@ -24,6 +24,16 @@ type MenziDjContextValue = {
   loading: boolean;
   expanded: boolean;
   setExpanded: (value: boolean) => void;
+  /** Ocultar visualmente el video sin tocar la reproducción — el iframe sigue montado y sonando
+   * igual, solo se lo cubre con una capa propia (nunca width/height:0, ver frameStyle en
+   * MenziDjPlayerHost.tsx: eso SÍ podía dejar al iframe con una superficie de renderizado nula,
+   * el mismo riesgo que llevó a la corrección equivalente en menzomovil). */
+  videoHidden: boolean;
+  setVideoHidden: (value: boolean) => void;
+  /** Pantalla completa real — misma instancia de iframe, solo cambia a `position:fixed inset-0`
+   * por CSS. Nunca crea un segundo player. */
+  fullscreen: boolean;
+  setFullscreen: (value: boolean) => void;
   /** Setter, no el ref crudo — exponer un RefObject directo en el valor del contexto hace que el
    * linter (react-hooks/refs) trate CUALQUIER otro campo leído del mismo objeto como "acceso a un
    * ref durante el render", así que el <div> del player se registra acá en vez de leer
@@ -55,14 +65,14 @@ type MenziDjContextValue = {
 
 const MenziDjContext = createContext<MenziDjContextValue | null>(null);
 
-/** Menzi DJ no transmite audio por Agora — el reproductor oficial de YouTube corre en cada
+/** DJ Menzi no transmite audio por Agora — el reproductor oficial de YouTube corre en cada
  * dispositivo, sincronizado contra el estado canónico que guarda menzoapi. El player es UN SOLO
  * <div> montado acá, en el provider (nunca en una pantalla específica), así que sobrevive a
  * cambiar de pantalla o minimizar el LIVE igual que el engine de Agora en LiveRoomContext —
  * "expanded" solo cambia su tamaño/posición por CSS, nunca lo destruye ni crea uno nuevo.
  *
  * El ciclo de vida de la música está atado al de la voz (`live.activeRoomId`): si estás
- * conectado al audio del LIVE, Menzi DJ carga/sincroniza; si salís del LIVE, se limpia. No hay
+ * conectado al audio del LIVE, DJ Menzi carga/sincroniza; si salís del LIVE, se limpia. No hay
  * un "watchRoom" independiente para música — no tiene sentido escuchar música de un LIVE al que
  * no estás conectado. */
 export function MenziDjProvider({ children }: { children: React.ReactNode }) {
@@ -70,6 +80,8 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<MusicSessionSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [videoHidden, setVideoHidden] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
   const [localVolume, setLocalVolumeState] = useState(DEFAULT_VOLUME);
@@ -420,6 +432,10 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       loading,
       expanded,
       setExpanded,
+      videoHidden,
+      setVideoHidden,
+      fullscreen,
+      setFullscreen,
       setPlayerContainer,
       autoplayBlocked,
       unlockAutoplay,
@@ -449,6 +465,8 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       session,
       loading,
       expanded,
+      videoHidden,
+      fullscreen,
       setPlayerContainer,
       autoplayBlocked,
       unlockAutoplay,
