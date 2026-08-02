@@ -106,6 +106,19 @@ export type UpdateProfileRequest = {
 export type PollOptionDto = { id: string; label: string; voteCount: number; votedByMe: boolean };
 export type AbstractVisualDto = { preset: string; caption: string | null };
 
+/** Espejo de PostBlock.java (backend) — `type` decide qué otros campos importan:
+ * paragraph/heading usan `text`; image/gif usan `url` (siempre https, nunca un blob local) y
+ * opcionalmente `alt`; divider no usa ninguno. `id` es generado por el cliente, solo para keys de
+ * React al reordenar — el backend nunca le da significado propio. */
+export type PostBlockType = "paragraph" | "heading" | "image" | "gif" | "divider";
+export type PostBlockDto = {
+  id: string;
+  type: PostBlockType;
+  text: string | null;
+  url: string | null;
+  alt: string | null;
+};
+
 export type PostDto = {
   id: string;
   author: UserSummaryDto;
@@ -124,6 +137,7 @@ export type PostDto = {
   commentCount: number;
   featured: boolean;
   createdAt: string;
+  blocks: PostBlockDto[];
 };
 
 export type CreatePostRequest = {
@@ -136,6 +150,13 @@ export type CreatePostRequest = {
   tags?: string[];
   pollOptions?: string[];
   eventId?: string;
+  blocks?: PostBlockDto[];
+};
+
+export type UpdatePostRequest = {
+  title?: string;
+  blocks: PostBlockDto[];
+  tags?: string[];
 };
 
 export type CommentDto = {
@@ -418,6 +439,10 @@ export type UpdateSettingsRequest = Partial<SettingsDto>;
 
 export type RecentlyViewedDto = { kind: ActivityKind; id: string; viewedAt: string };
 export type UploadResponseDto = { url: string };
+
+// ---- GIFs (Tenor, proxeado — ver TenorController en menzoapi) ---------------------------------
+export type GifResultDto = { id: string; url: string; previewUrl: string; width: number | null; height: number | null };
+export type GifSearchResponseDto = { results: GifResultDto[]; next: string | null };
 
 // ---- DJ Menzi (música sincronizada del LIVE, YouTube) -----------------------------------------
 // DJ Menzi no es un usuario ni un participante de Agora — es este módulo. Ver MusicService en

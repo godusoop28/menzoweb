@@ -143,6 +143,7 @@ export function mapPost(dto: PostDto, myRealId: string | null): Post {
         : undefined,
     eventId: dto.eventId ?? undefined,
     gradient: toGradient(dto.gradient),
+    blocks: dto.blocks ?? [],
   };
 }
 

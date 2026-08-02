@@ -29,6 +29,13 @@ export function PostCard({ post }: { post: Post }) {
 
   if (!author) return null;
 
+  // Preview compacto para la tarjeta del feed, no el post completo — `post.body` ya es un
+  // excerpt de solo texto derivado server-side de `blocks` (ver PostService.deriveBodyFromBlocks),
+  // así que sigue sirviendo tal cual acá. La portada usa la primera imagen/gif de los bloques si
+  // no hay `imageUri` legacy — el resto de los bloques (más imágenes, separadores, etc.) solo se
+  // ven al entrar al post (ver PostBlockRenderer en la página de detalle).
+  const coverImage = post.imageUri ?? post.blocks.find((b) => b.type === "image" || b.type === "gif")?.url;
+
   return (
     <article className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 flex flex-col gap-3 menzo-fade-in shadow-[0_4px_18px_-6px_rgba(0,0,0,0.4)] transition-shadow hover:border-[var(--color-border-strong)] hover:shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]">
       <div className="flex items-center justify-between gap-3">
@@ -59,9 +66,9 @@ export function PostCard({ post }: { post: Post }) {
       <Link href={`/post/${post.id}`} className="flex flex-col gap-3">
         {!!post.title && <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{post.title}</h3>}
         <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
-        {post.imageUri ? (
+        {coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.imageUri} alt="" className="max-h-96 w-full rounded-xl object-cover" />
+          <img src={coverImage} alt="" className="max-h-96 w-full rounded-xl object-cover" />
         ) : (
           post.abstractVisual && (
             <AbstractArtwork preset={post.abstractVisual.preset} caption={post.abstractVisual.caption} className="h-[150px] w-full rounded-xl" />

@@ -1,40 +1,38 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
+import { BlockEditor } from "./post/BlockEditor";
 import { useAppState } from "@/lib/AppStateContext";
+import type { PostBlockDto } from "@/lib/api/types";
 
 import { GradientButton } from "./GradientButton";
-import { CloseIcon, ImageIcon } from "./icons";
+import { CloseIcon } from "./icons";
 
 type Mode = "text" | "image" | "poll";
+
+function hasRealContent(blocks: PostBlockDto[]) {
+  return blocks.some(
+    (b) => ((b.type === "paragraph" || b.type === "heading") && !!b.text?.trim()) || b.type === "image" || b.type === "gif"
+  );
+}
 
 export function CreatePostComposer() {
   const { actions } = useAppState();
   const [mode, setMode] = useState<Mode>("text");
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [imageUri, setImageUri] = useState<string | undefined>();
-  const [imageFile, setImageFile] = useState<File | undefined>();
+  const [blocks, setBlocks] = useState<PostBlockDto[]>([]);
+  const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
-  const valid = mode === "poll" ? body.trim().length >= 3 && filledOptions.length >= 2 : body.trim().length > 0;
-
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageUri(URL.createObjectURL(file));
-    setImageFile(file);
-  }
+  const valid = mode === "poll" ? pollQuestion.trim().length >= 3 && filledOptions.length >= 2 : hasRealContent(blocks);
 
   function reset() {
     setTitle("");
-    setBody("");
-    setImageUri(undefined);
-    setImageFile(undefined);
+    setBlocks([]);
+    setPollQuestion("");
     setPollOptions(["", ""]);
     setMode("text");
   }
@@ -45,10 +43,9 @@ export function CreatePostComposer() {
     try {
       await actions.createPost({
         title: title.trim() || undefined,
-        body: body.trim(),
-        imageUri: mode === "image" ? imageUri : undefined,
-        imageFile: mode === "image" ? imageFile : undefined,
+        body: mode === "poll" ? pollQuestion.trim() : "",
         pollOptions: mode === "poll" ? filledOptions : undefined,
+        blocks: mode === "poll" ? undefined : blocks,
       });
       reset();
     } catch (error) {
@@ -77,8 +74,8 @@ export function CreatePostComposer() {
       {mode === "poll" ? (
         <>
           <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value.slice(0, 140))}
+            value={pollQuestion}
+            onChange={(e) => setPollQuestion(e.target.value.slice(0, 140))}
             placeholder="Escribe tu pregunta"
             rows={2}
             className="w-full resize-none rounded-xl bg-[var(--color-surface-secondary)] p-3 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
@@ -117,48 +114,13 @@ export function CreatePostComposer() {
         </>
       ) : (
         <>
-          {mode === "image" && (
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-              placeholder="Título (opcional)"
-              className="w-full rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
-            />
-          )}
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value.slice(0, 600))}
-            placeholder="¿Qué recuerdo quieres compartir?"
-            rows={3}
-            className="w-full resize-none rounded-xl bg-[var(--color-surface-secondary)] p-3 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value.slice(0, 80))}
+            placeholder="Título (opcional)"
+            className="w-full rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
           />
-          {mode === "image" &&
-            (imageUri ? (
-              <div className="flex flex-col gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUri} alt="" className="max-h-56 w-full rounded-xl object-cover" />
-                <button
-                  onClick={() => {
-                    setImageUri(undefined);
-                    setImageFile(undefined);
-                  }}
-                  className="self-start text-xs font-medium text-[var(--color-coral)] cursor-pointer"
-                >
-                  Quitar imagen
-                </button>
-              </div>
-            ) : (
-              <>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 self-start rounded-full border border-[var(--color-border-soft)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] cursor-pointer"
-                >
-                  <ImageIcon size={16} />
-                  Añadir imagen
-                </button>
-              </>
-            ))}
+          <BlockEditor blocks={blocks} onChange={setBlocks} />
         </>
       )}
 

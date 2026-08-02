@@ -12,6 +12,7 @@ import type {
   CreatePostRequest,
   CreateRoomRequest,
   EventDto,
+  GifSearchResponseDto,
   InterestDto,
   LiveParticipantDto,
   LiveSessionDto,
@@ -38,6 +39,7 @@ import type {
   StartLiveRequest,
   UpdateLiveRequest,
   UpdateProfileRequest,
+  UpdatePostRequest,
   UpdateRoomRequest,
   UpdateSettingsRequest,
   UploadResponseDto,
@@ -112,6 +114,7 @@ export const postsApi = {
     apiFetch<PageResponse<PostDto>>(`/api/posts/search${qs({ query, page, size })}`),
   getById: (id: string) => apiFetch<PostDto>(`/api/posts/${id}`),
   create: (body: CreatePostRequest) => apiFetch<PostDto>("/api/posts", { method: "POST", body }),
+  update: (id: string, body: UpdatePostRequest) => apiFetch<PostDto>(`/api/posts/${id}`, { method: "PUT", body }),
   remove: (id: string) => apiFetch<void>(`/api/posts/${id}`, { method: "DELETE" }),
   like: (id: string) => apiFetch<void>(`/api/posts/${id}/like`, { method: "PUT" }),
   unlike: (id: string) => apiFetch<void>(`/api/posts/${id}/like`, { method: "DELETE" }),
@@ -123,6 +126,11 @@ export const postsApi = {
     apiFetch<PageResponse<CommentDto>>(`/api/posts/${id}/comments${qs({ page, size })}`),
   addComment: (id: string, body: string) =>
     apiFetch<CommentDto>(`/api/posts/${id}/comments`, { method: "POST", body: { body } }),
+};
+
+export const gifsApi = {
+  search: (q: string, pos?: string) => apiFetch<GifSearchResponseDto>(`/api/gifs/search${qs({ q, pos })}`),
+  trending: (pos?: string) => apiFetch<GifSearchResponseDto>(`/api/gifs/trending${qs({ pos })}`),
 };
 
 export const chatApi = {

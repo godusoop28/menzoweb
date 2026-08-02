@@ -74,6 +74,9 @@ export type CommunityEvent = {
   attendees: string[];
 };
 
+export type PostBlockType = "paragraph" | "heading" | "image" | "gif" | "divider";
+export type PostBlock = { id: string; type: PostBlockType; text: string | null; url: string | null; alt: string | null };
+
 export type Post = {
   id: string;
   authorId: string;
@@ -91,6 +94,7 @@ export type Post = {
   pollOptions?: PollOption[];
   eventId?: string;
   gradient?: GradientId;
+  blocks: PostBlock[];
 };
 
 export type Comment = { id: string; postId: string; authorId: string; body: string; createdAt: string };

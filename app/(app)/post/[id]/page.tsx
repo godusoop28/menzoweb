@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, BookmarkIcon, HeartIcon, SendIcon } from "@/components/icons";
 import { PollCard } from "@/components/PollCard";
+import { PostBlockRenderer } from "@/components/post/PostBlockRenderer";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findPost, findUser } from "@/lib/store/selectors";
@@ -73,11 +74,17 @@ export default function PostDetailPage() {
       )}
 
       {!!post.title && <h1 className="font-display text-2xl font-bold">{post.title}</h1>}
-      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
 
-      {!!post.imageUri && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.imageUri} alt="" className="w-full rounded-2xl object-cover" />
+      {post.blocks.length > 0 ? (
+        <PostBlockRenderer blocks={post.blocks} />
+      ) : (
+        <>
+          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>
+          {!!post.imageUri && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={post.imageUri} alt="" className="w-full rounded-2xl object-cover" />
+          )}
+        </>
       )}
 
       {post.type === "poll" && <PollCard post={post} />}

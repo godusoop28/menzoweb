@@ -57,6 +57,7 @@ type AppStateContextValue = {
       imageUri?: string;
       imageFile?: File;
       pollOptions?: string[];
+      blocks?: import("@/lib/api/types").PostBlockDto[];
     }) => Promise<void>;
     sendMessage: (roomId: string, body: string, replyToMessageId?: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
@@ -344,16 +345,22 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       imageUri?: string;
       imageFile?: File;
       pollOptions?: string[];
+      blocks?: import("@/lib/api/types").PostBlockDto[];
     }) {
       if (!hasSession()) throw new Error("No hay sesión activa");
       const imageUri = await ensureUploaded(payload.imageUri, payload.imageFile);
+      // Cada bloque de imagen/gif ya trae su propia URL https (se sube al agregarse en el editor,
+      // ver BlockEditor) — acá solo se decide el `type` legacy que sigue pidiendo el backend para
+      // posts sin bloques (poll aparte, no usa nada de esto).
+      const hasMedia = payload.blocks?.some((b) => b.type === "image" || b.type === "gif") ?? false;
       const dto = await postsApi.create({
-        type: payload.pollOptions ? "poll" : imageUri ? "image" : "text",
+        type: payload.pollOptions ? "poll" : hasMedia || imageUri ? "image" : "text",
         title: payload.title,
         body: payload.body,
         imageUri,
         tags: payload.tags ?? [],
         pollOptions: payload.pollOptions,
+        blocks: payload.blocks,
       });
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }
