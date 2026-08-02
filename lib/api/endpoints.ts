@@ -5,12 +5,14 @@ import type {
   AuthResponseDto,
   BadgeDto,
   BanDto,
+  ChangeRoleRequest,
   ChatRoomDto,
   CommentDto,
   CommunityConfigDto,
   CreateEventRequest,
   CreatePostRequest,
   CreateRoomRequest,
+  CreateStickerPackRequest,
   EventDto,
   GifSearchResponseDto,
   InterestDto,
@@ -19,7 +21,9 @@ import type {
   LiveTokenDto,
   LoginRequest,
   MessageDto,
+  ModerationActionDto,
   ModerationActionRequest,
+  ModerationActionType,
   MusicSessionDto,
   MusicSettingsRequest,
   NotificationDto,
@@ -27,6 +31,7 @@ import type {
   PageResponse,
   PostDto,
   QueueItemDto,
+  ReasonRequest,
   RecentlyViewedDto,
   RefreshRequest,
   RegisterRequest,
@@ -37,6 +42,8 @@ import type {
   SendMessageRequest,
   SettingsDto,
   StartLiveRequest,
+  StickerPackDetailDto,
+  StickerPackSummaryDto,
   UpdateLiveRequest,
   UpdateProfileRequest,
   UpdatePostRequest,
@@ -115,7 +122,9 @@ export const postsApi = {
   getById: (id: string) => apiFetch<PostDto>(`/api/posts/${id}`),
   create: (body: CreatePostRequest) => apiFetch<PostDto>("/api/posts", { method: "POST", body }),
   update: (id: string, body: UpdatePostRequest) => apiFetch<PostDto>(`/api/posts/${id}`, { method: "PUT", body }),
-  remove: (id: string) => apiFetch<void>(`/api/posts/${id}`, { method: "DELETE" }),
+  // body solo hace falta cuando quien borra no es el autor (staff LEADER+, motivo obligatorio) —
+  // ver PostController.deletePost/PostService.deletePost en menzoapi.
+  remove: (id: string, body?: ReasonRequest) => apiFetch<void>(`/api/posts/${id}`, { method: "DELETE", body }),
   like: (id: string) => apiFetch<void>(`/api/posts/${id}/like`, { method: "PUT" }),
   unlike: (id: string) => apiFetch<void>(`/api/posts/${id}/like`, { method: "DELETE" }),
   bookmark: (id: string) => apiFetch<void>(`/api/posts/${id}/bookmark`, { method: "PUT" }),
@@ -151,6 +160,8 @@ export const chatApi = {
     apiFetch<PageResponse<MessageDto>>(`/api/chat/rooms/${id}/messages${qs({ page, size })}`),
   sendMessage: (id: string, body: SendMessageRequest) =>
     apiFetch<MessageDto>(`/api/chat/rooms/${id}/messages`, { method: "POST", body }),
+  deleteMessage: (id: string, messageId: string, body?: ReasonRequest) =>
+    apiFetch<void>(`/api/chat/rooms/${id}/messages/${messageId}`, { method: "DELETE", body }),
   members: (id: string) => apiFetch<RoomMemberDto[]>(`/api/chat/rooms/${id}/members`),
   promote: (id: string, userId: string) =>
     apiFetch<void>(`/api/chat/rooms/${id}/members/${userId}/promote`, { method: "POST" }),
@@ -212,8 +223,8 @@ export const liveApi = {
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}/demote`, { method: "POST" }),
   muteParticipant: (roomId: string, userId: string) =>
     apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}/mute`, { method: "POST" }),
-  removeParticipant: (roomId: string, userId: string) =>
-    apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}`, { method: "DELETE" }),
+  removeParticipant: (roomId: string, userId: string, body?: ReasonRequest) =>
+    apiFetch<void>(`/api/chat/rooms/${roomId}/live/participants/${userId}`, { method: "DELETE", body }),
 };
 
 export const musicApi = {
@@ -293,3 +304,38 @@ export async function ensureUploaded(uri: string | undefined, file: File | undef
   if (!file) return undefined;
   return uploadsApi.upload(file);
 }
+
+/** Panel de staff global (CURATOR/LEADER/MASTER) — ver AdminController en menzoapi. Nunca hay un
+ * endpoint acá para navegar mensajes/salas: eso queda estructuralmente excluido (ver plan). */
+export const adminApi = {
+  searchUsers: (query: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<UserProfileDto>>(`/api/admin/users${qs({ query, page, size })}`),
+  suspendUser: (id: string, body: ReasonRequest) =>
+    apiFetch<void>(`/api/admin/users/${id}/suspend`, { method: "POST", body }),
+  unsuspendUser: (id: string, body: ReasonRequest) =>
+    apiFetch<void>(`/api/admin/users/${id}/unsuspend`, { method: "POST", body }),
+  deleteAccount: (id: string, body: ReasonRequest) =>
+    apiFetch<void>(`/api/admin/users/${id}`, { method: "DELETE", body }),
+  changeRole: (id: string, body: ChangeRoleRequest) =>
+    apiFetch<void>(`/api/admin/users/${id}/role`, { method: "POST", body }),
+  searchPosts: (query: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<PostDto>>(`/api/admin/posts${qs({ query, page, size })}`),
+  hidePost: (id: string, body: ReasonRequest) =>
+    apiFetch<void>(`/api/admin/posts/${id}/hide`, { method: "POST", body }),
+  unhidePost: (id: string, body: ReasonRequest) =>
+    apiFetch<void>(`/api/admin/posts/${id}/unhide`, { method: "POST", body }),
+  moderationLog: (page = 0, size = 30, actorId?: string, actionType?: ModerationActionType) =>
+    apiFetch<PageResponse<ModerationActionDto>>(
+      `/api/admin/moderation-log${qs({ page, size, actorId, actionType })}`
+    ),
+};
+
+export const stickersApi = {
+  createPack: (body: CreateStickerPackRequest) =>
+    apiFetch<StickerPackDetailDto>("/api/stickers/packs", { method: "POST", body }),
+  listPacks: (query?: string, page = 0, size = 24) =>
+    apiFetch<PageResponse<StickerPackSummaryDto>>(`/api/stickers/packs${qs({ query, page, size })}`),
+  getPack: (id: string) => apiFetch<StickerPackDetailDto>(`/api/stickers/packs/${id}`),
+  deletePack: (id: string, body?: ReasonRequest) =>
+    apiFetch<void>(`/api/stickers/packs/${id}`, { method: "DELETE", body }),
+};

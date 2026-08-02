@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Avatar } from "./Avatar";
-import { ReplyIcon } from "./icons";
+import { ReplyIcon, TrashIcon } from "./icons";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
@@ -17,6 +17,7 @@ export function ChatBubble({
   role,
   grouped,
   onReply,
+  onDelete,
 }: {
   message: Message;
   author?: DemoUser;
@@ -29,6 +30,10 @@ export function ChatBubble({
    * long-press real como mobile, así que acá el ícono aparece al pasar el mouse (`group-hover`) —
    * en touch queda siempre tenue pero visible, sin necesitar un timer de long-press a mano. */
   onReply?: (message: Message) => void;
+  /** Presente cuando el llamador ya decidió que este usuario puede borrar este mensaje (autor
+   * siempre; CURATOR+ para el de otros, ver chat/[id]/page.tsx) — el propio botón no vuelve a
+   * chequear permisos. */
+  onDelete?: (message: Message) => void;
 }) {
   const accent = useAccent();
 
@@ -38,6 +43,41 @@ export function ChatBubble({
         <span className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
           {message.body}
         </span>
+      </div>
+    );
+  }
+
+  // Sticker: sin fondo de burbuja, más grande — estilo WhatsApp/Telegram. Igual sigue mostrando
+  // avatar/nombre/hora como cualquier otro mensaje, solo cambia el contenido central.
+  if (message.type === "sticker" && message.sticker && !message.deleted) {
+    return (
+      <div className={`group flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}>
+        {grouped ? (
+          <div className="w-[30px] shrink-0" aria-hidden />
+        ) : author ? (
+          <Link href={`/member/${author.id}`} className="shrink-0">
+            <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={30} level={author.level} />
+          </Link>
+        ) : (
+          <Avatar name="?" gradient="fire" size={30} />
+        )}
+        <div className="flex flex-col gap-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={message.sticker.imageUrl} alt="" className="h-32 w-32 object-contain" />
+          <span className={`text-[10px] ${isOwn ? "self-end" : ""} text-[var(--color-text-muted)]`}>
+            {relativeTime(message.createdAt)}
+          </span>
+        </div>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(message)}
+            aria-label="Eliminar"
+            title="Eliminar"
+            className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <TrashIcon size={14} />
+          </button>
+        )}
       </div>
     );
   }
@@ -106,16 +146,22 @@ export function ChatBubble({
             )}
           </div>
         )}
-        {!!message.imageUri && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={message.imageUri} alt="" className="h-[150px] w-[200px] rounded-lg object-cover" />
+        {message.deleted ? (
+          <p className={`text-sm italic ${isOwn ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>Mensaje eliminado</p>
+        ) : (
+          <>
+            {!!message.imageUri && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={message.imageUri} alt="" className="h-[150px] w-[200px] rounded-lg object-cover" />
+            )}
+            {!!message.body && <p className="whitespace-pre-wrap text-sm">{message.body}</p>}
+          </>
         )}
-        {!!message.body && <p className="whitespace-pre-wrap text-sm">{message.body}</p>}
         <span className={`self-end text-[10px] ${isOwn ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>
           {relativeTime(message.createdAt)}
         </span>
       </div>
-      {onReply && (
+      {!message.deleted && onReply && (
         <button
           onClick={() => onReply(message)}
           aria-label="Responder"
@@ -123,6 +169,16 @@ export function ChatBubble({
           className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
         >
           <ReplyIcon size={14} />
+        </button>
+      )}
+      {!message.deleted && onDelete && (
+        <button
+          onClick={() => onDelete(message)}
+          aria-label="Eliminar"
+          title="Eliminar"
+          className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <TrashIcon size={14} />
         </button>
       )}
     </div>

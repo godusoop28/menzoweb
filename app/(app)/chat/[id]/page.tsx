@@ -6,6 +6,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { Avatar } from "@/components/Avatar";
 import { BackIcon, CloseIcon, SendIcon, SettingsIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { StickerPickerSheet } from "@/components/chat/StickerPickerSheet";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
 import { LiveRoomPanel } from "@/components/live/LiveRoomPanel";
@@ -13,6 +14,7 @@ import { RoomInfoModal } from "@/components/room/RoomInfoModal";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { TypingBubble } from "@/components/TypingBubble";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ReasonDialog } from "@/components/ui/ReasonDialog";
 import { ApiError, chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
@@ -23,6 +25,7 @@ import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { dateSeparatorLabel, isSameDay } from "@/lib/time";
 import { useToast } from "@/lib/ToastContext";
+import type { Message } from "@/lib/types";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
@@ -42,6 +45,9 @@ export default function ChatRoomPage() {
   const [showLivePanel, setShowLivePanel] = useState(false);
   const [confirmStartLive, setConfirmStartLive] = useState(false);
   const [startingLive, setStartingLive] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ message: Message; isSelf: boolean } | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const prevMessageCountRef = useRef(0);
@@ -184,6 +190,30 @@ export default function ChatRoomPage() {
     }
   }
 
+  async function handlePickSticker(stickerId: string) {
+    if (!id) return;
+    setShowStickerPicker(false);
+    try {
+      await actions.sendMessage(id, "", undefined, stickerId);
+      requestAnimationFrame(() => scrollToBottom(true));
+    } catch (error) {
+      console.warn("[menzo/web] sendSticker failed", error);
+    }
+  }
+
+  async function handleConfirmDelete(reason?: string) {
+    if (!pendingDelete || !id) return;
+    setDeletingMessage(true);
+    try {
+      await actions.deleteMessage(id, pendingDelete.message.id, reason);
+      setPendingDelete(null);
+    } catch (error) {
+      console.warn("[menzo/web] deleteMessage failed", error);
+    } finally {
+      setDeletingMessage(false);
+    }
+  }
+
   /** Iniciar LIVE no debe sentirse como llenar un formulario — arranca de una con un anuncio y
    * título vacíos (se pueden agregar después desde la tuerca, dentro del LIVE) y solo pide una
    * confirmación rápida antes de encender la llamada. */
@@ -221,6 +251,12 @@ export default function ChatRoomPage() {
   const liveParticipantCount =
     live.activeRoomId === id ? live.participants.length : (live.watchedRoomId === id ? live.viewingState?.participantCount : room.liveSummary?.participantCount) ?? 0;
   const canModerate = room.role === "owner" || room.role === "co_host";
+  // Staff global (CURATOR+) puede borrar el mensaje de cualquiera, pero nunca en una sala DIRECT —
+  // ver Contexto/decisión #2 del plan (backend lo re-verifica igual, esto es solo para no ofrecer
+  // el botón donde de todos modos el pedido rebotaría).
+  const globalRole = state.profile?.globalRole;
+  const isGlobalStaff = globalRole === "CURATOR" || globalRole === "LEADER" || globalRole === "MASTER";
+  const canModerateMessages = isGlobalStaff && room.type === "public";
 
   return (
     <div className="relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
@@ -377,6 +413,15 @@ export default function ChatRoomPage() {
                               bodyPreview: m.imageUri && !m.body ? "Imagen" : m.body,
                             })
                     }
+                    onDelete={
+                      m.type === "system"
+                        ? undefined
+                        : m.authorId === LOCAL_USER_ID
+                          ? () => setPendingDelete({ message: m, isSelf: true })
+                          : canModerateMessages
+                            ? () => setPendingDelete({ message: m, isSelf: false })
+                            : undefined
+                    }
                   />
                 </Fragment>
               );
@@ -421,6 +466,14 @@ export default function ChatRoomPage() {
         className="flex shrink-0 items-end gap-2 border-t border-[var(--color-border-soft)] bg-[var(--color-background)]/95 px-4 py-3 backdrop-blur-md md:px-8"
         style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
+        <button
+          onClick={() => setShowStickerPicker(true)}
+          aria-label="Enviar sticker"
+          title="Enviar sticker"
+          className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full text-lg text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+        >
+          🏷️
+        </button>
         <textarea
           value={draft}
           onChange={(e) => {
@@ -447,6 +500,9 @@ export default function ChatRoomPage() {
           <SendIcon />
         </button>
       </div>
+      {showStickerPicker && (
+        <StickerPickerSheet onPick={(sticker) => handlePickSticker(sticker.id)} onClose={() => setShowStickerPicker(false)} />
+      )}
 
       {showInfo && <RoomInfoModal room={room} onClose={() => setShowInfo(false)} />}
       {showSettings && (
@@ -462,6 +518,25 @@ export default function ChatRoomPage() {
         image="/illustrations/menzi/menzi-live-voice.webp"
         onConfirm={handleConfirmStartLive}
         onCancel={() => setConfirmStartLive(false)}
+      />
+      <ConfirmDialog
+        open={!!pendingDelete?.isSelf}
+        title="Eliminar mensaje"
+        description="Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        danger
+        busy={deletingMessage}
+        onConfirm={() => handleConfirmDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
+      <ReasonDialog
+        open={!!pendingDelete && !pendingDelete.isSelf}
+        title="Eliminar mensaje de otro usuario"
+        description="El motivo queda registrado en el log de moderación, visible para el usuario maestro."
+        confirmLabel="Eliminar"
+        busy={deletingMessage}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

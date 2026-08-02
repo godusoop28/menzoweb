@@ -10,7 +10,7 @@ import { useAppHeight } from "@/lib/useAppHeight";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
 import { MenziDjPlayerHost } from "./music/MenziDjPlayerHost";
 import { Avatar } from "./Avatar";
-import { BellIcon, CalendarIcon, ChatIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
+import { BellIcon, CalendarIcon, ChatIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 
 const NAV_ITEMS = [
@@ -28,12 +28,16 @@ const SECONDARY_ITEMS = [
   { href: "/settings", label: "Configuración", icon: SettingsIcon },
 ];
 
+const ADMIN_ITEM = { href: "/admin", label: "Admin", icon: CrownIcon };
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { state, actions } = useAppState();
   const accent = useAccent();
   const unread = state.social.notifications.filter((n) => !n.read).length;
+  const isStaff = !!state.profile && state.profile.globalRole !== "USER";
+  const secondaryItems = isStaff ? [...SECONDARY_ITEMS, ADMIN_ITEM] : SECONDARY_ITEMS;
   useAppHeight();
   // El detalle de una sala (/chat/[id], no /chat, /chat/public ni /chat/[id]/members) es dueño de
   // su propio layout de una sola región con scroll (ver app/(app)/chat/[id]/page.tsx) — el <main>
@@ -95,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="my-2 h-px bg-[var(--color-border-soft)]" />
 
-          {SECONDARY_ITEMS.map((item) => {
+          {secondaryItems.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
@@ -176,6 +180,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/settings" aria-label="Configuración" className="text-[var(--color-text-secondary)]">
                 <SettingsIcon />
               </Link>
+              {isStaff && (
+                <Link href="/admin" aria-label="Admin" className="text-[var(--color-text-secondary)]">
+                  <CrownIcon />
+                </Link>
+              )}
             </div>
           </div>
         )}

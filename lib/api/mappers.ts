@@ -8,8 +8,12 @@ import type {
   CommunityEvent,
   DemoUser,
   Message,
+  ModerationAction,
   Notification,
   Post,
+  Sticker,
+  StickerPackDetail,
+  StickerPackSummary,
   UserProfile,
   WallComment,
   WallMessage,
@@ -21,9 +25,13 @@ import type {
   CommentDto,
   EventDto,
   MessageDto,
+  ModerationActionDto,
   NotificationDto,
   PostDto,
   RoomMemberDto,
+  StickerDto,
+  StickerPackDetailDto,
+  StickerPackSummaryDto,
   UserProfileDto,
   UserSummaryDto,
   WallCommentDto,
@@ -75,6 +83,7 @@ export function mapUserProfile(dto: UserProfileDto, myRealId: string | null): Us
     followsMe: dto.followsMe,
     areFriends: dto.areFriends,
     relationshipStatus: dto.relationshipStatus,
+    globalRole: dto.globalRole,
   };
 }
 
@@ -117,6 +126,10 @@ export function mapUserSummary(dto: UserSummaryDto, myRealId: string | null): De
     badges: [],
     isLocalUser: !!myRealId && dto.id === myRealId,
     activityStatus: "",
+    // UserSummaryDto no trae el rol (es un resumen liviano) — el rol real se conoce a través de
+    // UserProfileDto (perfil completo). Se resuelve por separado donde haga falta el rol exacto
+    // de un tercero (p. ej. panel de admin, que siempre pide el perfil completo).
+    globalRole: "USER",
   };
 }
 
@@ -144,6 +157,7 @@ export function mapPost(dto: PostDto, myRealId: string | null): Post {
     eventId: dto.eventId ?? undefined,
     gradient: toGradient(dto.gradient),
     blocks: dto.blocks ?? [],
+    hidden: dto.hidden,
   };
 }
 
@@ -295,6 +309,8 @@ export function mapMessage(dto: MessageDto, myRealId: string | null): Message {
     type: dto.type,
     imageUri: dto.imageUri ?? undefined,
     replyTo: dto.replyTo,
+    deleted: dto.deleted,
+    sticker: dto.sticker ? { id: dto.sticker.id, imageUrl: dto.sticker.imageUrl } : null,
   };
 }
 
@@ -362,6 +378,43 @@ export function mapYoutubeSearchResult(dto: import("./types").YoutubeSearchResul
     durationSeconds: dto.durationSeconds,
     embeddable: dto.embeddable,
     live: dto.live,
+  };
+}
+
+export function mapModerationAction(dto: ModerationActionDto, myRealId: string | null): ModerationAction {
+  return {
+    id: dto.id,
+    actor: mapUserSummary(dto.actor, myRealId),
+    actionType: dto.actionType,
+    targetType: dto.targetType,
+    targetId: dto.targetId,
+    reason: dto.reason,
+    createdAt: dto.createdAt,
+  };
+}
+
+export function mapSticker(dto: StickerDto): Sticker {
+  return { id: dto.id, imageUrl: dto.imageUrl, sortOrder: dto.sortOrder };
+}
+
+export function mapStickerPackSummary(dto: StickerPackSummaryDto, myRealId: string | null): StickerPackSummary {
+  return {
+    id: dto.id,
+    name: dto.name,
+    creator: mapUserSummary(dto.creator, myRealId),
+    coverImageUrl: dto.coverImageUrl,
+    stickerCount: dto.stickerCount,
+    createdAt: dto.createdAt,
+  };
+}
+
+export function mapStickerPackDetail(dto: StickerPackDetailDto, myRealId: string | null): StickerPackDetail {
+  return {
+    id: dto.id,
+    name: dto.name,
+    creator: mapUserSummary(dto.creator, myRealId),
+    stickers: dto.stickers.map(mapSticker),
+    createdAt: dto.createdAt,
   };
 }
 

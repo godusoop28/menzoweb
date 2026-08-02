@@ -1,7 +1,8 @@
 // Contrato 1:1 con menzoapi. Nombres de campo exactos, case-sensitive.
 
 export type PostType = "text" | "image" | "poll" | "question" | "event";
-export type MessageType = "text" | "system";
+export type MessageType = "text" | "system" | "sticker";
+export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
 export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos";
 export type ActivityKind = "post" | "member";
 
@@ -64,6 +65,7 @@ export type UserProfileDto = {
   followsMe: boolean;
   areFriends: boolean;
   relationshipStatus: RelationshipStatus;
+  globalRole: GlobalRole;
 };
 
 export type RelationshipStatus = "SELF" | "NONE" | "FOLLOWING" | "FOLLOWS_YOU" | "FRIENDS";
@@ -138,6 +140,7 @@ export type PostDto = {
   featured: boolean;
   createdAt: string;
   blocks: PostBlockDto[];
+  hidden: boolean;
 };
 
 export type CreatePostRequest = {
@@ -337,6 +340,8 @@ export type MessageReplyPreviewDto = {
   deleted: boolean;
 };
 
+export type MessageStickerPreviewDto = { id: string; imageUrl: string };
+
 export type MessageDto = {
   id: string;
   roomId: string;
@@ -347,9 +352,16 @@ export type MessageDto = {
   imageUri: string | null;
   createdAt: string;
   replyTo: MessageReplyPreviewDto | null;
+  deleted: boolean;
+  sticker: MessageStickerPreviewDto | null;
 };
 
-export type SendMessageRequest = { body: string; imageUri?: string; replyToMessageId?: string };
+export type SendMessageRequest = {
+  body?: string;
+  imageUri?: string;
+  replyToMessageId?: string;
+  stickerId?: string;
+};
 
 export type WallMessageDto = {
   id: string;
@@ -535,3 +547,54 @@ export type MusicEventDto<TPayload = unknown> = {
   occurredAt: string;
   payload: TPayload;
 };
+
+// ---- Staff global (MASTER/LEADER/CURATOR) — panel de administración ---------------------------
+
+export type ReasonRequest = { reason: string };
+export type ChangeRoleRequest = { role: GlobalRole; reason: string };
+
+export type ModerationActionType =
+  | "SUSPEND_USER"
+  | "UNSUSPEND_USER"
+  | "DELETE_ACCOUNT"
+  | "DELETE_POST"
+  | "HIDE_POST"
+  | "UNHIDE_POST"
+  | "DELETE_MESSAGE"
+  | "KICK_FROM_LIVE"
+  | "PROMOTE_ROLE"
+  | "DEMOTE_ROLE"
+  | "DELETE_STICKER_PACK";
+
+export type ModerationActionDto = {
+  id: string;
+  actor: UserSummaryDto;
+  actionType: ModerationActionType;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  createdAt: string;
+};
+
+// ---- Stickers (packs públicos desde su creación, ver StickerService en menzoapi) --------------
+
+export type StickerDto = { id: string; imageUrl: string; sortOrder: number };
+
+export type StickerPackSummaryDto = {
+  id: string;
+  name: string;
+  creator: UserSummaryDto;
+  coverImageUrl: string | null;
+  stickerCount: number;
+  createdAt: string;
+};
+
+export type StickerPackDetailDto = {
+  id: string;
+  name: string;
+  creator: UserSummaryDto;
+  stickers: StickerDto[];
+  createdAt: string;
+};
+
+export type CreateStickerPackRequest = { name: string; imageUrls: string[] };

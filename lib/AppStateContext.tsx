@@ -59,7 +59,8 @@ type AppStateContextValue = {
       pollOptions?: string[];
       blocks?: import("@/lib/api/types").PostBlockDto[];
     }) => Promise<void>;
-    sendMessage: (roomId: string, body: string, replyToMessageId?: string) => Promise<void>;
+    sendMessage: (roomId: string, body: string, replyToMessageId?: string, stickerId?: string) => Promise<void>;
+    deleteMessage: (roomId: string, messageId: string, reason?: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
     receiveRoomMessage: (dto: import("@/lib/api").MessageDto) => void;
     createRoom: (payload: { name: string; description?: string; topic?: string; category?: string }) => Promise<string | null>;
@@ -365,10 +366,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }
 
-    async function sendMessage(roomId: string, body: string, replyToMessageId?: string) {
+    async function sendMessage(roomId: string, body: string, replyToMessageId?: string, stickerId?: string) {
       if (!hasSession()) return;
-      const dto = await chatApi.sendMessage(roomId, { body, replyToMessageId });
+      const dto = await chatApi.sendMessage(roomId, { body: stickerId ? undefined : body, replyToMessageId, stickerId });
       dispatch({ type: "SEND_MESSAGE", payload: mapMessage(dto, getMyRealId()) });
+    }
+
+    /** Sin patch optimista local — el propio backend reenvía el mensaje actualizado (deleted:
+     * true) por el mismo tópico STOMP que cualquier otra mutación de sala (ver receiveRoomMessage/
+     * mergeById), así que la UI se actualiza sola cuando ese evento llega. */
+    async function deleteMessage(roomId: string, messageId: string, reason?: string) {
+      if (!hasSession()) return;
+      await chatApi.deleteMessage(roomId, messageId, reason ? { reason } : undefined);
     }
 
     async function loadRoomMessages(roomId: string) {
@@ -772,6 +781,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleBookmark,
       createPost,
       sendMessage,
+      deleteMessage,
       loadRoomMessages,
       receiveRoomMessage,
       createRoom,

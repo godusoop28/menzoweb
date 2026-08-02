@@ -16,6 +16,8 @@ export type Interest = { id: InterestId; label: string; icon: string; gradient: 
 export type Aura = { id: AuraId; name: string; description: string; gradient: GradientId };
 export type Badge = { id: string; name: string; description: string; icon: string; gradient: GradientId };
 
+export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
+
 export type UserProfile = {
   id: string;
   displayName: string;
@@ -43,6 +45,7 @@ export type UserProfile = {
   followsMe?: boolean;
   areFriends?: boolean;
   relationshipStatus?: RelationshipStatus;
+  globalRole: GlobalRole;
 };
 
 export type RelationshipStatus = "SELF" | "NONE" | "FOLLOWING" | "FOLLOWS_YOU" | "FRIENDS";
@@ -95,11 +98,12 @@ export type Post = {
   eventId?: string;
   gradient?: GradientId;
   blocks: PostBlock[];
+  hidden: boolean;
 };
 
 export type Comment = { id: string; postId: string; authorId: string; body: string; createdAt: string };
 
-export type MessageType = "text" | "system";
+export type MessageType = "text" | "system" | "sticker";
 
 export type MessageReplyPreview = {
   id: string;
@@ -107,6 +111,8 @@ export type MessageReplyPreview = {
   bodyPreview: string | null;
   deleted: boolean;
 };
+
+export type MessageStickerPreview = { id: string; imageUrl: string };
 
 export type Message = {
   id: string;
@@ -121,6 +127,8 @@ export type Message = {
   type: MessageType;
   imageUri?: string;
   replyTo: MessageReplyPreview | null;
+  deleted: boolean;
+  sticker: MessageStickerPreview | null;
 };
 
 export type ChatRoomType = "public" | "direct";
@@ -298,4 +306,50 @@ export type YoutubeSearchResult = {
   durationSeconds: number | null;
   embeddable: boolean;
   live: boolean;
+};
+
+// ---- Staff global (MASTER/LEADER/CURATOR) ------------------------------------------------------
+
+export type ModerationActionType =
+  | "SUSPEND_USER"
+  | "UNSUSPEND_USER"
+  | "DELETE_ACCOUNT"
+  | "DELETE_POST"
+  | "HIDE_POST"
+  | "UNHIDE_POST"
+  | "DELETE_MESSAGE"
+  | "KICK_FROM_LIVE"
+  | "PROMOTE_ROLE"
+  | "DEMOTE_ROLE"
+  | "DELETE_STICKER_PACK";
+
+export type ModerationAction = {
+  id: string;
+  actor: DemoUser;
+  actionType: ModerationActionType;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  createdAt: string;
+};
+
+// ---- Stickers -------------------------------------------------------------------------------
+
+export type Sticker = { id: string; imageUrl: string; sortOrder: number };
+
+export type StickerPackSummary = {
+  id: string;
+  name: string;
+  creator: DemoUser;
+  coverImageUrl: string | null;
+  stickerCount: number;
+  createdAt: string;
+};
+
+export type StickerPackDetail = {
+  id: string;
+  name: string;
+  creator: DemoUser;
+  stickers: Sticker[];
+  createdAt: string;
 };
