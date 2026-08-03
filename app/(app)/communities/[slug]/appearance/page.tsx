@@ -11,6 +11,7 @@ import type {
   CommunityThemeConfig,
 } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 import { BackIcon } from "@/components/icons";
 
 const IMAGE_FIELDS: { key: keyof Pick<CommunityDetailDto, "iconUrl" | "logoUrl" | "coverUrl" | "backgroundUrl" | "bannerUrl">; label: string }[] = [
@@ -67,6 +68,7 @@ export default function CommunityAppearancePage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const { state } = useAppState();
+  const { refreshActiveCommunityDetail } = useCommunity();
   const [community, setCommunity] = useState<CommunityDetailDto | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [colors, setColors] = useState<Record<string, string>>({});
@@ -168,6 +170,7 @@ export default function CommunityAppearancePage() {
       await communitiesApi.updateAppearance(community.id, { ...images, ...colors });
       await communitiesApi.updateTheme(community.id, { themeConfig: theme });
       await communitiesApi.updateNavigation(community.id, { navigationConfig: nav });
+      await refreshActiveCommunityDetail();
       router.push("/communities");
     } catch (err) {
       console.warn("[menzo/web] save community customization failed", err);

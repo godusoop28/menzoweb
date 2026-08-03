@@ -1,37 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-import { communityApi } from "@/lib/api";
-import type { CommunityConfigDto } from "@/lib/api/types";
 import type { DemoUser } from "@/lib/types";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 
 import { Avatar } from "./Avatar";
 
+/** Hero de la comunidad activa (Naruto, Anime, etc.) — antes mostraba /banners/banner-community.png
+ * fijo + datos de la config singleton de Menzo-plataforma (communityApi.config()), sin relación
+ * con la comunidad multi-comunidad nueva. Ahora usa activeCommunityDetail: si el líder/admin/
+ * curador puso portada/banner en "Editar apariencia", se ve acá; si no puso ninguna, cae a un
+ * degradé con los colores de la comunidad en vez de una imagen genérica del sistema. */
 export function CommunityHero({ previewMembers }: { previewMembers?: DemoUser[] }) {
-  const [config, setConfig] = useState<CommunityConfigDto | null>(null);
+  const { activeCommunityDetail: community } = useCommunity();
 
-  useEffect(() => {
-    communityApi.config().then(setConfig).catch(() => {});
-  }, []);
+  if (!community) return null;
 
-  if (!config) return null;
+  const heroImage = community.coverUrl || community.bannerUrl;
+  const primary = community.primaryColor || "#e74c3c";
+  const secondary = community.secondaryColor || "#2c3e50";
 
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-xl">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/banners/banner-community.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {heroImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
+        />
+      )}
       <div className="absolute inset-0 bg-[rgba(7,9,13,0.42)]" />
       <div className="relative flex flex-col gap-1.5 p-6 text-white">
-        <h2 className="font-display text-2xl font-bold">{config.name}</h2>
-        <p className="font-medium text-white/85">{config.subtitle}</p>
-        <p className="text-sm text-white/80">{config.description}</p>
+        <h2 className="font-display text-2xl font-bold">{community.name}</h2>
+        {community.shortDescription && <p className="font-medium text-white/85">{community.shortDescription}</p>}
 
         <div className="mt-2 flex items-center gap-2 text-sm text-white/85">
-          <span>{config.memberCount.toLocaleString("es-ES")} miembros</span>
+          <span>{community.memberCount.toLocaleString("es-ES")} miembros</span>
           <span className="h-1 w-1 rounded-full bg-white/60" />
-          <span>{config.onlineCount} conectados</span>
+          <span>{community.onlineMemberCount} conectados</span>
         </div>
 
         {previewMembers && previewMembers.length > 0 && (
@@ -52,13 +61,15 @@ export function CommunityHero({ previewMembers }: { previewMembers?: DemoUser[] 
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {config.tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
-              {tag}
-            </span>
-          ))}
-        </div>
+        {community.tags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {community.tags.map((tag) => (
+              <span key={tag} className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

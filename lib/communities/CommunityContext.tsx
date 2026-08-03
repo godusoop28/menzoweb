@@ -26,6 +26,7 @@ type CommunityContextValue = {
   error: string | null;
   switchCommunity: (communityId: string) => void;
   refreshCommunity: () => Promise<void>;
+  refreshActiveCommunityDetail: () => Promise<void>;
   joinCommunity: (communityId: string) => Promise<void>;
   leaveCommunity: (communityId: string) => Promise<void>;
 };
@@ -113,6 +114,20 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
   );
 
   const activeSlug = activeCommunity?.slug ?? null;
+
+  // Separado del useEffect de abajo para poder forzar un refetch a demanda (p. ej. justo después
+  // de guardar en el editor de apariencia/tema/navegación) — el useEffect solo reacciona cuando
+  // activeSlug CAMBIA, así que guardar cambios en la MISMA comunidad activa no lo dispara solo.
+  const refreshActiveCommunityDetail = useCallback(async () => {
+    if (!activeSlug) return;
+    try {
+      const detail = await communitiesApi.getBySlug(activeSlug);
+      setActiveCommunityDetail(detail);
+    } catch {
+      // Silencioso a propósito — ver el porqué en el useEffect de abajo.
+    }
+  }, [activeSlug]);
+
   useEffect(() => {
     if (!activeSlug) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia el detalle cuando no hay comunidad activa (logout, sin membresías).
@@ -143,10 +158,22 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
       error,
       switchCommunity,
       refreshCommunity: load,
+      refreshActiveCommunityDetail,
       joinCommunity,
       leaveCommunity,
     }),
-    [activeCommunity, activeCommunityDetail, memberships, loading, error, switchCommunity, load, joinCommunity, leaveCommunity]
+    [
+      activeCommunity,
+      activeCommunityDetail,
+      memberships,
+      loading,
+      error,
+      switchCommunity,
+      load,
+      refreshActiveCommunityDetail,
+      joinCommunity,
+      leaveCommunity,
+    ]
   );
 
   return <CommunityContext.Provider value={value}>{children}</CommunityContext.Provider>;
