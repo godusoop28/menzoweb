@@ -27,9 +27,10 @@ const COLOR_FIELDS: { key: keyof Pick<CommunityDetailDto, "primaryColor" | "seco
   { key: "accentColor", label: "Color de acento" },
 ];
 
-const THEME_IMAGE_FIELDS: { key: "feedBackgroundUrl" | "chatBackgroundUrl"; label: string }[] = [
+const THEME_IMAGE_FIELDS: { key: "navBackgroundUrl" | "feedBackgroundUrl" | "chatBackgroundUrl"; label: string }[] = [
+  { key: "navBackgroundUrl", label: "Fondo del menú/navegación" },
   { key: "feedBackgroundUrl", label: "Fondo del feed" },
-  { key: "chatBackgroundUrl", label: "Fondo de los chats" },
+  { key: "chatBackgroundUrl", label: "Fondo de la bandeja de mensajes" },
 ];
 
 const HEADER_STYLES = ["default", "compact", "banner", "minimal"];
@@ -106,8 +107,10 @@ export default function CommunityAppearancePage() {
   const globalRole = state.profile?.globalRole;
   const isGlobalStaff = globalRole === "LEADER" || globalRole === "MASTER";
   const communityRole = community?.myMembership?.communityRole;
-  const isCommunityAdmin = communityRole === "COMMUNITY_ADMIN" || communityRole === "COMMUNITY_OWNER";
-  const canEdit = isGlobalStaff || isCommunityAdmin;
+  // COMMUNITY_CURATOR+ — igual que CommunityPermissionEvaluator.requireCanEditAppearance.
+  const CAN_EDIT_ROLES = new Set(["COMMUNITY_CURATOR", "COMMUNITY_MODERATOR", "COMMUNITY_ADMIN", "COMMUNITY_OWNER"]);
+  const isCommunityStaff = !!communityRole && CAN_EDIT_ROLES.has(communityRole);
+  const canEdit = isGlobalStaff || isCommunityStaff;
 
   async function handleUpload(key: string, file: File) {
     try {
@@ -119,7 +122,7 @@ export default function CommunityAppearancePage() {
     }
   }
 
-  async function handleThemeImageUpload(key: "feedBackgroundUrl" | "chatBackgroundUrl", file: File) {
+  async function handleThemeImageUpload(key: "navBackgroundUrl" | "feedBackgroundUrl" | "chatBackgroundUrl", file: File) {
     try {
       const url = await uploadsApi.upload(file);
       setTheme((prev) => ({ ...prev, [key]: url }));

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useAppHeight } from "@/lib/useAppHeight";
 
 import { CommunitySwitcher } from "./communities/CommunitySwitcher";
@@ -37,6 +38,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const { activeCommunityDetail } = useCommunity();
+  const navBackgroundUrl = activeCommunityDetail?.themeConfig?.navBackgroundUrl;
   const unread = state.social.notifications.filter((n) => !n.read).length;
   const isStaff = !!state.profile && state.profile.globalRole !== "USER";
   const secondaryItems = isStaff ? [...SECONDARY_ITEMS, ADMIN_ITEM] : SECONDARY_ITEMS;
@@ -60,7 +63,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex h-[var(--app-height,100dvh)] w-full max-w-[1100px] overflow-hidden">
       {/* Sidebar — solo escritorio */}
-      <aside className="hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6">
+      <aside
+        className="relative hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6"
+        style={
+          navBackgroundUrl
+            ? { backgroundImage: `url(${navBackgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+            : undefined
+        }
+      >
+        {navBackgroundUrl && <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(7,9,13,0.88)" }} />}
+        <div className="relative flex h-full flex-col gap-6">
         <Link href="/" className="group flex items-center gap-2.5 px-2">
           <div className="relative">
             <div className="absolute inset-0 -z-10 rounded-lg bg-[var(--color-orange)]/40 opacity-0 blur-lg transition-opacity group-hover:opacity-100" />
@@ -153,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogoutIcon size={18} />
             Cerrar sesión
           </button>
+        </div>
         </div>
       </aside>
 

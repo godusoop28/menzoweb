@@ -655,6 +655,7 @@ export type MyCommunityDto = { community: CommunitySummaryDto; membership: Commu
 export type CommunityThemeConfig = {
   headerStyle?: string;
   cardStyle?: string;
+  navBackgroundUrl?: string;
   feedBackgroundUrl?: string;
   chatBackgroundUrl?: string;
   decorations?: string[];

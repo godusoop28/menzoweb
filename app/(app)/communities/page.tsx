@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { communitiesApi } from "@/lib/api";
 import type { CommunitySummaryDto } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/client";
 import { CommunityBadge } from "@/components/communities/CommunitySwitcher";
 import { CompassIcon } from "@/components/icons";
 import { useCommunity } from "@/lib/communities/CommunityContext";
@@ -18,6 +19,7 @@ export default function CommunitiesExplorePage() {
   const [communities, setCommunities] = useState<CommunitySummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     communitiesApi
@@ -31,11 +33,13 @@ export default function CommunitiesExplorePage() {
 
   async function handleJoin(id: string) {
     setPendingId(id);
+    setError(null);
     try {
       await joinCommunity(id);
       router.push("/communities");
-    } catch (error) {
-      console.warn("[menzo/web] joinCommunity failed", error);
+    } catch (err) {
+      console.warn("[menzo/web] joinCommunity failed", err);
+      setError(err instanceof ApiError ? err.message : "No pudimos unirte a esta comunidad.");
     } finally {
       setPendingId(null);
     }
@@ -43,10 +47,12 @@ export default function CommunitiesExplorePage() {
 
   async function handleLeave(id: string) {
     setPendingId(id);
+    setError(null);
     try {
       await leaveCommunity(id);
-    } catch (error) {
-      console.warn("[menzo/web] leaveCommunity failed", error);
+    } catch (err) {
+      console.warn("[menzo/web] leaveCommunity failed", err);
+      setError(err instanceof ApiError ? err.message : "No pudimos hacerte salir de esta comunidad.");
     } finally {
       setPendingId(null);
     }
@@ -65,6 +71,11 @@ export default function CommunitiesExplorePage() {
       {loading && <p className="text-sm text-[var(--color-text-muted)]">Cargando…</p>}
       {!loading && communities.length === 0 && (
         <p className="text-sm text-[var(--color-text-muted)]">Todavía no hay comunidades disponibles.</p>
+      )}
+      {error && (
+        <p className="rounded-xl border border-[var(--color-coral)]/40 bg-[var(--color-coral)]/10 px-3 py-2 text-sm text-[var(--color-coral)]">
+          {error}
+        </p>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

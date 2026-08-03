@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { communitiesApi } from "@/lib/api/endpoints";
-import type { CommunitySummaryDto, MyCommunityDto } from "@/lib/api/types";
+import type { CommunityDetailDto, CommunitySummaryDto, MyCommunityDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
 import { getItem, removeItem, setItem, StorageKeys } from "@/lib/storage";
 
@@ -13,9 +13,14 @@ import { getItem, removeItem, setItem, StorageKeys } from "@/lib/storage";
  * PUBLIC ya filtrados por la nueva comunidad — nunca mezcla contenido de una comunidad con otra
  * (ver Contexto §11/§21 del pedido original). Perfil global, amigos y mensajes privados siguen
  * intactos en AppStateContext, sin tocarse acá.
+ *
+ * activeCommunityDetail trae themeConfig/navigationConfig (CommunitySummaryDto, que es lo único
+ * que memberships[].community tiene, no los incluye) — es lo que AppShell/feed/bandeja de
+ * mensajes leen para aplicar fondos/decoraciones reales, no solo para el editor.
  */
 type CommunityContextValue = {
   activeCommunity: CommunitySummaryDto | null;
+  activeCommunityDetail: CommunityDetailDto | null;
   memberships: MyCommunityDto[];
   loading: boolean;
   error: string | null;
@@ -31,6 +36,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
   const { state, actions } = useAppState();
   const [memberships, setMemberships] = useState<MyCommunityDto[]>([]);
   const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null);
+  const [activeCommunityDetail, setActiveCommunityDetail] = useState<CommunityDetailDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,9 +112,32 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     [memberships, activeCommunityId]
   );
 
+  const activeSlug = activeCommunity?.slug ?? null;
+  useEffect(() => {
+    if (!activeSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia el detalle cuando no hay comunidad activa (logout, sin membresías).
+      setActiveCommunityDetail(null);
+      return;
+    }
+    let cancelled = false;
+    communitiesApi
+      .getBySlug(activeSlug)
+      .then((detail) => {
+        if (!cancelled) setActiveCommunityDetail(detail);
+      })
+      .catch(() => {
+        // Silencioso a propósito: el detalle solo alimenta fondos/decoraciones decorativos, no
+        // debe romper la navegación si falla — activeCommunity (el summary) sigue disponible.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSlug]);
+
   const value = useMemo<CommunityContextValue>(
     () => ({
       activeCommunity,
+      activeCommunityDetail,
       memberships,
       loading,
       error,
@@ -117,7 +146,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
       joinCommunity,
       leaveCommunity,
     }),
-    [activeCommunity, memberships, loading, error, switchCommunity, load, joinCommunity, leaveCommunity]
+    [activeCommunity, activeCommunityDetail, memberships, loading, error, switchCommunity, load, joinCommunity, leaveCommunity]
   );
 
   return <CommunityContext.Provider value={value}>{children}</CommunityContext.Provider>;

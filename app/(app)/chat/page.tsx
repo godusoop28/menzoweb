@@ -7,10 +7,13 @@ import { GradientButton } from "@/components/GradientButton";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 
 export default function ChatListPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const { activeCommunityDetail } = useCommunity();
+  const chatBackgroundUrl = activeCommunityDetail?.themeConfig?.chatBackgroundUrl || activeCommunityDetail?.backgroundUrl;
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -36,7 +39,19 @@ export default function ChatListPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6 md:px-8">
+    <div
+      className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6 md:px-8"
+      style={
+        chatBackgroundUrl
+          ? {
+              backgroundImage: `linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88)), url(${chatBackgroundUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "top center",
+              backgroundAttachment: "fixed",
+            }
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold">Mis chats</h1>
         <button

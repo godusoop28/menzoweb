@@ -19,9 +19,11 @@ export function CommunitySwitcher() {
   const globalRole = state.profile?.globalRole;
   const isGlobalStaff = globalRole === "LEADER" || globalRole === "MASTER";
   const activeMembership = memberships.find((m) => m.community.id === activeCommunity?.id)?.membership;
-  const isCommunityAdmin =
-    activeMembership?.communityRole === "COMMUNITY_ADMIN" || activeMembership?.communityRole === "COMMUNITY_OWNER";
-  const canEditAppearance = !!activeCommunity && (isGlobalStaff || isCommunityAdmin);
+  // COMMUNITY_CURATOR+ (curador, moderador, admin u owner) — igual que
+  // CommunityPermissionEvaluator.requireCanEditAppearance en el backend.
+  const CAN_EDIT_ROLES = new Set(["COMMUNITY_CURATOR", "COMMUNITY_MODERATOR", "COMMUNITY_ADMIN", "COMMUNITY_OWNER"]);
+  const isCommunityStaff = !!activeMembership && CAN_EDIT_ROLES.has(activeMembership.communityRole);
+  const canEditAppearance = !!activeCommunity && (isGlobalStaff || isCommunityStaff);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {

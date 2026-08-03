@@ -12,6 +12,7 @@ import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
 
 type HomeTab = "recientes" | "destacados" | "descubrir";
@@ -20,6 +21,8 @@ type RoomSort = "recent" | "popular";
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const { activeCommunityDetail } = useCommunity();
+  const feedBackgroundUrl = activeCommunityDetail?.themeConfig?.feedBackgroundUrl || activeCommunityDetail?.backgroundUrl;
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
@@ -72,7 +75,19 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8">
+    <div
+      className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8"
+      style={
+        feedBackgroundUrl
+          ? {
+              backgroundImage: `linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88)), url(${feedBackgroundUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "top center",
+              backgroundAttachment: "fixed",
+            }
+          : undefined
+      }
+    >
       <div className="menzo-fade-in flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">
