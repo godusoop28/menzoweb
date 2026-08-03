@@ -34,8 +34,11 @@ export default function CreateStickerPackPage() {
     setError(null);
     try {
       const imageUrls = await Promise.all(drafts.map((d) => uploadsApi.upload(d.file)));
-      const pack = await stickersApi.createPack({ name: name.trim(), imageUrls });
-      router.replace(`/chat?pack=${pack.id}`);
+      await stickersApi.createPack({ name: name.trim(), imageUrls });
+      // Volver a donde estaba (típicamente el picker de stickers del chat, ver
+      // StickerPickerSheet) en vez de una ruta fija — el pack ya quedó público y usable de
+      // inmediato, no hace falta "abrirlo" para nada más.
+      router.back();
     } catch (err) {
       console.warn("[menzo/web] createStickerPack failed", err);
       setError("No pudimos crear el pack — probá de nuevo.");

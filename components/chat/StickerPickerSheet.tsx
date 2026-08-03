@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, PlusIcon } from "@/components/icons";
 import { stickersApi } from "@/lib/api/endpoints";
 import type { StickerDto, StickerPackSummaryDto } from "@/lib/api/types";
 
@@ -11,6 +12,7 @@ import type { StickerDto, StickerPackSummaryDto } from "@/lib/api/types";
  * pero de dos niveles — primero se navega los packs (que agrupan varios stickers, a diferencia
  * de la grilla plana de Tenor), después se entra a uno para elegir un sticker puntual. */
 export function StickerPickerSheet({ onPick, onClose }: { onPick: (sticker: StickerDto) => void; onClose: () => void }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [packs, setPacks] = useState<StickerPackSummaryDto[]>([]);
   const [openPackId, setOpenPackId] = useState<string | null>(null);
@@ -82,10 +84,29 @@ export function StickerPickerSheet({ onPick, onClose }: { onPick: (sticker: Stic
         )}
 
         {!error && !loading && !openPackId && packs.length === 0 && (
-          <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay packs de stickers.</p>
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-sm text-[var(--color-text-muted)]">
+              {query ? "Sin resultados." : "Todavía no hay packs de stickers."}
+            </p>
+            <button
+              onClick={() => router.push("/stickers/create")}
+              className="flex items-center gap-1.5 rounded-full bg-[var(--color-coral)] px-4 py-2 text-sm font-semibold text-white cursor-pointer"
+            >
+              <PlusIcon size={16} /> Crear tu propio pack
+            </button>
+          </div>
         )}
         {!error && !loading && !openPackId && packs.length > 0 && (
           <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+            <button
+              onClick={() => router.push("/stickers/create")}
+              className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--color-border-strong)] p-2 text-[var(--color-text-muted)] cursor-pointer"
+            >
+              <span className="flex aspect-square w-full items-center justify-center">
+                <PlusIcon size={22} />
+              </span>
+              <span className="truncate text-xs font-medium">Crear pack</span>
+            </button>
             {packs.map((pack) => (
               <button
                 key={pack.id}
