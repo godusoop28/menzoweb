@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { communitiesApi, uploadsApi } from "@/lib/api";
-import type { CommunityDetailDto } from "@/lib/api/types";
+import type {
+  CommunityDetailDto,
+  CommunityNavigationConfig,
+  CommunityNavigationSectionKey,
+  CommunityThemeConfig,
+} from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
 import { BackIcon } from "@/components/icons";
 
@@ -22,9 +27,41 @@ const COLOR_FIELDS: { key: keyof Pick<CommunityDetailDto, "primaryColor" | "seco
   { key: "accentColor", label: "Color de acento" },
 ];
 
+const THEME_IMAGE_FIELDS: { key: "feedBackgroundUrl" | "chatBackgroundUrl"; label: string }[] = [
+  { key: "feedBackgroundUrl", label: "Fondo del feed" },
+  { key: "chatBackgroundUrl", label: "Fondo de los chats" },
+];
+
+const HEADER_STYLES = ["default", "compact", "banner", "minimal"];
+const CARD_STYLES = ["rounded", "square", "flat", "elevated"];
+
+const NAV_SECTION_DEFAULTS: { key: CommunityNavigationSectionKey; label: string; order: number }[] = [
+  { key: "home", label: "Inicio", order: 1 },
+  { key: "posts", label: "Publicaciones", order: 2 },
+  { key: "blogs", label: "Blogs", order: 3 },
+  { key: "chats", label: "Chats", order: 4 },
+  { key: "live", label: "LIVE", order: 5 },
+  { key: "members", label: "Miembros", order: 6 },
+  { key: "events", label: "Eventos", order: 7 },
+  { key: "about", label: "Información", order: 8 },
+];
+
+function withNavDefaults(config: CommunityNavigationConfig): CommunityNavigationConfig {
+  const next: CommunityNavigationConfig = { ...config };
+  for (const { key, label, order } of NAV_SECTION_DEFAULTS) {
+    if (!next[key]) next[key] = { enabled: true, order, label };
+  }
+  return next;
+}
+
 /** COMMUNITY_ADMIN+ de esta comunidad, o cuenta global LEADER+ — ver
  * CommunityPermissionEvaluator.requireCanEditAppearance en menzoapi (el backend re-valida
- * siempre; esta pantalla solo evita ofrecer el botón donde de todos modos rebotaría). */
+ * siempre; esta pantalla solo evita ofrecer el botón donde de todos modos rebotaría).
+ *
+ * Además de imágenes/colores (apariencia), edita themeConfig (fondos adicionales de feed/chat,
+ * estilo de encabezado/tarjetas, decoraciones) y navigationConfig (qué secciones se muestran, en
+ * qué orden, con qué etiqueta) — ambos JSONB de shape libre en el backend, ver
+ * UpdateCommunityThemeRequest/UpdateCommunityNavigationRequest. */
 export default function CommunityAppearancePage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
@@ -32,6 +69,9 @@ export default function CommunityAppearancePage() {
   const [community, setCommunity] = useState<CommunityDetailDto | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [colors, setColors] = useState<Record<string, string>>({});
+  const [theme, setTheme] = useState<CommunityThemeConfig>({});
+  const [nav, setNav] = useState<CommunityNavigationConfig>({});
+  const [newDecorationUrl, setNewDecorationUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +93,8 @@ export default function CommunityAppearancePage() {
           secondaryColor: detail.secondaryColor ?? "",
           accentColor: detail.accentColor ?? "",
         });
+        setTheme(detail.themeConfig ?? {});
+        setNav(withNavDefaults(detail.navigationConfig ?? {}));
       })
       .catch((err) => {
         console.warn("[menzo/web] getBySlug failed", err);
@@ -77,16 +119,55 @@ export default function CommunityAppearancePage() {
     }
   }
 
+  async function handleThemeImageUpload(key: "feedBackgroundUrl" | "chatBackgroundUrl", file: File) {
+    try {
+      const url = await uploadsApi.upload(file);
+      setTheme((prev) => ({ ...prev, [key]: url }));
+    } catch (err) {
+      console.warn("[menzo/web] upload failed", err);
+      setError("No pudimos subir la imagen.");
+    }
+  }
+
+  async function handleDecorationUpload(file: File) {
+    try {
+      const url = await uploadsApi.upload(file);
+      setTheme((prev) => ({ ...prev, decorations: [...(prev.decorations ?? []), url] }));
+    } catch (err) {
+      console.warn("[menzo/web] upload failed", err);
+      setError("No pudimos subir la imagen.");
+    }
+  }
+
+  function addDecorationUrl() {
+    const url = newDecorationUrl.trim();
+    if (!url) return;
+    setTheme((prev) => ({ ...prev, decorations: [...(prev.decorations ?? []), url] }));
+    setNewDecorationUrl("");
+  }
+
+  function removeDecoration(index: number) {
+    setTheme((prev) => ({ ...prev, decorations: (prev.decorations ?? []).filter((_, i) => i !== index) }));
+  }
+
+  function updateNavSection(key: CommunityNavigationSectionKey, patch: Partial<{ enabled: boolean; order: number; label: string }>) {
+    setNav((prev) => {
+      const current = prev[key] ?? { enabled: true, order: 0, label: key };
+      return { ...prev, [key]: { ...current, ...patch } };
+    });
+  }
+
   async function handleSave() {
     if (!community) return;
     setSaving(true);
     setError(null);
     try {
-      const updated = await communitiesApi.updateAppearance(community.id, { ...images, ...colors });
-      setCommunity(updated);
+      await communitiesApi.updateAppearance(community.id, { ...images, ...colors });
+      await communitiesApi.updateTheme(community.id, { themeConfig: theme });
+      await communitiesApi.updateNavigation(community.id, { navigationConfig: nav });
       router.push("/communities");
     } catch (err) {
-      console.warn("[menzo/web] updateAppearance failed", err);
+      console.warn("[menzo/web] save community customization failed", err);
       setError("No pudimos guardar los cambios.");
     } finally {
       setSaving(false);
@@ -104,6 +185,10 @@ export default function CommunityAppearancePage() {
       </div>
     );
   }
+
+  const sortedNavKeys = (Object.keys(nav) as CommunityNavigationSectionKey[]).sort(
+    (a, b) => (nav[a]?.order ?? 0) - (nav[b]?.order ?? 0)
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-6 md:px-8">
@@ -157,6 +242,146 @@ export default function CommunityAppearancePage() {
             <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
           </div>
         ))}
+
+        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
+          Fondos adicionales
+        </h2>
+        {THEME_IMAGE_FIELDS.map(({ key, label }) => (
+          <div key={key} className="flex items-center gap-3">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-surface-secondary)]">
+              {theme[key] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={theme[key] as string} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xs text-[var(--color-text-muted)]">Sin imagen</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{label}</p>
+              <label className="mt-1 inline-block cursor-pointer rounded-full bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs font-semibold">
+                Cambiar
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleThemeImageUpload(key, file);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+
+        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Estilo</h2>
+        <div className="flex items-center gap-3">
+          <p className="w-32 text-sm font-medium">Encabezado</p>
+          <select
+            value={theme.headerStyle ?? "default"}
+            onChange={(e) => setTheme((prev) => ({ ...prev, headerStyle: e.target.value }))}
+            className="flex-1 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-sm"
+          >
+            {HEADER_STYLES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="w-32 text-sm font-medium">Tarjetas</p>
+          <select
+            value={theme.cardStyle ?? "rounded"}
+            onChange={(e) => setTheme((prev) => ({ ...prev, cardStyle: e.target.value }))}
+            className="flex-1 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-sm"
+          >
+            {CARD_STYLES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
+          Decoraciones
+        </h2>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Marcos, insignias, separadores o fondos de temporada — imágenes sueltas que se pueden usar en la comunidad.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(theme.decorations ?? []).map((url, i) => (
+            <div key={`${url}-${i}`} className="relative h-16 w-16 overflow-hidden rounded-lg bg-[var(--color-surface-secondary)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              <button
+                onClick={() => removeDecoration(i)}
+                className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-black/60 text-xs text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="cursor-pointer rounded-full bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs font-semibold">
+            Subir imagen
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleDecorationUpload(file);
+              }}
+            />
+          </label>
+          <input
+            type="text"
+            value={newDecorationUrl}
+            onChange={(e) => setNewDecorationUrl(e.target.value)}
+            placeholder="o pegá una URL"
+            className="flex-1 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-xs"
+          />
+          <button
+            onClick={addDecorationUrl}
+            className="rounded-full bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs font-semibold cursor-pointer"
+          >
+            Agregar
+          </button>
+        </div>
+
+        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
+          Navegación
+        </h2>
+        <div className="flex flex-col gap-2">
+          {sortedNavKeys.map((key) => {
+            const section = nav[key]!;
+            return (
+              <div key={key} className="flex items-center gap-2 rounded-lg border border-[var(--color-border-soft)] p-2">
+                <input
+                  type="checkbox"
+                  checked={section.enabled}
+                  onChange={(e) => updateNavSection(key, { enabled: e.target.checked })}
+                  className="h-4 w-4 shrink-0 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={section.label}
+                  onChange={(e) => updateNavSection(key, { label: e.target.value })}
+                  className="flex-1 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-2 py-1 text-sm"
+                />
+                <input
+                  type="number"
+                  value={section.order}
+                  onChange={(e) => updateNavSection(key, { order: Number(e.target.value) || 0 })}
+                  className="w-16 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-2 py-1 text-sm"
+                />
+              </div>
+            );
+          })}
+        </div>
 
         {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
 

@@ -49,6 +49,8 @@ import type {
   StickerPackDetailDto,
   StickerPackSummaryDto,
   UpdateCommunityAppearanceRequest,
+  UpdateCommunityNavigationRequest,
+  UpdateCommunityThemeRequest,
   UpdateLiveRequest,
   UpdateProfileRequest,
   UpdatePostRequest,
@@ -355,6 +357,10 @@ export const communitiesApi = {
   // COMMUNITY_ADMIN+ de esa comunidad, o cuenta global LEADER+ — ver CommunitiesController.
   updateAppearance: (id: string, body: UpdateCommunityAppearanceRequest) =>
     apiFetch<CommunityDetailDto>(`/api/communities/${id}/appearance`, { method: "PATCH", body }),
+  updateTheme: (id: string, body: UpdateCommunityThemeRequest) =>
+    apiFetch<CommunityDetailDto>(`/api/communities/${id}/theme`, { method: "PATCH", body }),
+  updateNavigation: (id: string, body: UpdateCommunityNavigationRequest) =>
+    apiFetch<CommunityDetailDto>(`/api/communities/${id}/navigation`, { method: "PATCH", body }),
 };
 
 export const stickersApi = {

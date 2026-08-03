@@ -646,6 +646,37 @@ export type CommunityMembershipDto = {
   customTitle: string | null;
 };
 
+export type MyCommunityDto = { community: CommunitySummaryDto; membership: CommunityMembershipDto };
+
+/** Shape libre (JSONB en el backend) — estas claves son las que el editor de apariencia conoce
+ * hoy (fondos adicionales de feed/chat, estilo de encabezado/tarjetas, lista de URLs de
+ * decoraciones tipo marco/insignia/fondo de temporada), pero el backend acepta cualquier clave
+ * extra sin necesitar otra migración. */
+export type CommunityThemeConfig = {
+  headerStyle?: string;
+  cardStyle?: string;
+  feedBackgroundUrl?: string;
+  chatBackgroundUrl?: string;
+  decorations?: string[];
+  [key: string]: unknown;
+};
+
+export type CommunityNavigationSectionKey =
+  | "home"
+  | "posts"
+  | "blogs"
+  | "chats"
+  | "live"
+  | "members"
+  | "events"
+  | "about";
+
+export type CommunityNavigationSectionConfig = { enabled: boolean; order: number; label: string };
+
+export type CommunityNavigationConfig = Partial<
+  Record<CommunityNavigationSectionKey, CommunityNavigationSectionConfig>
+>;
+
 export type CommunityDetailDto = {
   id: string;
   slug: string;
@@ -681,11 +712,11 @@ export type CommunityDetailDto = {
   allowMemberPosts: boolean;
   minimumGlobalLevelToJoin: number;
   minimumGlobalLevelToPost: number;
+  themeConfig: CommunityThemeConfig;
+  navigationConfig: CommunityNavigationConfig;
   createdAt: string;
   myMembership: CommunityMembershipDto | null;
 };
-
-export type MyCommunityDto = { community: CommunitySummaryDto; membership: CommunityMembershipDto };
 
 /** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios — mismo criterio que
  * UpdateRoomRequest. */
@@ -699,3 +730,7 @@ export type UpdateCommunityAppearanceRequest = {
   secondaryColor?: string;
   accentColor?: string;
 };
+
+/** Reemplazo completo del mapa — no parcial. */
+export type UpdateCommunityThemeRequest = { themeConfig: CommunityThemeConfig };
+export type UpdateCommunityNavigationRequest = { navigationConfig: CommunityNavigationConfig };
