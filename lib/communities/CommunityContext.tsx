@@ -62,6 +62,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
   }, [state.profile]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el sistema externo (la API) apenas hay perfil; load() ya está detrás de un guard sobre state.profile.
     load();
   }, [load]);
 

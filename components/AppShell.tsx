@@ -7,10 +7,11 @@ import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAppHeight } from "@/lib/useAppHeight";
 
+import { CommunitySwitcher } from "./communities/CommunitySwitcher";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
 import { MenziDjPlayerHost } from "./music/MenziDjPlayerHost";
 import { Avatar } from "./Avatar";
-import { BellIcon, CalendarIcon, ChatIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
+import { BellIcon, CalendarIcon, ChatIcon, CompassIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 
 const NAV_ITEMS = [
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
 ];
 
 const SECONDARY_ITEMS = [
+  { href: "/communities", label: "Comunidades", icon: CompassIcon },
   { href: "/chat/public", label: "Chats públicos", icon: ChatIcon },
   { href: "/search", label: "Buscar", icon: SearchIcon },
   { href: "/events", label: "Eventos", icon: CalendarIcon },
@@ -67,6 +69,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-display text-lg font-bold tracking-tight">MENZO</span>
         </Link>
+
+        <CommunitySwitcher />
 
         <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => {
@@ -167,6 +171,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-display text-base font-bold">MENZO</span>
             </Link>
             <div className="flex items-center gap-4">
+              <Link href="/communities" aria-label="Comunidades" className="text-[var(--color-text-secondary)]">
+                <CompassIcon />
+              </Link>
               <Link href="/search" aria-label="Buscar" className="text-[var(--color-text-secondary)]">
                 <SearchIcon />
               </Link>
