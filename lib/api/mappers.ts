@@ -158,6 +158,7 @@ export function mapPost(dto: PostDto, myRealId: string | null): Post {
     gradient: toGradient(dto.gradient),
     blocks: dto.blocks ?? [],
     hidden: dto.hidden,
+    communityId: dto.communityId,
   };
 }
 
@@ -260,6 +261,7 @@ export function mapChatRoom(dto: ChatRoomDto, myRealId: string | null = null): C
           createdAt: dto.lastMessage.createdAt,
         }
       : undefined,
+    communityId: dto.communityId,
   };
 }
 

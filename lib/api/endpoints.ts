@@ -48,6 +48,7 @@ import type {
   StartLiveRequest,
   StickerPackDetailDto,
   StickerPackSummaryDto,
+  UpdateCommunityAppearanceRequest,
   UpdateLiveRequest,
   UpdateProfileRequest,
   UpdatePostRequest,
@@ -118,11 +119,15 @@ export const lookupsApi = {
 };
 
 export const postsApi = {
-  list: (page = 0, size = 20) => apiFetch<PageResponse<PostDto>>(`/api/posts${qs({ page, size })}`),
-  featured: (page = 0, size = 20) => apiFetch<PageResponse<PostDto>>(`/api/posts/featured${qs({ page, size })}`),
+  // communityId opcional (ver PostController en menzoapi): sin él no filtra nada. Los clientes
+  // actualizados siempre mandan la comunidad activa para no mezclar publicaciones entre comunidades.
+  list: (communityId?: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<PostDto>>(`/api/posts${qs({ communityId, page, size })}`),
+  featured: (communityId?: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<PostDto>>(`/api/posts/featured${qs({ communityId, page, size })}`),
   bookmarked: (page = 0, size = 20) => apiFetch<PageResponse<PostDto>>(`/api/posts/bookmarked${qs({ page, size })}`),
-  search: (query: string, page = 0, size = 20) =>
-    apiFetch<PageResponse<PostDto>>(`/api/posts/search${qs({ query, page, size })}`),
+  search: (query: string, communityId?: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<PostDto>>(`/api/posts/search${qs({ query, communityId, page, size })}`),
   getById: (id: string) => apiFetch<PostDto>(`/api/posts/${id}`),
   create: (body: CreatePostRequest) => apiFetch<PostDto>("/api/posts", { method: "POST", body }),
   update: (id: string, body: UpdatePostRequest) => apiFetch<PostDto>(`/api/posts/${id}`, { method: "PUT", body }),
@@ -147,10 +152,12 @@ export const gifsApi = {
 };
 
 export const chatApi = {
-  rooms: () => apiFetch<ChatRoomDto[]>("/api/chat/rooms"),
-  discover: (sort: "recent" | "popular" = "recent") =>
-    apiFetch<ChatRoomDto[]>(`/api/chat/rooms/discover${qs({ sort })}`),
-  liveRooms: () => apiFetch<ChatRoomDto[]>("/api/chat/rooms/live"),
+  // communityId opcional (ver ChatController en menzoapi): filtra solo salas PUBLIC — las DIRECT
+  // (mensajes privados) el backend las devuelve siempre, sin importar communityId.
+  rooms: (communityId?: string) => apiFetch<ChatRoomDto[]>(`/api/chat/rooms${qs({ communityId })}`),
+  discover: (sort: "recent" | "popular" = "recent", communityId?: string) =>
+    apiFetch<ChatRoomDto[]>(`/api/chat/rooms/discover${qs({ sort, communityId })}`),
+  liveRooms: (communityId?: string) => apiFetch<ChatRoomDto[]>(`/api/chat/rooms/live${qs({ communityId })}`),
   getRoom: (id: string) => apiFetch<ChatRoomDto>(`/api/chat/rooms/${id}`),
   openDirect: (userId: string) => apiFetch<ChatRoomDto>(`/api/chat/rooms/dm/${userId}`, { method: "POST" }),
   createRoom: (body: CreateRoomRequest) => apiFetch<ChatRoomDto>("/api/chat/rooms", { method: "POST", body }),
@@ -345,6 +352,9 @@ export const communitiesApi = {
   getBySlug: (slug: string) => apiFetch<CommunityDetailDto>(`/api/communities/${slug}`),
   join: (id: string) => apiFetch<CommunityMembershipDto>(`/api/communities/${id}/join`, { method: "POST" }),
   leave: (id: string) => apiFetch<void>(`/api/communities/${id}/leave`, { method: "POST" }),
+  // COMMUNITY_ADMIN+ de esa comunidad, o cuenta global LEADER+ — ver CommunitiesController.
+  updateAppearance: (id: string, body: UpdateCommunityAppearanceRequest) =>
+    apiFetch<CommunityDetailDto>(`/api/communities/${id}/appearance`, { method: "PATCH", body }),
 };
 
 export const stickersApi = {

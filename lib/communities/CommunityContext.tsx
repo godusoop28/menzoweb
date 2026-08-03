@@ -5,14 +5,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { communitiesApi } from "@/lib/api/endpoints";
 import type { CommunitySummaryDto, MyCommunityDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
-
-const ACTIVE_COMMUNITY_STORAGE_KEY = "menzo.activeCommunityId";
+import { getItem, removeItem, setItem, StorageKeys } from "@/lib/storage";
 
 /**
- * Estado global de comunidades (Fase A: solo el andamiaje — selector/onboarding/explorar son
- * Fase B). Vive separado de AppStateContext a propósito: cambiar de comunidad solo debe limpiar
- * cachés *comunitarias* (feed/blogs/chats con communityId, todavía no existen — Fase C), nunca el
- * perfil global, amigos o mensajes privados, que siguen viviendo en AppStateContext sin tocarse.
+ * Estado global de comunidades. Al cambiar de comunidad, dispara
+ * actions.refreshSocialForCommunity (en AppStateContext) para volver a traer posts/salas
+ * PUBLIC ya filtrados por la nueva comunidad — nunca mezcla contenido de una comunidad con otra
+ * (ver Contexto §11/§21 del pedido original). Perfil global, amigos y mensajes privados siguen
+ * intactos en AppStateContext, sin tocarse acá.
  */
 type CommunityContextValue = {
   activeCommunity: CommunitySummaryDto | null;
@@ -28,7 +28,7 @@ type CommunityContextValue = {
 const CommunityContext = createContext<CommunityContextValue | null>(null);
 
 export function CommunityProvider({ children }: { children: React.ReactNode }) {
-  const { state } = useAppState();
+  const { state, actions } = useAppState();
   const [memberships, setMemberships] = useState<MyCommunityDto[]>([]);
   const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,20 +45,24 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
       // 1) leer última comunidad activa guardada localmente; 2) verificar que la membresía
       // siga activa entre las que acaban de llegar; 3) si no, caer a la primera válida; 4) si no
       // pertenece a ninguna, queda en null (Fase B decide qué mostrar ahí — p. ej. Explorar).
-      const stored = window.localStorage.getItem(ACTIVE_COMMUNITY_STORAGE_KEY);
+      const stored = getItem<string>(StorageKeys.activeCommunityId);
       const stillValid = stored && mine.some((m) => m.community.id === stored);
       const nextActiveId = stillValid ? stored : (mine[0]?.community.id ?? null);
       setActiveCommunityId(nextActiveId);
       if (nextActiveId) {
-        window.localStorage.setItem(ACTIVE_COMMUNITY_STORAGE_KEY, nextActiveId);
+        setItem(StorageKeys.activeCommunityId, nextActiveId);
       } else {
-        window.localStorage.removeItem(ACTIVE_COMMUNITY_STORAGE_KEY);
+        removeItem(StorageKeys.activeCommunityId);
       }
+      await actions.refreshSocial();
     } catch {
       setError("No pudimos cargar tus comunidades.");
     } finally {
       setLoading(false);
     }
+    // actions es un objeto nuevo cada render (useMemo de AppStateContext con muchas deps) — solo
+    // nos importa la referencia a refreshSocialForCommunity, no reactivar por cualquier otro cambio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.profile]);
 
   useEffect(() => {
@@ -70,9 +74,10 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     (communityId: string) => {
       if (!memberships.some((m) => m.community.id === communityId)) return;
       setActiveCommunityId(communityId);
-      window.localStorage.setItem(ACTIVE_COMMUNITY_STORAGE_KEY, communityId);
+      setItem(StorageKeys.activeCommunityId, communityId);
+      actions.refreshSocial().catch(() => {});
     },
-    [memberships]
+    [memberships, actions]
   );
 
   const joinCommunity = useCallback(
@@ -88,7 +93,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
     async (communityId: string) => {
       await communitiesApi.leave(communityId);
       if (activeCommunityId === communityId) {
-        window.localStorage.removeItem(ACTIVE_COMMUNITY_STORAGE_KEY);
+        removeItem(StorageKeys.activeCommunityId);
         setActiveCommunityId(null);
       }
       await load();

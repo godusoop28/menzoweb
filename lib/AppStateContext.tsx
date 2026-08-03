@@ -113,10 +113,18 @@ function hasSession() {
   return !!getCachedSession();
 }
 
-async function fetchInitialSocialSnapshot(myRealId: string, profile: UserProfile): Promise<Partial<SocialState>> {
+/** communityId opcional: sin él trae todo sin filtrar (compatibilidad); con él, posts/salas
+ * PUBLIC quedan acotados a esa comunidad — nunca se mezcla contenido de una comunidad con otra
+ * (ver Contexto §11/§21 del pedido original). Los DM (salas DIRECT) el backend los devuelve
+ * siempre, sin importar communityId. */
+async function fetchInitialSocialSnapshot(
+  myRealId: string,
+  profile: UserProfile,
+  communityId?: string | null
+): Promise<Partial<SocialState>> {
   const [postsPage, rooms, events, notificationsPage, following, membersPage] = await Promise.all([
-    postsApi.list(0, 20).catch(() => null),
-    chatApi.rooms().catch(() => []),
+    postsApi.list(communityId ?? undefined, 0, 20).catch(() => null),
+    chatApi.rooms(communityId ?? undefined).catch(() => []),
     communityApi.events().catch(() => []),
     notificationsApi.list(0, 30).catch(() => null),
     usersApi.following(myRealId).catch(() => []),
@@ -180,7 +188,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         try {
           const meDto = await usersApi.me();
           const profile = mapUserProfile(meDto, session.userId);
-          const snapshot = await fetchInitialSocialSnapshot(session.userId, profile);
+          const communityId = getItem<string>(StorageKeys.activeCommunityId);
+          const snapshot = await fetchInitialSocialSnapshot(session.userId, profile, communityId);
           next = {
             ...next,
             profile,
@@ -257,7 +266,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SET_SESSION", payload: { profile, onboardingCompleted: res.onboardingCompleted } });
       if (res.onboardingCompleted) {
         try {
-          const snapshot = await fetchInitialSocialSnapshot(res.profile.id, profile);
+          const communityId = getItem<string>(StorageKeys.activeCommunityId);
+          const snapshot = await fetchInitialSocialSnapshot(res.profile.id, profile, communityId);
           dispatch({ type: "SET_SOCIAL_BULK", payload: snapshot });
         } catch (error) {
           console.warn("[menzo/api] no se pudo cargar el contenido inicial", error);
@@ -362,6 +372,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         tags: payload.tags ?? [],
         pollOptions: payload.pollOptions,
         blocks: payload.blocks,
+        communityId: getItem<string>(StorageKeys.activeCommunityId) ?? undefined,
       });
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }
@@ -407,7 +418,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }): Promise<string | null> {
       if (!hasSession()) return null;
       try {
-        const dto = await chatApi.createRoom(payload);
+        const communityId = getItem<string>(StorageKeys.activeCommunityId) ?? undefined;
+        const dto = await chatApi.createRoom({ ...payload, communityId });
         const room: ChatRoom = mapChatRoom(dto, getMyRealId());
         dispatch({ type: "MERGE_SOCIAL", payload: { rooms: [room] } });
         return room.id;
@@ -439,7 +451,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     async function loadDiscoverRooms(sort: "recent" | "popular" = "recent") {
       try {
-        const dtos = await chatApi.discover(sort);
+        const communityId = getItem<string>(StorageKeys.activeCommunityId) ?? undefined;
+        const dtos = await chatApi.discover(sort, communityId);
         const myRealId = getMyRealId();
         dispatch({ type: "MERGE_SOCIAL", payload: { rooms: dtos.map((dto) => mapChatRoom(dto, myRealId)) } });
       } catch (error) {
@@ -449,7 +462,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     async function loadLiveRooms() {
       try {
-        const dtos = await chatApi.liveRooms();
+        const communityId = getItem<string>(StorageKeys.activeCommunityId) ?? undefined;
+        const dtos = await chatApi.liveRooms(communityId);
         const myRealId = getMyRealId();
         dispatch({ type: "MERGE_SOCIAL", payload: { rooms: dtos.map((dto) => mapChatRoom(dto, myRealId)) } });
       } catch (error) {
@@ -494,7 +508,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const profile = stateRef.current.profile;
       if (!session || !profile) return;
       try {
-        const snapshot = await fetchInitialSocialSnapshot(session.userId, profile);
+        const communityId = getItem<string>(StorageKeys.activeCommunityId);
+        const snapshot = await fetchInitialSocialSnapshot(session.userId, profile, communityId);
         dispatch({ type: "SET_SOCIAL_BULK", payload: snapshot });
       } catch (error) {
         console.warn("[menzo/api] refreshSocial failed", error);

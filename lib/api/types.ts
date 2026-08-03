@@ -141,6 +141,7 @@ export type PostDto = {
   createdAt: string;
   blocks: PostBlockDto[];
   hidden: boolean;
+  communityId: string | null;
 };
 
 export type CreatePostRequest = {
@@ -154,6 +155,7 @@ export type CreatePostRequest = {
   pollOptions?: string[];
   eventId?: string;
   blocks?: PostBlockDto[];
+  communityId?: string;
 };
 
 export type UpdatePostRequest = {
@@ -177,6 +179,7 @@ export type CreateRoomRequest = {
   gradient?: string;
   icon?: string;
   category?: string;
+  communityId?: string;
 };
 
 export type RoomRole = "OWNER" | "CO_HOST" | "MEMBER";
@@ -218,6 +221,7 @@ export type ChatRoomDto = {
   createdAt: string;
   updatedAt: string | null;
   lastMessage: ChatRoomLastMessageDto | null;
+  communityId: string | null;
 };
 
 export type RoomMemberDto = { user: UserSummaryDto; role: RoomRole; joinedAt: string };
@@ -682,3 +686,16 @@ export type CommunityDetailDto = {
 };
 
 export type MyCommunityDto = { community: CommunitySummaryDto; membership: CommunityMembershipDto };
+
+/** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios — mismo criterio que
+ * UpdateRoomRequest. */
+export type UpdateCommunityAppearanceRequest = {
+  iconUrl?: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  backgroundUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+};

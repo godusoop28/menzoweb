@@ -26,4 +26,7 @@ export const StorageKeys = {
   auth: "menzo.auth",
   profile: "menzo.profile",
   onboarding: "menzo.onboardingCompleted",
+  // Compartida entre CommunityContext (dueño) y AppStateContext (solo lee, para scopear el
+  // snapshot inicial de posts/salas) — ver Contexto §8/§21 del pedido original.
+  activeCommunityId: "menzo.activeCommunityId",
 } as const;

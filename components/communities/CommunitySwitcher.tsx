@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { ChevronDownIcon, CompassIcon } from "@/components/icons";
+import { ChevronDownIcon, CompassIcon, SettingsIcon } from "@/components/icons";
+import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 
 /** Selector de comunidad — ver Contexto §8 del pedido (selector accesible, cambiar/buscar entre
@@ -11,8 +12,16 @@ import { useCommunity } from "@/lib/communities/CommunityContext";
  * este es el primer lugar que lo usa de verdad. */
 export function CommunitySwitcher() {
   const { activeCommunity, memberships, loading, switchCommunity } = useCommunity();
+  const { state } = useAppState();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const globalRole = state.profile?.globalRole;
+  const isGlobalStaff = globalRole === "LEADER" || globalRole === "MASTER";
+  const activeMembership = memberships.find((m) => m.community.id === activeCommunity?.id)?.membership;
+  const isCommunityAdmin =
+    activeMembership?.communityRole === "COMMUNITY_ADMIN" || activeMembership?.communityRole === "COMMUNITY_OWNER";
+  const canEditAppearance = !!activeCommunity && (isGlobalStaff || isCommunityAdmin);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -75,6 +84,16 @@ export function CommunitySwitcher() {
             <CompassIcon size={18} />
             Explorar comunidades
           </Link>
+          {canEditAppearance && (
+            <Link
+              href={`/communities/${activeCommunity!.slug}/appearance`}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-secondary)]"
+            >
+              <SettingsIcon size={18} />
+              Editar apariencia
+            </Link>
+          )}
         </div>
       )}
     </div>

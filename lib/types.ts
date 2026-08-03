@@ -99,6 +99,7 @@ export type Post = {
   gradient?: GradientId;
   blocks: PostBlock[];
   hidden: boolean;
+  communityId: string | null;
 };
 
 export type Comment = { id: string; postId: string; authorId: string; body: string; createdAt: string };
@@ -180,6 +181,7 @@ export type ChatRoom = {
   updatedAt: string | null;
   peer?: ChatPeer;
   lastMessage?: ChatRoomLastMessage;
+  communityId: string | null;
 };
 
 export type ChatRoomLastMessage = {
