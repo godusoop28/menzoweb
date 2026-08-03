@@ -12,6 +12,9 @@ import type {
   CreateEventRequest,
   CreatePostRequest,
   CreateRoomRequest,
+  CommunityDetailDto,
+  CommunityMembershipDto,
+  CommunitySummaryDto,
   CreateStickerPackRequest,
   EventDto,
   GifSearchResponseDto,
@@ -22,6 +25,7 @@ import type {
   LoginRequest,
   MessageDto,
   ModerationActionDto,
+  MyCommunityDto,
   ModerationActionRequest,
   ModerationActionType,
   MusicSessionDto,
@@ -328,6 +332,19 @@ export const adminApi = {
     apiFetch<PageResponse<ModerationActionDto>>(
       `/api/admin/moderation-log${qs({ page, size, actorId, actionType })}`
     ),
+};
+
+/** Dominio nuevo (multi-comunidad: Naruto, Anime, etc.) — `/api/communities` (plural), separado
+ * de `communityApi` de arriba (`/api/community/*` singular, la config/eventos de Menzo como
+ * plataforma única, sin relación con esto). Ver CommunitiesController en menzoapi. */
+export const communitiesApi = {
+  list: (page = 0, size = 20) => apiFetch<PageResponse<CommunitySummaryDto>>(`/api/communities${qs({ page, size })}`),
+  discover: (query?: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<CommunitySummaryDto>>(`/api/communities/discover${qs({ query, page, size })}`),
+  my: () => apiFetch<MyCommunityDto[]>("/api/communities/my"),
+  getBySlug: (slug: string) => apiFetch<CommunityDetailDto>(`/api/communities/${slug}`),
+  join: (id: string) => apiFetch<CommunityMembershipDto>(`/api/communities/${id}/join`, { method: "POST" }),
+  leave: (id: string) => apiFetch<void>(`/api/communities/${id}/leave`, { method: "POST" }),
 };
 
 export const stickersApi = {

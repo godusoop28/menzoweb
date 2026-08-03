@@ -598,3 +598,87 @@ export type StickerPackDetailDto = {
 };
 
 export type CreateStickerPackRequest = { name: string; imageUrls: string[] };
+
+// ---- Comunidades (Naruto, Anime, etc. — no confundir con /api/community/* singular, que es la
+// configuración de Menzo como plataforma única) — ver CommunitiesController en menzoapi. --------
+
+export type CommunityVisibility = "PUBLIC" | "PRIVATE" | "UNLISTED";
+export type CommunityAccessType = "OPEN" | "REQUEST" | "INVITE_ONLY";
+export type CommunityStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "SUSPENDED";
+export type CommunityRole = "MEMBER" | "COMMUNITY_CURATOR" | "COMMUNITY_MODERATOR" | "COMMUNITY_ADMIN" | "COMMUNITY_OWNER";
+export type CommunityMembershipStatus = "ACTIVE" | "PENDING" | "INVITED" | "LEFT" | "REMOVED" | "BANNED";
+
+export type CommunitySummaryDto = {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription: string | null;
+  category: string | null;
+  tags: string[];
+  iconUrl: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+  memberCount: number;
+  featured: boolean;
+  official: boolean;
+  visibility: CommunityVisibility;
+  accessType: CommunityAccessType;
+  joined: boolean;
+};
+
+export type CommunityMembershipDto = {
+  communityRole: CommunityRole;
+  membershipStatus: CommunityMembershipStatus;
+  joinedAt: string;
+  lastVisitedAt: string | null;
+  favorite: boolean;
+  muted: boolean;
+  communityNickname: string | null;
+  communityBio: string | null;
+  contributionCount: number;
+  customTitle: string | null;
+};
+
+export type CommunityDetailDto = {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription: string | null;
+  fullDescription: string | null;
+  status: CommunityStatus;
+  visibility: CommunityVisibility;
+  accessType: CommunityAccessType;
+  primaryLanguage: string | null;
+  category: string | null;
+  tags: string[];
+  iconUrl: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  backgroundUrl: string | null;
+  bannerUrl: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+  textColor: string | null;
+  surfaceColor: string | null;
+  memberCount: number;
+  onlineMemberCount: number;
+  postCount: number;
+  chatCount: number;
+  featured: boolean;
+  official: boolean;
+  allowJoinRequests: boolean;
+  allowPublicChats: boolean;
+  allowBlogs: boolean;
+  allowVoiceRooms: boolean;
+  allowMemberPosts: boolean;
+  minimumGlobalLevelToJoin: number;
+  minimumGlobalLevelToPost: number;
+  createdAt: string;
+  myMembership: CommunityMembershipDto | null;
+};
+
+export type MyCommunityDto = { community: CommunitySummaryDto; membership: CommunityMembershipDto };
