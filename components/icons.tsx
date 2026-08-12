@@ -345,6 +345,15 @@ export function VolumeMuteIcon({ size = 18, className = "" }: IconProps) {
   );
 }
 
+export function PowerIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M12 4v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M7 6.5a7 7 0 1 0 10 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function TrashIcon({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

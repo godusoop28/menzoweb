@@ -405,25 +405,6 @@ export type CommunityConfigDto = {
   tags: string[];
 };
 
-export type EventDto = {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  kind: string;
-  attendeeCount: number;
-  attendingByMe: boolean;
-};
-
-export type CreateEventRequest = {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  kind: string;
-};
-
 export type NotificationDto = {
   id: string;
   category: NotificationCategory;

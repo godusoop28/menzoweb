@@ -67,16 +67,6 @@ export type AbstractVisualPreset =
 export type AbstractVisual = { preset: AbstractVisualPreset; caption?: string };
 export type PollOption = { id: string; label: string; votes: string[] };
 
-export type CommunityEvent = {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  kind: string;
-  attendees: string[];
-};
-
 export type PostBlockType = "paragraph" | "heading" | "image" | "gif" | "divider";
 export type PostBlock = { id: string; type: PostBlockType; text: string | null; url: string | null; alt: string | null };
 

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import { CloseIcon, PauseIcon, PlayIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
+import { CloseIcon, PauseIcon, PlayIcon, PowerIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
 import { MenziDjBrand } from "@/components/music/MenziDjBrand";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
@@ -178,6 +178,32 @@ export function MenziDjPlayerHost() {
               {music.localMuted ? <VolumeMuteIcon size={14} /> : <VolumeIcon size={14} />}
             </span>
           )}
+          {/* Apagado real (ver MenziDjContext.djEnabled) — antes la única forma de "quitar"
+              Menzi DJ era `videoHidden`, que a propósito deja el audio sonando. Acá el usuario
+              puede de verdad silenciarlo y volver a prenderlo cuando quiera. */}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              music.toggleDjEnabled();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                music.toggleDjEnabled();
+              }
+            }}
+            aria-label={music.djEnabled ? "Apagar Menzi DJ" : "Prender Menzi DJ"}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cyan)] ${
+              music.djEnabled
+                ? "bg-[var(--color-surface-secondary)]"
+                : "bg-[var(--color-cyan)] text-[var(--color-background-deep,#07090D)]"
+            }`}
+          >
+            <PowerIcon size={14} />
+          </span>
         </button>
       )}
     </>

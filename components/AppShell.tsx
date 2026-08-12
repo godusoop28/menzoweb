@@ -12,7 +12,7 @@ import { CommunitySwitcher } from "./communities/CommunitySwitcher";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
 import { MenziDjPlayerHost } from "./music/MenziDjPlayerHost";
 import { Avatar } from "./Avatar";
-import { BellIcon, CalendarIcon, ChatIcon, CompassIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
+import { BellIcon, ChatIcon, CompassIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 
 const NAV_ITEMS = [
@@ -26,7 +26,6 @@ const SECONDARY_ITEMS = [
   { href: "/communities", label: "Comunidades", icon: CompassIcon },
   { href: "/chat/public", label: "Chats públicos", icon: ChatIcon },
   { href: "/search", label: "Buscar", icon: SearchIcon },
-  { href: "/events", label: "Eventos", icon: CalendarIcon },
   { href: "/notifications", label: "Notificaciones", icon: BellIcon },
   { href: "/settings", label: "Configuración", icon: SettingsIcon },
 ];
@@ -189,9 +188,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/search" aria-label="Buscar" className="text-[var(--color-text-secondary)]">
                 <SearchIcon />
-              </Link>
-              <Link href="/events" aria-label="Eventos" className="text-[var(--color-text-secondary)]">
-                <CalendarIcon />
               </Link>
               <Link href="/notifications" aria-label="Notificaciones" className="relative text-[var(--color-text-secondary)]">
                 <BellIcon />

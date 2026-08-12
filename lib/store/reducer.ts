@@ -1,4 +1,4 @@
-import type { Comment, CommunityEvent, Post, UserProfile, WallComment, WallMessage } from "@/lib/types";
+import type { Comment, Post, UserProfile, WallComment, WallMessage } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./localUser";
 import type { AppState, RecentlyViewedEntry, SocialState } from "./types";
@@ -12,7 +12,6 @@ export function createDefaultSocialState(): SocialState {
     messages: [],
     wallMessages: [],
     wallComments: [],
-    events: [],
     notifications: [],
     following: [],
     recentlyViewed: [],
@@ -33,7 +32,6 @@ type MergeableSocialState = Pick<
   | "wallMessages"
   | "wallComments"
   | "rooms"
-  | "events"
   | "notifications"
 >;
 
@@ -54,8 +52,6 @@ export type Action =
   | { type: "TOGGLE_FOLLOW"; payload: { userId: string } }
   | { type: "SEND_MESSAGE"; payload: import("@/lib/types").Message }
   | { type: "TOGGLE_FAVORITE_ROOM"; payload: { roomId: string } }
-  | { type: "ATTEND_EVENT"; payload: { eventId: string } }
-  | { type: "CREATE_EVENT"; payload: CommunityEvent }
   | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
   | { type: "MARK_ALL_NOTIFICATIONS_READ" }
   | { type: "ADD_RECENTLY_VIEWED"; payload: RecentlyViewedEntry }
@@ -112,7 +108,6 @@ export function appReducer(state: AppState, action: Action): AppState {
           wallMessages: p.wallMessages ? mergeById(state.social.wallMessages, p.wallMessages) : state.social.wallMessages,
           wallComments: p.wallComments ? mergeById(state.social.wallComments, p.wallComments) : state.social.wallComments,
           rooms: p.rooms ? mergeById(state.social.rooms, p.rooms) : state.social.rooms,
-          events: p.events ? mergeById(state.social.events, p.events) : state.social.events,
           notifications: p.notifications ? mergeById(state.social.notifications, p.notifications) : state.social.notifications,
         },
       };
@@ -269,29 +264,6 @@ export function appReducer(state: AppState, action: Action): AppState {
         },
       };
     }
-
-    case "ATTEND_EVENT": {
-      const { eventId } = action.payload;
-      return {
-        ...state,
-        social: {
-          ...state.social,
-          events: state.social.events.map((event) => {
-            if (event.id !== eventId) return event;
-            const attending = event.attendees.includes(LOCAL_USER_ID);
-            return {
-              ...event,
-              attendees: attending
-                ? event.attendees.filter((id) => id !== LOCAL_USER_ID)
-                : [...event.attendees, LOCAL_USER_ID],
-            };
-          }),
-        },
-      };
-    }
-
-    case "CREATE_EVENT":
-      return { ...state, social: { ...state.social, events: [action.payload, ...state.social.events] } };
 
     case "MARK_NOTIFICATION_READ": {
       const { id } = action.payload;

@@ -1,7 +1,6 @@
 import type {
   ChatRoom,
   Comment,
-  CommunityEvent,
   DemoUser,
   Message,
   Notification,
@@ -21,7 +20,6 @@ export type SocialState = {
   messages: Message[];
   wallMessages: WallMessage[];
   wallComments: WallComment[];
-  events: CommunityEvent[];
   notifications: Notification[];
   following: string[];
   recentlyViewed: RecentlyViewedEntry[];

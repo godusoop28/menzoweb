@@ -7,14 +7,12 @@ import {
   authApi,
   chatApi,
   clearSession,
-  communityApi,
   ensureUploaded,
   getCachedSession,
   getMyRealId,
   loadSession,
   mapChatRoom,
   mapComment,
-  mapEvent,
   mapMessage,
   mapNotification,
   mapPost,
@@ -28,7 +26,7 @@ import {
   saveSession,
   usersApi,
 } from "@/lib/api";
-import type { ChatRoom, CommunityEvent, UserProfile } from "@/lib/types";
+import type { ChatRoom, UserProfile } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./store/localUser";
 import { appReducer, createDefaultState } from "./store/reducer";
@@ -95,9 +93,6 @@ type AppStateContextValue = {
     toggleWallCommentLike: (commentId: string, wallMessageId: string) => Promise<void>;
     toggleFollow: (userId: string) => void;
     openDirectMessage: (userId: string) => Promise<string | null>;
-    loadEvents: () => Promise<void>;
-    attendEvent: (eventId: string) => void;
-    createEvent: (payload: { title: string; description: string; date: string; time: string; kind: string }) => Promise<CommunityEvent | null>;
     loadNotifications: () => Promise<void>;
     markNotificationRead: (id: string) => void;
     markAllNotificationsRead: () => void;
@@ -122,10 +117,9 @@ async function fetchInitialSocialSnapshot(
   profile: UserProfile,
   communityId?: string | null
 ): Promise<Partial<SocialState>> {
-  const [postsPage, rooms, events, notificationsPage, following, membersPage] = await Promise.all([
+  const [postsPage, rooms, notificationsPage, following, membersPage] = await Promise.all([
     postsApi.list(communityId ?? undefined, 0, 20).catch(() => null),
     chatApi.rooms(communityId ?? undefined).catch(() => []),
-    communityApi.events().catch(() => []),
     notificationsApi.list(0, 30).catch(() => null),
     usersApi.following(myRealId).catch(() => []),
     usersApi.search("", 0, 60).catch(() => null),
@@ -152,7 +146,6 @@ async function fetchInitialSocialSnapshot(
     users: Array.from(userMap.values()),
     posts: postsPage ? postsPage.items.map((dto) => mapPost(dto, myRealId)) : [],
     rooms: rooms.map((dto) => mapChatRoom(dto, myRealId)),
-    events: events.map(mapEvent),
     notifications: notificationsPage ? notificationsPage.items.map((dto) => mapNotification(dto, myRealId)) : [],
     following: following.map((dto) => dto.id),
   };
@@ -711,36 +704,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    async function loadEvents() {
-      try {
-        const events = await communityApi.events();
-        dispatch({ type: "MERGE_SOCIAL", payload: { events: events.map(mapEvent) } });
-      } catch (error) {
-        console.warn("[menzo/api] loadEvents failed", error);
-      }
-    }
-
-    function attendEvent(eventId: string) {
-      const wasAttending = stateRef.current.social.events.find((e) => e.id === eventId)?.attendees.includes(LOCAL_USER_ID) ?? false;
-      dispatch({ type: "ATTEND_EVENT", payload: { eventId } });
-      if (!hasSession()) return;
-      const call = wasAttending ? communityApi.unattend(eventId) : communityApi.attend(eventId);
-      call.catch((error) => console.warn("[menzo/api] attendEvent failed", error));
-    }
-
-    async function createEvent(payload: { title: string; description: string; date: string; time: string; kind: string }): Promise<CommunityEvent | null> {
-      if (!hasSession()) return null;
-      try {
-        const dto = await communityApi.createEvent(payload);
-        const mapped = mapEvent(dto);
-        dispatch({ type: "CREATE_EVENT", payload: mapped });
-        return mapped;
-      } catch (error) {
-        console.warn("[menzo/api] createEvent failed", error);
-        return null;
-      }
-    }
-
     async function loadNotifications() {
       try {
         const page = await notificationsApi.list(0, 30);
@@ -822,9 +785,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleWallCommentLike,
       toggleFollow,
       openDirectMessage,
-      loadEvents,
-      attendEvent,
-      createEvent,
       loadNotifications,
       markNotificationRead,
       markAllNotificationsRead,

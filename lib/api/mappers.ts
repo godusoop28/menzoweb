@@ -5,7 +5,6 @@ import type {
   ChatRoom,
   ChatRoomRole,
   Comment,
-  CommunityEvent,
   DemoUser,
   Message,
   ModerationAction,
@@ -23,7 +22,6 @@ import type {
   BanDto,
   ChatRoomDto,
   CommentDto,
-  EventDto,
   MessageDto,
   ModerationActionDto,
   NotificationDto,
@@ -313,18 +311,6 @@ export function mapMessage(dto: MessageDto, myRealId: string | null): Message {
     replyTo: dto.replyTo,
     deleted: dto.deleted,
     sticker: dto.sticker ? { id: dto.sticker.id, imageUrl: dto.sticker.imageUrl } : null,
-  };
-}
-
-export function mapEvent(dto: EventDto): CommunityEvent {
-  return {
-    id: dto.id,
-    title: dto.title,
-    description: dto.description,
-    date: dto.date,
-    time: dto.time,
-    kind: dto.kind,
-    attendees: synthArray(dto.attendeeCount, dto.attendingByMe),
   };
 }
 

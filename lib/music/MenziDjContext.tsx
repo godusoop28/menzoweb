@@ -17,6 +17,7 @@ const DRIFT_CHECK_INTERVAL_MS = 15_000;
 const DRIFT_THRESHOLD_SECONDS = 2;
 const AUTOPLAY_CHECK_DELAY_MS = 1500;
 const DEFAULT_VOLUME = 80;
+const DJ_ENABLED_STORAGE_KEY = "menzo.djEnabled";
 
 type MenziDjContextValue = {
   roomId: string | null;
@@ -54,6 +55,13 @@ type MenziDjContextValue = {
   localVolume: number;
   toggleLocalMute: () => void;
   setLocalVolume: (value: number) => void;
+  /** Apagado real de Menzi DJ para este dispositivo/pestaña — a diferencia de `videoHidden`
+   * (solo tapa el video, el iframe sigue sonando a propósito, ver el comentario de esa clase),
+   * esto mutea el audio local Y oculta el video a la vez. Antes no existía ningún apagado real
+   * en la web (paridad con menzomovil, que tenía el mismo hueco — ver MenziDjState.djEnabled).
+   * Persistido en localStorage, puramente por-dispositivo: nunca toca la sesión global. */
+  djEnabled: boolean;
+  toggleDjEnabled: () => void;
   refresh: () => Promise<void>;
   searchSongs: (q: string) => Promise<YoutubeSearchResult[]>;
   addToQueue: (videoId: string, playNow?: boolean) => Promise<void>;
@@ -111,6 +119,10 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [localMuted, setLocalMuted] = useState(false);
   const [localVolume, setLocalVolumeState] = useState(DEFAULT_VOLUME);
+  const [djEnabled, setDjEnabledState] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem(DJ_ENABLED_STORAGE_KEY) !== "false";
+  });
 
   const roomIdRef = useRef<string | null>(null);
   // sessionRef espeja el estado `session` para leerlo dentro de callbacks/intervals sin
@@ -290,6 +302,26 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
     if (playerRef.current && !localMutedRef.current) {
       playerRef.current.setVolume(clamped);
     }
+  }, []);
+
+  const toggleDjEnabled = useCallback(() => {
+    setDjEnabledState((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(DJ_ENABLED_STORAGE_KEY, String(next));
+      }
+      if (playerRef.current) {
+        if (next) {
+          playerRef.current.unMute();
+          playerRef.current.setVolume(localVolumeRef.current);
+        } else {
+          playerRef.current.mute();
+        }
+      }
+      setLocalMuted(!next);
+      setVideoHidden(!next);
+      return next;
+    });
   }, []);
 
   // ---- ciclo de vida: atado a estar conectado al audio del LIVE (live.activeRoomId) -----------
@@ -473,6 +505,8 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       localVolume,
       toggleLocalMute,
       setLocalVolume,
+      djEnabled,
+      toggleDjEnabled,
       refresh,
       searchSongs,
       addToQueue,
@@ -508,6 +542,8 @@ export function MenziDjProvider({ children }: { children: React.ReactNode }) {
       localVolume,
       toggleLocalMute,
       setLocalVolume,
+      djEnabled,
+      toggleDjEnabled,
       refresh,
       searchSongs,
       addToQueue,

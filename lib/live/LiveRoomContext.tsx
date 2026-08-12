@@ -697,6 +697,20 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  // menzomovil manda esto cada 15s mientras hay un LIVE activo (ver LiveNotifier._startHeartbeat)
+  // — la web nunca lo hizo. `beforeunload` es best-effort y no dispara ante un crash o un cierre
+  // forzado del proceso, así que sin este ping periódico un usuario podía quedar como participante
+  // fantasma para siempre (visible para el resto) hasta que alguien lo expulsara a mano. El
+  // heartbeat de sesión que ya existía solo evita que la sesión ENTERA se cierre sola; esto cubre
+  // la limpieza de la fila individual de este participante en el backend.
+  useEffect(() => {
+    if (!connected || !activeRoomId) return;
+    const interval = setInterval(() => {
+      liveApi.heartbeat(activeRoomId).catch(() => {});
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [connected, activeRoomId]);
+
   const canSpeak = myRole !== null && SPEAKING_ROLES.includes(myRole);
 
   const value = useMemo<LiveRoomContextValue>(

@@ -9,14 +9,12 @@ import type {
   ChatRoomDto,
   CommentDto,
   CommunityConfigDto,
-  CreateEventRequest,
   CreatePostRequest,
   CreateRoomRequest,
   CommunityDetailDto,
   CommunityMembershipDto,
   CommunitySummaryDto,
   CreateStickerPackRequest,
-  EventDto,
   GifSearchResponseDto,
   InterestDto,
   LiveParticipantDto,
@@ -216,6 +214,12 @@ export const liveApi = {
     apiFetch<LiveSessionDto>(`/api/chat/rooms/${roomId}/live`, { method: "PATCH", body }),
   join: (roomId: string) => apiFetch<LiveSessionDto>(`/api/chat/rooms/${roomId}/live/join`, { method: "POST" }),
   leave: (roomId: string) => apiFetch<void>(`/api/chat/rooms/${roomId}/live/leave`, { method: "POST" }),
+  // menzomovil ya llama esto cada 15s mientras hay un LIVE activo (ver LiveNotifier._startHeartbeat);
+  // la web nunca lo hizo, así que un cierre abrupto de pestaña (crash, cerrar sin beforeunload)
+  // dejaba al usuario como participante fantasma para siempre en la sala — nada expiraba su fila
+  // individual (el heartbeat de sesión que sí existe solo cubre que la sesión ENTERA no se cierre
+  // sola, no que cada participante se limpie). Ver LiveService.heartbeat en el backend.
+  heartbeat: (roomId: string) => apiFetch<void>(`/api/chat/rooms/${roomId}/live/heartbeat`, { method: "POST" }),
   token: (roomId: string) => apiFetch<LiveTokenDto>(`/api/chat/rooms/${roomId}/live/token`),
   participants: (roomId: string) => apiFetch<LiveParticipantDto[]>(`/api/chat/rooms/${roomId}/live/participants`),
   setMicrophone: (roomId: string, enabled: boolean) =>
@@ -276,12 +280,6 @@ export const musicApi = {
 
 export const communityApi = {
   config: () => apiFetch<CommunityConfigDto>("/api/community/config"),
-  events: () => apiFetch<EventDto[]>("/api/community/events"),
-  getEvent: (id: string) => apiFetch<EventDto>(`/api/community/events/${id}`),
-  createEvent: (body: CreateEventRequest) =>
-    apiFetch<EventDto>("/api/community/events", { method: "POST", body }),
-  attend: (id: string) => apiFetch<void>(`/api/community/events/${id}/attend`, { method: "PUT" }),
-  unattend: (id: string) => apiFetch<void>(`/api/community/events/${id}/attend`, { method: "DELETE" }),
 };
 
 export const notificationsApi = {
