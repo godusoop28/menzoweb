@@ -362,6 +362,13 @@ export type MessageReplyPreviewDto = {
 
 export type MessageStickerPreviewDto = { id: string; imageUrl: string };
 
+/** userIds en vez de un booleano "reactedByMe" resuelto server-side a propósito: este mismo DTO
+ * se reenvía tal cual por WebSocket a todos los suscriptos de la sala (ver
+ * ChatService.broadcastMessage en menzoapi), así que un booleano ya calculado sería incorrecto
+ * para cualquier cliente que no sea quien reaccionó — cada cliente compara su propio id contra
+ * esta lista (ver mapMessage). */
+export type MessageReactionDto = { emoji: string; count: number; userIds: string[] };
+
 export type MessageDto = {
   id: string;
   roomId: string;
@@ -374,6 +381,7 @@ export type MessageDto = {
   replyTo: MessageReplyPreviewDto | null;
   deleted: boolean;
   sticker: MessageStickerPreviewDto | null;
+  reactions: MessageReactionDto[];
 };
 
 export type SendMessageRequest = {

@@ -119,6 +119,10 @@ export type MessageReplyPreview = {
 
 export type MessageStickerPreview = { id: string; imageUrl: string };
 
+/** Ver MessageReactionDto en lib/api/types.ts — sin reactedByMe resuelto acá tampoco, se deriva
+ * en el componente comparando userIds contra el id propio (ver ChatBubble). */
+export type MessageReaction = { emoji: string; count: number; userIds: string[] };
+
 export type Message = {
   id: string;
   roomId: string;
@@ -134,6 +138,7 @@ export type Message = {
   replyTo: MessageReplyPreview | null;
   deleted: boolean;
   sticker: MessageStickerPreview | null;
+  reactions: MessageReaction[];
 };
 
 export type ChatRoomType = "public" | "direct";

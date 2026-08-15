@@ -1,14 +1,65 @@
 import Link from "next/link";
+import { useState } from "react";
 
 import { Avatar } from "./Avatar";
 import { ReplyIcon, TrashIcon } from "./icons";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
+import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
 
 const ROLE_BADGE: Partial<Record<RoomRole, string>> = { OWNER: "👑", CO_HOST: "⭐" };
+
+/** Mismo set fijo que menzomovil/_quickReactionEmojis — un puñado de reacciones rápidas, no un
+ * selector completo de emojis (eso sería una feature aparte). */
+const QUICK_REACTION_EMOJIS = ["❤️", "😂", "👍", "😮", "😢", "🙏"];
+
+function ReactionChips({ message, onReact }: { message: Message; onReact?: (message: Message, emoji: string) => void }) {
+  if (message.reactions.length === 0) return null;
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${message.reactions.length ? "mt-1" : ""}`}>
+      {message.reactions.map((reaction) => {
+        const reactedByMe = reaction.userIds.includes(LOCAL_USER_ID);
+        return (
+          <button
+            key={reaction.emoji}
+            onClick={() => onReact?.(message, reaction.emoji)}
+            disabled={!onReact}
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors cursor-pointer ${
+              reactedByMe
+                ? "border border-[var(--color-orange)] bg-[var(--color-orange)]/20"
+                : "border border-transparent bg-[var(--color-surface-secondary)] hover:bg-[var(--color-surface-secondary)]/70"
+            }`}
+          >
+            <span>{reaction.emoji}</span>
+            <span className="text-[var(--color-text-secondary)]">{reaction.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReactionPicker({ onPick, onClose }: { onPick: (emoji: string) => void; onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-10" onClick={onClose} aria-hidden />
+      <div className="absolute bottom-full z-20 mb-1 flex gap-1 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-background)] px-2 py-1.5 shadow-lg">
+        {QUICK_REACTION_EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => onPick(emoji)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 cursor-pointer"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export function ChatBubble({
   message,
@@ -17,6 +68,7 @@ export function ChatBubble({
   role,
   grouped,
   onReply,
+  onReact,
   onDelete,
 }: {
   message: Message;
@@ -30,12 +82,16 @@ export function ChatBubble({
    * long-press real como mobile, así que acá el ícono aparece al pasar el mouse (`group-hover`) —
    * en touch queda siempre tenue pero visible, sin necesitar un timer de long-press a mano. */
   onReply?: (message: Message) => void;
+  /** Ausente (o mensaje de sistema) → sin botón de reaccionar. Abre un mini picker con
+   * QUICK_REACTION_EMOJIS al pasar el mouse/tocar, igual criterio que onReply. */
+  onReact?: (message: Message, emoji: string) => void;
   /** Presente cuando el llamador ya decidió que este usuario puede borrar este mensaje (autor
    * siempre; CURATOR+ para el de otros, ver chat/[id]/page.tsx) — el propio botón no vuelve a
    * chequear permisos. */
   onDelete?: (message: Message) => void;
 }) {
   const accent = useAccent();
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
 
   if (message.type === "system") {
     return (
@@ -61,13 +117,35 @@ export function ChatBubble({
         ) : (
           <Avatar name="?" gradient="fire" size={30} />
         )}
-        <div className="flex flex-col gap-1">
+        <div className={`flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={message.sticker.imageUrl} alt="" className="h-32 w-32 object-contain" />
+          <ReactionChips message={message} onReact={onReact} />
           <span className={`text-[10px] ${isOwn ? "self-end" : ""} text-[var(--color-text-muted)]`}>
             {relativeTime(message.createdAt)}
           </span>
         </div>
+        {onReact && (
+          <div className="relative">
+            <button
+              onClick={() => setShowReactionPicker((v) => !v)}
+              aria-label="Reaccionar"
+              title="Reaccionar"
+              className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-sm opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              🙂
+            </button>
+            {showReactionPicker && (
+              <ReactionPicker
+                onPick={(emoji) => {
+                  onReact(message, emoji);
+                  setShowReactionPicker(false);
+                }}
+                onClose={() => setShowReactionPicker(false)}
+              />
+            )}
+          </div>
+        )}
         {onDelete && (
           <button
             onClick={() => onDelete(message)}
@@ -101,6 +179,7 @@ export function ChatBubble({
       ) : (
         <Avatar name="?" gradient="fire" size={30} />
       )}
+      <div className={`flex min-w-0 flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}>
       <div
         className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] px-4 py-2 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
           isOwn
@@ -161,6 +240,8 @@ export function ChatBubble({
           {relativeTime(message.createdAt)}
         </span>
       </div>
+      <ReactionChips message={message} onReact={onReact} />
+      </div>
       {!message.deleted && onReply && (
         <button
           onClick={() => onReply(message)}
@@ -170,6 +251,27 @@ export function ChatBubble({
         >
           <ReplyIcon size={14} />
         </button>
+      )}
+      {!message.deleted && onReact && (
+        <div className="relative">
+          <button
+            onClick={() => setShowReactionPicker((v) => !v)}
+            aria-label="Reaccionar"
+            title="Reaccionar"
+            className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-sm opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            🙂
+          </button>
+          {showReactionPicker && (
+            <ReactionPicker
+              onPick={(emoji) => {
+                onReact(message, emoji);
+                setShowReactionPicker(false);
+              }}
+              onClose={() => setShowReactionPicker(false)}
+            />
+          )}
+        </div>
       )}
       {!message.deleted && onDelete && (
         <button

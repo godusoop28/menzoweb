@@ -173,6 +173,8 @@ export const chatApi = {
     apiFetch<MessageDto>(`/api/chat/rooms/${id}/messages`, { method: "POST", body }),
   deleteMessage: (id: string, messageId: string, body?: ReasonRequest) =>
     apiFetch<void>(`/api/chat/rooms/${id}/messages/${messageId}`, { method: "DELETE", body }),
+  toggleReaction: (id: string, messageId: string, emoji: string) =>
+    apiFetch<MessageDto>(`/api/chat/rooms/${id}/messages/${messageId}/reactions`, { method: "POST", body: { emoji } }),
   members: (id: string) => apiFetch<RoomMemberDto[]>(`/api/chat/rooms/${id}/members`),
   promote: (id: string, userId: string) =>
     apiFetch<void>(`/api/chat/rooms/${id}/members/${userId}/promote`, { method: "POST" }),

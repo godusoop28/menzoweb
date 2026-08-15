@@ -62,6 +62,7 @@ type AppStateContextValue = {
     deletePost: (postId: string, reason?: string) => Promise<void>;
     sendMessage: (roomId: string, body: string, replyToMessageId?: string, stickerId?: string) => Promise<void>;
     deleteMessage: (roomId: string, messageId: string, reason?: string) => Promise<void>;
+    toggleReaction: (roomId: string, messageId: string, emoji: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
     receiveRoomMessage: (dto: import("@/lib/api").MessageDto) => void;
     createRoom: (payload: { name: string; description?: string; topic?: string; category?: string }) => Promise<string | null>;
@@ -410,6 +411,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async function deleteMessage(roomId: string, messageId: string, reason?: string) {
       if (!hasSession()) return;
       await chatApi.deleteMessage(roomId, messageId, reason ? { reason } : undefined);
+    }
+
+    /** Mismo criterio que deleteMessage: sin patch optimista, el backend reenvía el mensaje
+     * actualizado (con la reacción puesta o quitada) por el mismo tópico STOMP de siempre. */
+    async function toggleReaction(roomId: string, messageId: string, emoji: string) {
+      if (!hasSession()) return;
+      await chatApi.toggleReaction(roomId, messageId, emoji);
     }
 
     async function loadRoomMessages(roomId: string) {
@@ -790,6 +798,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       deletePost,
       sendMessage,
       deleteMessage,
+      toggleReaction,
       loadRoomMessages,
       receiveRoomMessage,
       createRoom,

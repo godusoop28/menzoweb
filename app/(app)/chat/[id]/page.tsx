@@ -201,6 +201,17 @@ export default function ChatRoomPage() {
     }
   }
 
+  /** Sin patch optimista local — igual criterio que handleConfirmDelete: el backend reenvía el
+   * mensaje actualizado por el mismo tópico STOMP, MERGE_SOCIAL lo reconcilia por id. */
+  async function handleToggleReaction(message: Message, emoji: string) {
+    if (!id) return;
+    try {
+      await actions.toggleReaction(id, message.id, emoji);
+    } catch (error) {
+      console.warn("[menzo/web] toggleReaction failed", error);
+    }
+  }
+
   async function handleConfirmDelete(reason?: string) {
     if (!pendingDelete || !id) return;
     setDeletingMessage(true);
@@ -413,6 +424,7 @@ export default function ChatRoomPage() {
                               bodyPreview: m.imageUri && !m.body ? "Imagen" : m.body,
                             })
                     }
+                    onReact={m.type === "system" ? undefined : handleToggleReaction}
                     onDelete={
                       m.type === "system"
                         ? undefined
