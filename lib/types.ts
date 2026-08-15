@@ -68,7 +68,21 @@ export type AbstractVisual = { preset: AbstractVisualPreset; caption?: string };
 export type PollOption = { id: string; label: string; votes: string[] };
 
 export type PostBlockType = "paragraph" | "heading" | "image" | "gif" | "divider";
-export type PostBlock = { id: string; type: PostBlockType; text: string | null; url: string | null; alt: string | null };
+export type PostBlockFontSize = "sm" | "md" | "lg" | "xl";
+export type PostBlockFontFamily = "sans" | "serif" | "mono";
+export type PostBlockAlign = "left" | "center" | "right";
+export type PostBlock = {
+  id: string;
+  type: PostBlockType;
+  text: string | null;
+  url: string | null;
+  alt: string | null;
+  fontSize: PostBlockFontSize | null;
+  fontFamily: PostBlockFontFamily | null;
+  align: PostBlockAlign | null;
+  bold: boolean | null;
+  italic: boolean | null;
+};
 
 export type Post = {
   id: string;

@@ -109,16 +109,29 @@ export type PollOptionDto = { id: string; label: string; voteCount: number; vote
 export type AbstractVisualDto = { preset: string; caption: string | null };
 
 /** Espejo de PostBlock.java (backend) — `type` decide qué otros campos importan:
- * paragraph/heading usan `text`; image/gif usan `url` (siempre https, nunca un blob local) y
- * opcionalmente `alt`; divider no usa ninguno. `id` es generado por el cliente, solo para keys de
- * React al reordenar — el backend nunca le da significado propio. */
+ * paragraph/heading usan `text` (+ formato, ver abajo); image/gif usan `url` (siempre https,
+ * nunca un blob local), opcionalmente `alt` y `align`; divider no usa ninguno. `id` es generado
+ * por el cliente, solo para keys de React al reordenar — el backend nunca le da significado
+ * propio.
+ *
+ * Formato "tipo Word" por bloque (no por selección/carácter — ver comentario de BlockEditor.tsx
+ * sobre por qué). `null` siempre significa "el default del cliente" (fontSize md, fontFamily
+ * sans, align left, bold/italic false) — nunca se manda un default explícito. */
 export type PostBlockType = "paragraph" | "heading" | "image" | "gif" | "divider";
+export type PostBlockFontSize = "sm" | "md" | "lg" | "xl";
+export type PostBlockFontFamily = "sans" | "serif" | "mono";
+export type PostBlockAlign = "left" | "center" | "right";
 export type PostBlockDto = {
   id: string;
   type: PostBlockType;
   text: string | null;
   url: string | null;
   alt: string | null;
+  fontSize: PostBlockFontSize | null;
+  fontFamily: PostBlockFontFamily | null;
+  align: PostBlockAlign | null;
+  bold: boolean | null;
+  italic: boolean | null;
 };
 
 export type PostDto = {
