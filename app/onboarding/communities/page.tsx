@@ -19,13 +19,29 @@ export default function OnboardingCommunitiesPage() {
   const router = useRouter();
   const [communities, setCommunities] = useState<CommunitySummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
+  // Sin esto, un cold-start de Render (o cualquier hiccup de red justo en la cuenta recién
+  // creada) dejaba `communities` vacío en silencio para siempre: "Todavía no hay comunidades
+  // disponibles" con el botón Continuar deshabilitado y ninguna forma de reintentar — la cuenta
+  // quedaba efectivamente atascada a mitad de registro. Este es el bug reportado de "no le salen
+  // las comunidades al crear cuenta".
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  function loadCommunities() {
+    setLoading(true);
+    setError(false);
     communitiesApi
       .list(0, 50)
       .then((page) => setCommunities(page.items))
-      .catch((error) => console.warn("[menzo/web] communities list failed", error))
+      .catch((err) => {
+        console.warn("[menzo/web] communities list failed", err);
+        setError(true);
+      })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reintentable fetch on mount, not derived render state
+    loadCommunities();
   }, []);
 
   const canContinue = draft.communityIds.length >= 1;
@@ -39,7 +55,18 @@ export default function OnboardingCommunitiesPage() {
         </div>
 
         {loading && <p className="text-sm text-[var(--color-text-muted)]">Cargando…</p>}
-        {!loading && communities.length === 0 && (
+        {!loading && error && (
+          <div className="flex flex-col items-start gap-2 rounded-2xl border border-[var(--color-coral)]/40 bg-[var(--color-coral)]/10 p-4">
+            <p className="text-sm text-[var(--color-coral)]">No pudimos cargar las comunidades disponibles.</p>
+            <button
+              onClick={loadCommunities}
+              className="rounded-full bg-[var(--color-coral)] px-4 py-2 text-xs font-bold text-white cursor-pointer"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {!loading && !error && communities.length === 0 && (
           <p className="text-sm text-[var(--color-text-muted)]">Todavía no hay comunidades disponibles.</p>
         )}
 
