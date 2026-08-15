@@ -228,6 +228,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
         const tokenDto = await liveApi.token(roomId);
         await client.renewToken(tokenDto.token);
+        // mode "live" exige rol "host" para poder publicar — sin esto, publish() más abajo
+        // (dentro de publishMicTrack) lo rechaza silenciosamente porque seguía como "audience".
+        await client.setClientRole("host");
         setMyRole("speaker");
         await publishMicTrack(client, AgoraRTC);
       } catch (error) {
@@ -255,6 +258,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       try {
         const tokenDto = await liveApi.token(roomId);
         await client.renewToken(tokenDto.token);
+        await client.setClientRole("audience");
       } catch (error) {
         console.warn("[menzo/live] renew subscriber token failed", error);
       }
@@ -499,8 +503,30 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         AgoraRTC.onAutoplayFailed = () => setAutoplayBlocked(true);
 
         const tokenDto = await liveApi.token(roomId);
-        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        // mode "live" (LiveBroadcasting), no "rtc" (Communication) — tiene que coincidir con el
+        // perfil de canal que ya usa menzomovil (ChannelProfileType.channelProfileLiveBroadcasting,
+        // ver live_provider.dart) porque Agora exige que TODOS los participantes de un mismo canal
+        // compartan el mismo perfil; mezclarlos (como quedó acá desde antes de esa migración) es
+        // una configuración no soportada que produce justo delay/audio cortado/intermitente
+        // dependiendo de qué combinación de plataformas hay en la sala.
+        const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
         clientRef.current = client;
+        await client.setClientRole(SPEAKING_ROLES.includes(role) ? "host" : "audience");
+
+        // El token de Agora expira a la hora (ver LiveService.TOKEN_EXPIRE_SECONDS en menzoapi):
+        // sin este listener, cualquier LIVE que dure más que eso se corta de golpe para todos, sin
+        // aviso ni reconexión — mismo patrón que ya usa becomeSpeaker/becomeAudience para renovar
+        // tras un cambio de rol, pero disparado proactivamente en vez de esperar a que ya haya
+        // expirado. menzomovil ya tiene el equivalente (ensureFreshAccessToken + reintento de
+        // renovación, ver live_provider.dart).
+        client.on("token-privilege-will-expire", async () => {
+          try {
+            const freshToken = await liveApi.token(roomId);
+            await client.renewToken(freshToken.token);
+          } catch (error) {
+            console.warn("[menzo/live] token renewal failed", error);
+          }
+        });
 
         client.enableAudioVolumeIndicator();
         client.on("volume-indicator", (volumes) => {
