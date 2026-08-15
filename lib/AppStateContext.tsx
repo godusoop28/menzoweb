@@ -85,6 +85,7 @@ type AppStateContextValue = {
     addComment: (postId: string, body: string) => void;
     votePoll: (postId: string, optionId: string) => Promise<void>;
     ensureUserLoaded: (userId: string) => Promise<void>;
+    refreshUser: (userId: string) => Promise<void>;
     addUserTitle: (profileId: string, text: string, color: string) => Promise<void>;
     removeUserTitle: (profileId: string, titleId: string) => Promise<void>;
     loadProfileWall: (profileId: string) => Promise<void>;
@@ -607,6 +608,23 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    /** A diferencia de ensureUserLoaded, SIEMPRE pide el perfil de nuevo — ensureUserLoaded se
+     * salta el fetch si ese id ya está en social.users, algo intencional para no repetir
+     * consultas al mostrar un avatar/nombre suelto (autor de un post, un mensaje), pero incorrecto
+     * para la pantalla de perfil en sí: si ese usuario ya había aparecido como autor de cualquier
+     * cosa antes de abrir su perfil, la pantalla se quedaba con esos datos livianos/desactualizados
+     * (sin sus títulos nuevos, p.ej.) hasta un refresh completo del navegador. */
+    async function refreshUser(userId: string) {
+      if (userId === LOCAL_USER_ID) return;
+      try {
+        const dto = await usersApi.getById(userId);
+        const myRealId = getMyRealId();
+        dispatch({ type: "MERGE_SOCIAL", payload: { users: [mapDemoUser(dto, myRealId)] } });
+      } catch (error) {
+        console.warn("[menzo/api] refreshUser failed", error);
+      }
+    }
+
     /** LEADER+ (el backend re-verifica, ver AdminService.addTitle en menzoapi) — igual criterio
      * de resolución de id que loadProfileWall: profileId puede venir como LOCAL_USER_ID cuando
      * el objetivo es uno mismo, pero el endpoint necesita el UUID real. */
@@ -839,6 +857,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addComment,
       votePoll,
       ensureUserLoaded,
+      refreshUser,
       addUserTitle,
       removeUserTitle,
       loadProfileWall,

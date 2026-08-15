@@ -26,6 +26,10 @@ export default function ProfilePage() {
   const profile = state.profile;
 
   useEffect(() => {
+    // state.profile es un caché en memoria que solo se actualiza con acciones explícitas (login,
+    // "Actualizar" manual) — sin este refresh al abrir la pantalla, un título que otro LEADER te
+    // haya puesto mientras tanto no aparecía hasta tocar ese botón a mano.
+    actions.refreshProfile();
     actions.loadProfileWall(LOCAL_USER_ID);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

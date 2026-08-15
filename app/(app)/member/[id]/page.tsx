@@ -39,7 +39,11 @@ export default function MemberProfilePage() {
 
   useEffect(() => {
     if (!id) return;
-    if (!isSelf) actions.ensureUserLoaded(id);
+    // refreshUser, no ensureUserLoaded — este último se salta el fetch si el id ya apareció como
+    // autor liviano de un post/mensaje en otra parte, lo que dejaba esta pantalla de perfil
+    // mostrando datos viejos (p.ej. títulos que otro LEADER acaba de poner) hasta un refresh
+    // completo del navegador.
+    if (!isSelf) actions.refreshUser(id);
     actions.loadProfileWall(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
