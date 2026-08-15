@@ -12,6 +12,7 @@ import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { communityFallbackGradient } from "@/lib/communities/backgroundStyle";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
 
@@ -21,8 +22,9 @@ type RoomSort = "recent" | "popular";
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
-  const { activeCommunityDetail } = useCommunity();
+  const { activeCommunity, activeCommunityDetail } = useCommunity();
   const feedBackgroundUrl = activeCommunityDetail?.themeConfig?.feedBackgroundUrl || activeCommunityDetail?.backgroundUrl;
+  const feedFallbackGradient = communityFallbackGradient(activeCommunity);
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
@@ -78,9 +80,15 @@ export default function FeedPage() {
     <div
       className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8"
       style={
-        feedBackgroundUrl
+        feedBackgroundUrl || feedFallbackGradient
           ? {
-              backgroundImage: `linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88)), url(${feedBackgroundUrl})`,
+              backgroundImage: [
+                "linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88))",
+                feedBackgroundUrl ? `url(${feedBackgroundUrl})` : null,
+                feedFallbackGradient,
+              ]
+                .filter(Boolean)
+                .join(", "),
               backgroundSize: "cover",
               backgroundPosition: "top center",
               backgroundAttachment: "fixed",

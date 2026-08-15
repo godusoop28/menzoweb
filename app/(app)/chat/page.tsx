@@ -7,13 +7,15 @@ import { GradientButton } from "@/components/GradientButton";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { communityFallbackGradient } from "@/lib/communities/backgroundStyle";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 
 export default function ChatListPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
-  const { activeCommunityDetail } = useCommunity();
+  const { activeCommunity, activeCommunityDetail } = useCommunity();
   const chatBackgroundUrl = activeCommunityDetail?.themeConfig?.chatBackgroundUrl || activeCommunityDetail?.backgroundUrl;
+  const chatFallbackGradient = communityFallbackGradient(activeCommunity);
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -42,9 +44,15 @@ export default function ChatListPage() {
     <div
       className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-5 px-4 py-6 md:px-8"
       style={
-        chatBackgroundUrl
+        chatBackgroundUrl || chatFallbackGradient
           ? {
-              backgroundImage: `linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88)), url(${chatBackgroundUrl})`,
+              backgroundImage: [
+                "linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88))",
+                chatBackgroundUrl ? `url(${chatBackgroundUrl})` : null,
+                chatFallbackGradient,
+              ]
+                .filter(Boolean)
+                .join(", "),
               backgroundSize: "cover",
               backgroundPosition: "top center",
               backgroundAttachment: "fixed",
