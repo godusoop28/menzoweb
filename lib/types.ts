@@ -307,6 +307,7 @@ export type ModerationActionType =
   | "UNSUSPEND_USER"
   | "DELETE_ACCOUNT"
   | "DELETE_POST"
+  | "EDIT_POST"
   | "HIDE_POST"
   | "UNHIDE_POST"
   | "DELETE_MESSAGE"

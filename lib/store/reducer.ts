@@ -45,6 +45,7 @@ export type Action =
   | { type: "TOGGLE_LIKE"; payload: { postId: string } }
   | { type: "TOGGLE_BOOKMARK"; payload: { postId: string } }
   | { type: "CREATE_POST"; payload: Post }
+  | { type: "REMOVE_POST"; payload: { postId: string } }
   | { type: "ADD_COMMENT"; payload: Comment }
   | { type: "ADD_WALL_MESSAGE"; payload: WallMessage }
   | { type: "ADD_WALL_COMMENT"; payload: WallComment }
@@ -179,6 +180,16 @@ export function appReducer(state: AppState, action: Action): AppState {
           users: state.social.users.map((u) =>
             u.id === LOCAL_USER_ID && updatedProfile ? { ...u, xp, level: nextLevel(xp) } : u
           ),
+        },
+      };
+    }
+
+    case "REMOVE_POST": {
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          posts: state.social.posts.filter((p) => p.id !== action.payload.postId),
         },
       };
     }

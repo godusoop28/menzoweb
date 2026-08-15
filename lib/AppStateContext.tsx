@@ -57,6 +57,8 @@ type AppStateContextValue = {
       pollOptions?: string[];
       blocks?: import("@/lib/api/types").PostBlockDto[];
     }) => Promise<void>;
+    updatePost: (postId: string, payload: { title?: string; blocks: import("@/lib/api/types").PostBlockDto[]; reason?: string }) => Promise<void>;
+    deletePost: (postId: string, reason?: string) => Promise<void>;
     sendMessage: (roomId: string, body: string, replyToMessageId?: string, stickerId?: string) => Promise<void>;
     deleteMessage: (roomId: string, messageId: string, reason?: string) => Promise<void>;
     loadRoomMessages: (roomId: string) => Promise<void>;
@@ -368,6 +370,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         communityId: getItem<string>(StorageKeys.activeCommunityId) ?? undefined,
       });
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
+    }
+
+    async function updatePost(
+      postId: string,
+      payload: { title?: string; blocks: import("@/lib/api/types").PostBlockDto[]; reason?: string }
+    ) {
+      if (!hasSession()) throw new Error("No hay sesión activa");
+      const dto = await postsApi.update(postId, { title: payload.title, blocks: payload.blocks, reason: payload.reason });
+      dispatch({ type: "MERGE_SOCIAL", payload: { posts: [mapPost(dto, getMyRealId())] } });
+    }
+
+    async function deletePost(postId: string, reason?: string) {
+      if (!hasSession()) throw new Error("No hay sesión activa");
+      await postsApi.remove(postId, reason ? { reason } : undefined);
+      dispatch({ type: "REMOVE_POST", payload: { postId } });
     }
 
     async function sendMessage(roomId: string, body: string, replyToMessageId?: string, stickerId?: string) {
@@ -758,6 +775,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleLike,
       toggleBookmark,
       createPost,
+      updatePost,
+      deletePost,
       sendMessage,
       deleteMessage,
       loadRoomMessages,

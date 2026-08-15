@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { BackIcon, BookmarkIcon, HeartIcon, SendIcon } from "@/components/icons";
 import { PollCard } from "@/components/PollCard";
 import { PostBlockRenderer } from "@/components/post/PostBlockRenderer";
+import { PostMenuButton } from "@/components/post/PostMenuButton";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findPost, findUser } from "@/lib/store/selectors";
@@ -62,15 +63,18 @@ export default function PostDetailPage() {
       </button>
 
       {author && (
-        <Link href={`/member/${author.id}`} className="flex items-center gap-3">
-          <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={48} showOnline online={author.isOnline} level={author.level} />
-          <div>
-            <p className="font-medium">{author.displayName}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Nivel {author.level} · {relativeTime(post.createdAt)}
-            </p>
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/member/${author.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={48} showOnline online={author.isOnline} level={author.level} />
+            <div>
+              <p className="font-medium">{author.displayName}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Nivel {author.level} · {relativeTime(post.createdAt)}
+              </p>
+            </div>
+          </Link>
+          <PostMenuButton post={post} />
+        </div>
       )}
 
       {!!post.title && <h1 className="font-display text-2xl font-bold">{post.title}</h1>}

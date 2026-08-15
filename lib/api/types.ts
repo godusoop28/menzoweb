@@ -162,6 +162,9 @@ export type UpdatePostRequest = {
   title?: string;
   blocks: PostBlockDto[];
   tags?: string[];
+  // Ignorado cuando edita el propio autor; obligatorio cuando edita un CURATOR+ el post de otra
+  // persona (ver PostService.updatePost en menzoapi) — mismo criterio que el motivo de deletePost.
+  reason?: string;
 };
 
 export type CommentDto = {
@@ -543,6 +546,7 @@ export type ModerationActionType =
   | "UNSUSPEND_USER"
   | "DELETE_ACCOUNT"
   | "DELETE_POST"
+  | "EDIT_POST"
   | "HIDE_POST"
   | "UNHIDE_POST"
   | "DELETE_MESSAGE"

@@ -13,6 +13,7 @@ import { AbstractArtwork } from "./AbstractArtwork";
 import { Avatar } from "./Avatar";
 import { BookmarkIcon, CommentIcon, HeartIcon } from "./icons";
 import { PollCard } from "./PollCard";
+import { PostMenuButton } from "./post/PostMenuButton";
 
 const typeLabel: Record<Post["type"], string> = {
   text: "",
@@ -73,23 +74,26 @@ export function PostCard({ post }: { post: Post }) {
       </Link>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
-        <Link href={`/member/${author.id}`} className="flex items-center gap-3 min-w-0">
-          <Avatar
-            name={author.displayName}
-            avatarUri={author.avatarUri}
-            gradient={author.avatarGradient}
-            size={38}
-            showOnline
-            online={author.isOnline}
-            level={author.level}
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">{author.displayName}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Nivel {author.level} · {relativeTime(post.createdAt)}
-            </p>
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/member/${author.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar
+              name={author.displayName}
+              avatarUri={author.avatarUri}
+              gradient={author.avatarGradient}
+              size={38}
+              showOnline
+              online={author.isOnline}
+              level={author.level}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">{author.displayName}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Nivel {author.level} · {relativeTime(post.createdAt)}
+              </p>
+            </div>
+          </Link>
+          <PostMenuButton post={post} />
+        </div>
 
         <Link href={`/post/${post.id}`}>
           <p className="line-clamp-3 whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--color-text-secondary)]">{post.body}</p>

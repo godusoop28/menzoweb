@@ -14,7 +14,9 @@ type PendingAction = { kind: "hide" | "unhide" | "delete"; post: Post } | null;
 
 export default function AdminPostsPage() {
   const { state } = useAppState();
-  const isLeaderPlus = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
+  // CURATOR+ (ver PostService.deletePost en menzoapi — bajó de LEADER+ a CURATOR+).
+  const globalRole = state.profile?.globalRole;
+  const isCuratorPlus = globalRole === "CURATOR" || globalRole === "LEADER" || globalRole === "MASTER";
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,7 +106,7 @@ export default function AdminPostsPage() {
                   <EyeOffIcon size={14} /> Ocultar
                 </button>
               )}
-              {isLeaderPlus && (
+              {isCuratorPlus && (
                 <button
                   onClick={() => setPending({ kind: "delete", post })}
                   className="flex items-center gap-1 rounded-full bg-[var(--color-coral)] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
