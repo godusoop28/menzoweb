@@ -63,7 +63,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mx-auto flex h-[var(--app-height,100dvh)] w-full max-w-[1100px] overflow-hidden">
       {/* Sidebar — solo escritorio */}
       <aside
-        className="relative hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-[var(--color-border-soft)] md:px-4 md:py-6"
+        // Sombra en vez de un borde sólido: un borde de 1px se veía como una costura fea cuando
+        // la comunidad tiene fondo de nav (recorta la imagen de forma abrupta contra el panel
+        // principal, que no comparte esa imagen) — la sombra da la misma separación visual sin
+        // ese corte duro, tanto con imagen como sin ella.
+        className="relative hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:px-4 md:py-6 md:shadow-[2px_0_16px_rgba(0,0,0,0.45)]"
         style={
           navBackgroundUrl
             ? { backgroundImage: `url(${navBackgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
