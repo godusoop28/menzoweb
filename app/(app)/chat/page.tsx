@@ -40,7 +40,7 @@ export default function ChatListPage() {
 
   return (
     <div
-      className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6 md:px-8"
+      className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-5 px-4 py-6 md:px-8"
       style={
         chatBackgroundUrl
           ? {
