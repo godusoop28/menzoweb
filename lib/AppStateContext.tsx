@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useRef } fro
 
 import {
   activityApi,
+  ApiError,
   authApi,
   chatApi,
   clearSession,
@@ -193,8 +194,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           };
         } catch (error) {
           console.warn("[menzo/api] no se pudo restaurar la sesión", error);
-          clearSession();
-          next = { ...next, profile: null, onboardingCompleted: false };
+          // Solo se descarta la sesión si el backend realmente la rechazó (401/403). Cualquier
+          // otro error (red caída, backend de Render despertando, timeout) NO debe desloguear a
+          // alguien con tokens válidos — antes cualquier falla acá tiraba la sesión entera, así
+          // que un simple corte de señal al abrir la app forzaba un login nuevo. Se mantiene el
+          // perfil cacheado en localStorage (ya está en `next` desde arriba) y el efecto de
+          // reconexión de más abajo reintenta traer el perfil real + los datos sociales apenas
+          // vuelva la conexión o la pestaña recupere foco.
+          const isAuthError = error instanceof ApiError && (error.status === 401 || error.status === 403);
+          if (isAuthError) {
+            clearSession();
+            next = { ...next, profile: null, onboardingCompleted: false };
+          }
         }
       }
 
@@ -812,6 +823,44 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       clearRecentSearches,
     };
   }, [showToast]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let lastSync = 0;
+    const SYNC_THROTTLE_MS = 10_000;
+
+    // Sin esto, la única forma de que la app "se entere" de que la conexión volvió (wifi
+    // cortado, celular sin señal un rato, pestaña en segundo plano en un cell que suspende JS)
+    // era que la persona refrescara la página a mano — de ahí el reporte de que hay que
+    // refrescar para que cargue. Se replica el patrón "refetch on focus/reconnect" que ya usan
+    // librerías tipo React Query, pero a mano porque esta app maneja su propio store.
+    function resync() {
+      if (!hasSession()) return;
+      const now = Date.now();
+      if (now - lastSync < SYNC_THROTTLE_MS) return;
+      lastSync = now;
+      (async () => {
+        // Si hydrate() no pudo traer el perfil real (backend dormido/sin red al abrir la app),
+        // acá se reintenta — sin esto quien perdió la primera carga se queda con la app
+        // "trabada" hasta un refresh manual.
+        if (!stateRef.current.profile) {
+          await actions.refreshProfile().catch(() => {});
+        }
+        actions.refreshSocial().catch(() => {});
+      })();
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") resync();
+    }
+
+    window.addEventListener("online", resync);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("online", resync);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [actions]);
 
   const value = useMemo(() => ({ state, actions }), [state, actions]);
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { SlowRequestBanner } from "@/components/SlowRequestBanner";
 import { AccentProvider } from "@/lib/AccentContext";
 import { AppStateProvider } from "@/lib/AppStateContext";
 import { CommunityProvider } from "@/lib/communities/CommunityContext";
@@ -10,6 +11,7 @@ import { ToastProvider } from "@/lib/ToastContext";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
+      <SlowRequestBanner />
       <AppStateProvider>
         {/* Depende de AppStateProvider (necesita el perfil para saber si hay sesión) pero es
             independiente de todo lo demás — cambiar de comunidad nunca debe tocar accent/LIVE/DJ. */}
