@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { IRemoteVideoTrack } from "agora-rtc-sdk-ng";
 
-import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, ScreenShareIcon, SettingsIcon, TrashIcon, UsersIcon } from "@/components/icons";
+import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, ScreenShareIcon, SettingsIcon, TrashIcon, UsersIcon, VolumeIcon } from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -53,6 +53,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
   const [showMusic, setShowMusic] = useState(false);
   const [showAudience, setShowAudience] = useState(false);
   const [moderationTarget, setModerationTarget] = useState<LiveParticipant | null>(null);
+  const [volumeTarget, setVolumeTarget] = useState<LiveParticipant | null>(null);
   const myId = getMyRealId();
   const isConnectedHere = live.activeRoomId === room.id;
   const elapsed = useElapsed(live.watchedRoomId === room.id ? live.viewingState?.startedAt : undefined);
@@ -160,6 +161,9 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
                     participant={p}
                     speakingLevel={live.speakingLevels.get(p.user.id) ?? 0}
                     onModerate={canModerate && p.user.id !== myId ? () => setModerationTarget(p) : undefined}
+                    onOpenVolumeControl={p.user.id !== myId ? () => setVolumeTarget(p) : undefined}
+                    locallyMuted={live.localMutedUserIds.has(p.user.id)}
+                    localVolume={live.localVolumes.get(p.user.id) ?? 100}
                   />
                 ))}
                 {stage.length === 0 && (
@@ -212,6 +216,8 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       {showSettings && <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab="live" />}
 
       <ParticipantModerationSheet target={moderationTarget} onClose={() => setModerationTarget(null)} />
+
+      <ParticipantVolumeSheet target={volumeTarget} onClose={() => setVolumeTarget(null)} />
     </div>
   );
 }
@@ -274,6 +280,47 @@ function ParticipantModerationSheet({ target, onClose }: { target: LiveParticipa
   );
 }
 
+/** Volumen/silencio LOCAL de un participante — nunca pega al backend ni afecta lo que escuchan
+ * los demás (ver LiveRoomContext.setLocalParticipantVolume/toggleLocalParticipantMute). A
+ * diferencia de ParticipantModerationSheet, disponible para cualquiera, no solo moderadores. */
+function ParticipantVolumeSheet({ target, onClose }: { target: LiveParticipant | null; onClose: () => void }) {
+  const live = useLiveRoomContext();
+  if (!target) return null;
+  const muted = live.localMutedUserIds.has(target.user.id);
+  const volume = live.localVolumes.get(target.user.id) ?? 100;
+
+  return (
+    <Sheet open={!!target} onClose={onClose} title={target.user.displayName} subtitle="Volumen local" widthClassName="max-w-sm">
+      <div className="flex flex-col gap-4">
+        <p className="text-xs text-[var(--color-text-muted)]">Solo para vos — no cambia lo que escuchan los demás.</p>
+        <label className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-4 py-3 text-sm font-medium cursor-pointer">
+          Ensordecer
+          <input
+            type="checkbox"
+            checked={muted}
+            onChange={() => live.toggleLocalParticipantMute(target.user.id)}
+            className="h-5 w-5 cursor-pointer accent-[var(--color-coral)]"
+          />
+        </label>
+        <div className="flex items-center gap-3">
+          <VolumeIcon size={16} className="shrink-0 text-[var(--color-text-muted)]" />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={volume}
+            disabled={muted}
+            onChange={(e) => live.setLocalParticipantVolume(target.user.id, Number(e.target.value))}
+            className="w-full cursor-pointer accent-[var(--color-orange)] disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <span className="w-10 shrink-0 text-right text-xs text-[var(--color-text-muted)]">{muted ? 0 : volume}%</span>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 /** Superficie de video para la pantalla compartida — Discord no la usa como "toma total" de la
  * pantalla, sigue mostrando el resto (escenario, audiencia) debajo; acá se hace lo mismo, es un
  * elemento más arriba del escenario, no un modo aparte. `track.play(el)` es imperativo (Agora
@@ -302,10 +349,16 @@ function StageSlot({
   participant,
   speakingLevel,
   onModerate,
+  onOpenVolumeControl,
+  locallyMuted,
+  localVolume,
 }: {
   participant: LiveParticipant;
   speakingLevel: number;
   onModerate?: (participant: LiveParticipant) => void;
+  onOpenVolumeControl?: (participant: LiveParticipant) => void;
+  locallyMuted?: boolean;
+  localVolume?: number;
 }) {
   const isHost = participant.role === "host";
   return (
@@ -314,6 +367,9 @@ function StageSlot({
       size={isHost ? 76 : 60}
       speakingLevel={speakingLevel}
       onModerate={onModerate}
+      onOpenVolumeControl={onOpenVolumeControl}
+      locallyMuted={locallyMuted}
+      localVolume={localVolume}
     />
   );
 }

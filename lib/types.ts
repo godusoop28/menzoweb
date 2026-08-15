@@ -18,6 +18,10 @@ export type Badge = { id: string; name: string; description: string; icon: strin
 
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
 
+/** Etiqueta de texto libre con color propio (p.ej. "Friendly") que un LEADER+ le otorgó a este
+ * usuario — ver UserTitleDto en lib/api/types.ts. Se muestra debajo del perfil. */
+export type UserTitle = { id: string; text: string; color: string; createdAt: string };
+
 export type UserProfile = {
   id: string;
   displayName: string;
@@ -40,6 +44,7 @@ export type UserProfile = {
   visitors: number;
   isOnline: boolean;
   badges: string[];
+  titles: UserTitle[];
   isLocalUser?: boolean;
   followedByMe?: boolean;
   followsMe?: boolean;

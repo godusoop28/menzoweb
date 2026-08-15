@@ -9,6 +9,7 @@ import { GradientButton } from "@/components/GradientButton";
 import { BackIcon } from "@/components/icons";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
@@ -78,6 +79,7 @@ export default function MemberProfilePage() {
   }
 
   const hasBackground = !!(user.backgroundUri || user.backgroundColor);
+  const canManageTitles = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
 
   const content = (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
@@ -152,6 +154,12 @@ export default function MemberProfilePage() {
 
           {!!user.bio && <p className="text-sm text-[var(--color-text-secondary)]">{user.bio}</p>}
           <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(user.joinedAt)}</p>
+          <UserTitles
+            titles={user.titles}
+            canManage={canManageTitles}
+            onAdd={(text, color) => actions.addUserTitle(user.id, text, color)}
+            onRemove={(title) => actions.removeUserTitle(user.id, title.id)}
+          />
         </div>
       </div>
 

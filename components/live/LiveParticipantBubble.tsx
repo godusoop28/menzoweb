@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/Avatar";
-import { MicOffIcon } from "@/components/icons";
+import { MicOffIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
 import type { LiveParticipant, LiveParticipantRole } from "@/lib/types";
 
 const ROLE_RING: Record<LiveParticipantRole, string | null> = {
@@ -28,6 +28,9 @@ export function LiveParticipantBubble({
   size = 64,
   speakingLevel = 0,
   onModerate,
+  onOpenVolumeControl,
+  locallyMuted = false,
+  localVolume = 100,
 }: {
   participant: LiveParticipant;
   size?: number;
@@ -36,6 +39,12 @@ export function LiveParticipantBubble({
    * LiveRoomPanel: nunca sobre uno mismo, y el backend vuelve a validar todo igual). Sin esto la
    * burbuja sigue siendo puramente presentacional, como antes. */
   onModerate?: (participant: LiveParticipant) => void;
+  /** Abre el control de volumen/silencio LOCAL de este participante (ver
+   * LiveRoomContext.setLocalParticipantVolume) — a diferencia de onModerate, disponible para
+   * cualquiera que esté escuchando, no solo moderadores; nunca presente para el propio tile. */
+  onOpenVolumeControl?: (participant: LiveParticipant) => void;
+  locallyMuted?: boolean;
+  localVolume?: number;
 }) {
   const ring = ROLE_RING[participant.role];
   const badge = ROLE_BADGE[participant.role];
@@ -85,6 +94,24 @@ export function LiveParticipantBubble({
           >
             <MicOffIcon size={11} />
           </span>
+        )}
+        {onOpenVolumeControl && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenVolumeControl(participant);
+            }}
+            title="Volumen local"
+            aria-label={`Ajustar volumen local de ${participant.user.displayName}`}
+            className="absolute -bottom-0.5 -left-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 cursor-pointer"
+            style={{
+              background: locallyMuted || localVolume !== 100 ? "var(--color-cyan)" : "var(--color-surface-secondary)",
+              borderColor: "var(--color-background)",
+              color: locallyMuted || localVolume !== 100 ? "var(--color-background)" : "var(--color-text-muted)",
+            }}
+          >
+            {locallyMuted ? <VolumeMuteIcon size={11} /> : <VolumeIcon size={11} />}
+          </button>
         )}
       </div>
       <p className="max-w-[76px] truncate text-center text-[11px] font-medium">{participant.user.displayName}</p>

@@ -76,6 +76,12 @@ type LiveRoomContextValue = {
   muteParticipant: (userId: string) => Promise<void>;
   removeParticipant: (userId: string) => Promise<void>;
   refreshParticipants: () => Promise<void>;
+
+  // Volumen/silencio LOCAL por participante — ver setLocalParticipantVolume más abajo.
+  localVolumes: Map<string, number>;
+  localMutedUserIds: Set<string>;
+  setLocalParticipantVolume: (userId: string, volume: number) => void;
+  toggleLocalParticipantMute: (userId: string) => void;
 };
 
 const LiveRoomContext = createContext<LiveRoomContextValue | null>(null);
@@ -105,6 +111,12 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [remoteScreenShare, setRemoteScreenShare] = useState<{ uid: string; track: IRemoteVideoTrack } | null>(null);
+  // Volumen/silencio LOCAL por participante (userId → 0-100, 100 = normal) — nunca se manda al
+  // backend ni afecta lo que escuchan los demás, mismo criterio que localVolume/localMuted de
+  // Menzi DJ (ver MENZI_DJ_ARCHITECTURE.md en menzomovil) y el equivalente en live_provider.dart.
+  // Ausente en el mapa = volumen normal (100). Distinto de `muteParticipant` (arriba, server-side).
+  const [localVolumes, setLocalVolumes] = useState<Map<string, number>>(new Map());
+  const [localMutedUserIds, setLocalMutedUserIds] = useState<Set<string>>(new Set());
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -118,6 +130,12 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   // antes de que React re-renderice; leer del ref siempre da el valor más reciente.
   const mutedRef = useRef(true);
   const screenSharingRef = useRef(false);
+  // Espejo de localVolumes/localMutedUserIds, leído dentro del handler "user-published" (definido
+  // una sola vez por join, así que un closure ahí quedaría con el mapa/set vacío del primer
+  // render si leyera el estado directo) — al reaparecer el audio de alguien (reconexión, o
+  // simplemente activó el mic recién) se reaplica la preferencia local guardada.
+  const localVolumesRef = useRef<Map<string, number>>(new Map());
+  const localMutedUserIdsRef = useRef<Set<string>>(new Set());
 
   const stompRef = useRef<Client | null>(null);
 
@@ -132,6 +150,14 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     screenSharingRef.current = screenSharing;
   }, [screenSharing]);
+
+  useEffect(() => {
+    localVolumesRef.current = localVolumes;
+  }, [localVolumes]);
+
+  useEffect(() => {
+    localMutedUserIdsRef.current = localMutedUserIds;
+  }, [localMutedUserIds]);
 
   // ---- WebSocket: un cliente STOMP persistente para todo el provider, con suscripciones que se
   // agregan/quitan dinámicamente por sala (watchedRoomId y activeRoomId pueden ser salas
@@ -483,6 +509,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     setAutoplayBlocked(false);
     setScreenSharing(false);
     setRemoteScreenShare(null);
+    // Salir del canal deja de tener sentido cualquier preferencia local — la próxima sala tiene
+    // participantes distintos, y reaplicarla ahí sería aleatorio/confuso.
+    setLocalVolumes(new Map());
+    setLocalMutedUserIds(new Set());
   }, []);
 
   const join = useCallback(
@@ -537,8 +567,17 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
         client.on("user-published", async (user, mediaType) => {
           await client.subscribe(user, mediaType);
           if (mediaType === "audio" && user.audioTrack) {
-            remoteAudioTracksRef.current.set(String(user.uid), user.audioTrack);
+            const uid = String(user.uid);
+            remoteAudioTracksRef.current.set(uid, user.audioTrack);
             user.audioTrack.play();
+            // Reaplica la preferencia LOCAL guardada para este uid, si había una — el track es
+            // nuevo (reconexión, o recién activó el mic) y por defecto arranca en volumen 100.
+            if (localMutedUserIdsRef.current.has(uid)) {
+              user.audioTrack.setVolume(0);
+            } else {
+              const savedVolume = localVolumesRef.current.get(uid);
+              if (savedVolume !== undefined) user.audioTrack.setVolume(savedVolume);
+            }
           } else if (mediaType === "video" && user.videoTrack) {
             // No se hace .play() acá (a diferencia del audio) — un video necesita un elemento del
             // DOM real para pintarse, que todavía no existe en este punto; lo provee la UI
@@ -705,6 +744,41 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     await liveApi.removeParticipant(roomId, userId);
   }, []);
 
+  /** Volumen LOCAL de un participante remoto (0-100) — nunca pega al backend ni afecta lo que
+   * escuchan los demás. remoteAudioTracksRef está keyeado por el mismo string uid con el que se
+   * llamó a client.join (el UUID real, ver el esquema de "String UID" de Agora Web) — a
+   * diferencia de menzomovil, acá no hace falta ningún paso de resolución aparte. Si el track
+   * todavía no existe (el participante no tiene audio publicado ahora mismo) igual se guarda la
+   * preferencia: se reaplica sola cuando aparezca (ver el handler "user-published" más arriba). */
+  const setLocalParticipantVolume = useCallback((userId: string, volume: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(volume)));
+    remoteAudioTracksRef.current.get(userId)?.setVolume(clamped);
+    setLocalVolumes((prev) => {
+      const next = new Map(prev);
+      if (clamped === 100) next.delete(userId);
+      else next.set(userId, clamped);
+      return next;
+    });
+  }, []);
+
+  /** "Ensordecer" a un participante — silencio LOCAL, distinto de muteParticipant (arriba, que
+   * silencia su micrófono para toda la sala). Mismo criterio de resolución que
+   * setLocalParticipantVolume. */
+  const toggleLocalParticipantMute = useCallback((userId: string) => {
+    const muting = !localMutedUserIdsRef.current.has(userId);
+    if (muting) {
+      remoteAudioTracksRef.current.get(userId)?.setVolume(0);
+    } else {
+      remoteAudioTracksRef.current.get(userId)?.setVolume(localVolumesRef.current.get(userId) ?? 100);
+    }
+    setLocalMutedUserIds((prev) => {
+      const next = new Set(prev);
+      if (muting) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  }, []);
+
   // Suscripción en vivo al roster/roles/solicitudes de la sala a la que estoy conectado —
   // independiente de qué pantalla se esté mirando, para que un cambio de rol o un mute forzado
   // se aplique aunque el usuario haya navegado a otra parte (el LIVE sigue minimizado).
@@ -779,6 +853,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       muteParticipant,
       removeParticipant,
       refreshParticipants,
+      localVolumes,
+      localMutedUserIds,
+      setLocalParticipantVolume,
+      toggleLocalParticipantMute,
     }),
     [
       watchedRoomId,
@@ -818,6 +896,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       muteParticipant,
       removeParticipant,
       refreshParticipants,
+      localVolumes,
+      localMutedUserIds,
+      setLocalParticipantVolume,
+      toggleLocalParticipantMute,
     ]
   );
 

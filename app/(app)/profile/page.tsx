@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const mySaved = savedPosts(state.social, LOCAL_USER_ID);
 
   const hasBackground = !!(profile.backgroundUri || profile.backgroundColor);
+  const canManageTitles = profile.globalRole === "LEADER" || profile.globalRole === "MASTER";
 
   const content = (
     <div className="menzo-fade-in mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
@@ -103,6 +105,12 @@ export default function ProfilePage() {
 
           {!!profile.bio && <p className="text-sm text-[var(--color-text-secondary)]">{profile.bio}</p>}
           <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
+          <UserTitles
+            titles={profile.titles}
+            canManage={canManageTitles}
+            onAdd={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
+            onRemove={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
+          />
         </div>
       </div>
 

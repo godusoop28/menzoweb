@@ -39,6 +39,10 @@ export type UserSummaryDto = {
   isOnline: boolean;
 };
 
+/** Etiqueta de texto libre con color propio (p.ej. "Friendly") que un LEADER+ le otorgó a este
+ * usuario — ver AdminService.addTitle en menzoapi. Se muestra debajo del perfil. */
+export type UserTitleDto = { id: string; text: string; color: string; createdAt: string };
+
 export type UserProfileDto = {
   id: string;
   displayName: string;
@@ -61,6 +65,7 @@ export type UserProfileDto = {
   visitors: number;
   isOnline: boolean;
   badges: string[];
+  titles: UserTitleDto[];
   followedByMe: boolean;
   followsMe: boolean;
   areFriends: boolean;
@@ -561,6 +566,7 @@ export type MusicEventDto<TPayload = unknown> = {
 
 export type ReasonRequest = { reason: string };
 export type ChangeRoleRequest = { role: GlobalRole; reason: string };
+export type AddUserTitleRequest = { text: string; color: string };
 
 export type ModerationActionType =
   | "SUSPEND_USER"

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useRef } fro
 
 import {
   activityApi,
+  adminApi,
   ApiError,
   authApi,
   chatApi,
@@ -14,6 +15,7 @@ import {
   loadSession,
   mapChatRoom,
   mapComment,
+  mapDemoUser,
   mapMessage,
   mapNotification,
   mapPost,
@@ -83,6 +85,8 @@ type AppStateContextValue = {
     addComment: (postId: string, body: string) => void;
     votePoll: (postId: string, optionId: string) => Promise<void>;
     ensureUserLoaded: (userId: string) => Promise<void>;
+    addUserTitle: (profileId: string, text: string, color: string) => Promise<void>;
+    removeUserTitle: (profileId: string, titleId: string) => Promise<void>;
     loadProfileWall: (profileId: string) => Promise<void>;
     addWallMessage: (profileId: string, body: string, imageUri?: string, imageFile?: File) => Promise<void>;
     loadWallComments: (wallMessageId: string, page?: number) => Promise<{ hasNext: boolean } | null>;
@@ -603,6 +607,27 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    /** LEADER+ (el backend re-verifica, ver AdminService.addTitle en menzoapi) — igual criterio
+     * de resolución de id que loadProfileWall: profileId puede venir como LOCAL_USER_ID cuando
+     * el objetivo es uno mismo, pero el endpoint necesita el UUID real. */
+    async function addUserTitle(profileId: string, text: string, color: string) {
+      const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
+      if (!targetId) return;
+      const dto = await adminApi.addTitle(targetId, { text, color });
+      dispatch({ type: "MERGE_SOCIAL", payload: { users: [mapDemoUser(dto, getMyRealId())] } });
+      // Un LEADER puede otorgarse un título a sí mismo (ver AdminService.addTitle) — state.profile
+      // vive aparte de social.users (ver profile/page.tsx), así que también hay que refrescarlo.
+      if (profileId === LOCAL_USER_ID) await refreshProfile();
+    }
+
+    async function removeUserTitle(profileId: string, titleId: string) {
+      const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
+      if (!targetId) return;
+      const dto = await adminApi.removeTitle(targetId, titleId);
+      dispatch({ type: "MERGE_SOCIAL", payload: { users: [mapDemoUser(dto, getMyRealId())] } });
+      if (profileId === LOCAL_USER_ID) await refreshProfile();
+    }
+
     async function loadProfileWall(profileId: string) {
       const targetId = profileId === LOCAL_USER_ID ? getMyRealId() : profileId;
       if (!targetId) return;
@@ -814,6 +839,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addComment,
       votePoll,
       ensureUserLoaded,
+      addUserTitle,
+      removeUserTitle,
       loadProfileWall,
       addWallMessage,
       loadWallComments,

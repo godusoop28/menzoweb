@@ -76,6 +76,7 @@ export function mapUserProfile(dto: UserProfileDto, myRealId: string | null): Us
     visitors: dto.visitors,
     isOnline: dto.isOnline,
     badges: dto.badges,
+    titles: dto.titles,
     isLocalUser: !!myRealId && dto.id === myRealId,
     followedByMe: dto.followedByMe,
     followsMe: dto.followsMe,
@@ -122,6 +123,7 @@ export function mapUserSummary(dto: UserSummaryDto, myRealId: string | null): De
     visitors: 0,
     isOnline: dto.isOnline,
     badges: [],
+    titles: [],
     isLocalUser: !!myRealId && dto.id === myRealId,
     activityStatus: "",
     // UserSummaryDto no trae el rol (es un resumen liviano) — el rol real se conoce a través de

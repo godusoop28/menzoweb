@@ -1,6 +1,7 @@
 import { apiFetch } from "./client";
 import type {
   AddQueueItemRequest,
+  AddUserTitleRequest,
   AuraDto,
   AuthResponseDto,
   BadgeDto,
@@ -331,6 +332,10 @@ export const adminApi = {
     apiFetch<void>(`/api/admin/users/${id}`, { method: "DELETE", body }),
   changeRole: (id: string, body: ChangeRoleRequest) =>
     apiFetch<void>(`/api/admin/users/${id}/role`, { method: "POST", body }),
+  addTitle: (id: string, body: AddUserTitleRequest) =>
+    apiFetch<UserProfileDto>(`/api/admin/users/${id}/titles`, { method: "POST", body }),
+  removeTitle: (id: string, titleId: string) =>
+    apiFetch<UserProfileDto>(`/api/admin/users/${id}/titles/${titleId}`, { method: "DELETE" }),
   searchPosts: (query: string, page = 0, size = 20) =>
     apiFetch<PageResponse<PostDto>>(`/api/admin/posts${qs({ query, page, size })}`),
   hidePost: (id: string, body: ReasonRequest) =>
