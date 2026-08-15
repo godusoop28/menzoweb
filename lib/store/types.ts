@@ -40,4 +40,5 @@ export type OnboardingPayload = {
   avatarFile?: File;
   avatarGradient: UserProfile["avatarGradient"];
   interests: UserProfile["interests"];
+  communityIds: string[];
 };

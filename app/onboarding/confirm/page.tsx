@@ -32,6 +32,7 @@ export default function OnboardingConfirmPage() {
         avatarFile: draft.avatarFile,
         avatarGradient: draft.avatarGradient,
         interests: draft.interests,
+        communityIds: draft.communityIds,
       });
       router.replace("/");
     } catch (e) {
@@ -75,10 +76,28 @@ export default function OnboardingConfirmPage() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Comunidades</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            {draft.communityIds.length} comunidad{draft.communityIds.length === 1 ? "" : "es"} seleccionada
+            {draft.communityIds.length === 1 ? "" : "s"}
+          </p>
+        </div>
+
         {!!error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
       </div>
 
-      <GradientButton label="Entrar a Menzo" onClick={handleEnter} loading={submitting} />
+      <div className="flex gap-3">
+        <button
+          onClick={() => router.push("/onboarding/communities")}
+          className="rounded-full border border-[var(--color-border-soft)] px-6 py-3 text-sm font-semibold cursor-pointer"
+        >
+          Atrás
+        </button>
+        <div className="flex-1">
+          <GradientButton label="Entrar a Menzo" onClick={handleEnter} loading={submitting} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export default function OnboardingInterestsPage() {
         </div>
       </div>
 
-      <GradientButton label="Continuar" onClick={() => router.push("/onboarding/confirm")} disabled={!canContinue} />
+      <GradientButton label="Continuar" onClick={() => router.push("/onboarding/communities")} disabled={!canContinue} />
     </div>
   );
 }

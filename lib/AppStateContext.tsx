@@ -296,6 +296,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         avatarUri: avatarUri ?? null,
         avatarGradient: payload.avatarGradient,
         interests: payload.interests,
+        communityIds: payload.communityIds,
       });
       const myRealId = getCachedSession()?.userId ?? dto.id;
       const profile = mapUserProfile(dto, myRealId);

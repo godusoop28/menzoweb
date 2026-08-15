@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { OnboardingDraftProvider } from "@/lib/OnboardingDraftContext";
 
-const STEPS = ["name", "avatar", "interests", "confirm"];
+const STEPS = ["name", "avatar", "interests", "communities", "confirm"];
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

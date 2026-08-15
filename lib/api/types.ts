@@ -94,6 +94,7 @@ export type OnboardingRequest = {
   avatarUri: string | null;
   avatarGradient: string;
   interests: string[];
+  communityIds: string[];
 };
 
 export type UpdateProfileRequest = {

@@ -13,6 +13,9 @@ type OnboardingDraft = {
   avatarFile?: File;
   avatarGradient: GradientId;
   interests: InterestId[];
+  /** Al menos una es obligatoria para completar el onboarding (ver
+   * OnboardingRequest.communityIds en menzoapi). */
+  communityIds: string[];
 };
 
 type OnboardingDraftContextValue = {
@@ -21,6 +24,7 @@ type OnboardingDraftContextValue = {
   setAura: (id: AuraId) => void;
   setAvatar: (uri: string | undefined, file: File | undefined) => void;
   toggleInterest: (id: InterestId) => void;
+  toggleCommunity: (id: string) => void;
 };
 
 const initialDraft: OnboardingDraft = {
@@ -30,6 +34,7 @@ const initialDraft: OnboardingDraft = {
   avatarFile: undefined,
   avatarGradient: "fire",
   interests: [],
+  communityIds: [],
 };
 
 const OnboardingDraftContext = createContext<OnboardingDraftContextValue | null>(null);
@@ -49,6 +54,11 @@ export function OnboardingDraftProvider({ children }: { children: React.ReactNod
           if (has) return { ...d, interests: d.interests.filter((i) => i !== id) };
           if (d.interests.length >= 5) return d;
           return { ...d, interests: [...d.interests, id] };
+        }),
+      toggleCommunity: (id) =>
+        setDraft((d) => {
+          const has = d.communityIds.includes(id);
+          return { ...d, communityIds: has ? d.communityIds.filter((c) => c !== id) : [...d.communityIds, id] };
         }),
     }),
     [draft]
