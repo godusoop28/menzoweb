@@ -275,6 +275,9 @@ export type LiveSessionSummary = {
   myRole: LiveParticipantRole | null;
   myMicrophoneEnabled: boolean;
   hasPendingSpeakRequest: boolean;
+  /** Cuando está en true, cualquier miembro de la sala entra al LIVE directo como hablante, sin
+   * pedir/esperar aprobación — ver ChatLiveSession.openMic en menzoapi. */
+  openMic: boolean;
 };
 
 // ---- DJ Menzi -----------------------------------------------------------------------------

@@ -67,7 +67,7 @@ type LiveRoomContextValue = {
   toggleMute: () => Promise<void>;
   startLive: (roomId: string, info?: { title?: string; description?: string; announcement?: string }) => Promise<void>;
   endLive: (roomId: string) => Promise<void>;
-  updateLiveInfo: (roomId: string, info: { title?: string; description?: string; announcement?: string }) => Promise<void>;
+  updateLiveInfo: (roomId: string, info: { title?: string; description?: string; announcement?: string; openMic?: boolean }) => Promise<void>;
   requestToSpeak: () => Promise<void>;
   cancelSpeakRequest: () => Promise<void>;
   approveSpeaking: (userId: string) => Promise<void>;
@@ -693,7 +693,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateLiveInfo = useCallback(
-    async (roomId: string, info: { title?: string; description?: string; announcement?: string }) => {
+    async (roomId: string, info: { title?: string; description?: string; announcement?: string; openMic?: boolean }) => {
       const dto = await liveApi.update(roomId, info);
       setViewingState(mapLiveSession(dto));
     },

@@ -280,6 +280,7 @@ export function mapLiveSession(dto: import("./types").LiveSessionDto): import("@
     myRole: dto.myRole ? (dto.myRole.toLowerCase() as import("@/lib/types").LiveParticipantRole) : null,
     myMicrophoneEnabled: dto.myMicrophoneEnabled,
     hasPendingSpeakRequest: dto.hasPendingSpeakRequest,
+    openMic: dto.openMic,
   };
 }
 

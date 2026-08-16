@@ -745,6 +745,14 @@ function LiveSettingsSection({ room, canModerate }: { room: ChatRoom; canModerat
     }
   }
 
+  async function handleToggleOpenMic() {
+    try {
+      await live.updateLiveInfo(room.id, { openMic: !state?.openMic });
+    } catch {
+      showToast("No pudimos actualizar el LIVE.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {!isActive ? (
@@ -761,6 +769,18 @@ function LiveSettingsSection({ room, canModerate }: { room: ChatRoom; canModerat
               Finalizar
             </button>
           </div>
+          <label className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2.5 cursor-pointer">
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">Micrófono abierto</span>
+              <span className="text-xs text-[var(--color-text-muted)]">Cualquiera se une para hablar directo, sin pedir permiso.</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={state?.openMic ?? false}
+              onChange={handleToggleOpenMic}
+              className="h-5 w-5 shrink-0 cursor-pointer accent-[var(--color-orange)]"
+            />
+          </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-[var(--color-text-muted)]">Título</span>
             <input

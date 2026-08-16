@@ -299,6 +299,7 @@ export type LiveSessionDto = {
   myRole: LiveParticipantRole | null;
   myMicrophoneEnabled: boolean;
   hasPendingSpeakRequest: boolean;
+  openMic: boolean;
 };
 
 export type LiveParticipantDto = {
@@ -313,7 +314,7 @@ export type LiveParticipantDto = {
 export type LiveTokenDto = { appId: string; channelName: string; token: string; uid: string; role: "PUBLISHER" | "SUBSCRIBER" };
 
 export type StartLiveRequest = { title?: string; description?: string; announcement?: string };
-export type UpdateLiveRequest = { title?: string; description?: string; announcement?: string };
+export type UpdateLiveRequest = { title?: string; description?: string; announcement?: string; openMic?: boolean };
 
 export type LiveEventType =
   | "CHAT_LIVE_STARTED"
