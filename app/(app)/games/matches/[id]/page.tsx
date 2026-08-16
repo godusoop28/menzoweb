@@ -44,7 +44,26 @@ export default function TicTacToeMatchPage() {
     if (event.matchId !== id) return;
     setMatch((prev) => (!prev || event.payload.version >= prev.version ? event.payload : prev));
   }, [id]);
-  useGameMatchSocket(id ? `/topic/matches/${id}/state` : undefined, onEvent);
+
+  /** Refetch por HTTP — cubre tanto la reconexión del socket (pudo perderse eventos mientras
+   * estaba caído, STOMP acá no tiene replay) como respaldo por si el socket nunca llegó a
+   * suscribirse (p.ej. rechazado por StompAuthChannelInterceptor): sin esto, un fallo de WebSocket
+   * dejaba la partida completamente trabada y en silencio para el jugador. */
+  const refetch = useCallback(() => {
+    if (!id) return;
+    gamesApi
+      .getMatch(id)
+      .then((updated) => setMatch((prev) => (!prev || updated.version >= prev.version ? updated : prev)))
+      .catch((error) => console.warn("[menzo/web] refetch de partida falló", error));
+  }, [id]);
+
+  useGameMatchSocket(id ? `/topic/matches/${id}/state` : undefined, onEvent, refetch);
+
+  useEffect(() => {
+    if (match?.status !== "IN_PROGRESS") return;
+    const interval = setInterval(refetch, 3000);
+    return () => clearInterval(interval);
+  }, [match?.status, refetch]);
 
   async function play(cell: number) {
     if (!match || acting) return;
