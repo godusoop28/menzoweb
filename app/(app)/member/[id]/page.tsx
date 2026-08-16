@@ -13,7 +13,9 @@ import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
+import { ApiError, gamesApi } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { useToast } from "@/lib/ToastContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, wallMessagesForProfile } from "@/lib/store/selectors";
 import { formatJoinDate } from "@/lib/time";
@@ -25,8 +27,10 @@ export default function MemberProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, actions } = useAppState();
+  const showToast = useToast();
   const [tab, setTab] = useState<Tab>("posts");
   const [openingChat, setOpeningChat] = useState(false);
+  const [challenging, setChallenging] = useState(false);
 
   const isSelf = id === LOCAL_USER_ID;
   const user = state.social.users.find((u) => u.id === id);
@@ -82,6 +86,20 @@ export default function MemberProfilePage() {
     if (roomId) router.push(`/chat/${roomId}`);
   }
 
+  async function handleChallenge() {
+    if (challenging || !user) return;
+    setChallenging(true);
+    try {
+      const match = await gamesApi.createMatch({ gameType: "TIC_TAC_TOE", opponentId: user.id });
+      router.push(`/games/matches/${match.id}`);
+    } catch (error) {
+      console.warn("[menzo/web] createMatch failed", error);
+      showToast(error instanceof ApiError ? error.message : "No pudimos crear la partida.");
+    } finally {
+      setChallenging(false);
+    }
+  }
+
   const hasBackground = !!(user.backgroundUri || user.backgroundColor);
   const canManageTitles = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
 
@@ -119,6 +137,13 @@ export default function MemberProfilePage() {
                 className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
               >
                 Mensaje
+              </button>
+              <button
+                onClick={handleChallenge}
+                disabled={challenging}
+                className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
+              >
+                Jugar
               </button>
             </div>
           </div>

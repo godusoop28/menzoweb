@@ -10,6 +10,7 @@ import type {
   ChatRoomDto,
   CommentDto,
   CommunityConfigDto,
+  CreateMatchRequest,
   CreatePostRequest,
   CreateRoomRequest,
   CommunityDetailDto,
@@ -23,6 +24,9 @@ import type {
   LiveTokenDto,
   LoginRequest,
   MessageDto,
+  MatchActionRequest,
+  MatchResponseDto,
+  MatchStatus,
   ModerationActionDto,
   MyCommunityDto,
   ModerationActionRequest,
@@ -402,4 +406,18 @@ export const stickersApi = {
   getPack: (id: string) => apiFetch<StickerPackDetailDto>(`/api/stickers/packs/${id}`),
   deletePack: (id: string, body?: ReasonRequest) =>
     apiFetch<void>(`/api/stickers/packs/${id}`, { method: "DELETE", body }),
+};
+
+/** Menzo Games — ver GameMatchController en menzoapi. El estado en vivo de una partida se sigue
+ * por STOMP (ver lib/realtime/useGameMatchSocket.ts), estos endpoints son para crear/consultar/
+ * jugar/abandonar. */
+export const gamesApi = {
+  createMatch: (body: CreateMatchRequest) =>
+    apiFetch<MatchResponseDto>("/api/games/matches", { method: "POST", body }),
+  getMatch: (id: string) => apiFetch<MatchResponseDto>(`/api/games/matches/${id}`),
+  listMyMatches: (status?: MatchStatus, page = 0, size = 20) =>
+    apiFetch<PageResponse<MatchResponseDto>>(`/api/games/matches${qs({ status, page, size })}`),
+  act: (id: string, body: MatchActionRequest) =>
+    apiFetch<MatchResponseDto>(`/api/games/matches/${id}/actions`, { method: "POST", body }),
+  forfeit: (id: string) => apiFetch<void>(`/api/games/matches/${id}/forfeit`, { method: "POST" }),
 };

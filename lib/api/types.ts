@@ -791,3 +791,43 @@ export type UpdateCommunityAppearanceRequest = {
 /** Reemplazo completo del mapa — no parcial. */
 export type UpdateCommunityThemeRequest = { themeConfig: CommunityThemeConfig };
 export type UpdateCommunityNavigationRequest = { navigationConfig: CommunityNavigationConfig };
+
+// ---- Menzo Games (ver com.menzo.menzo.game en menzoapi) — arquitectura genérica de partidas,
+// `state`/`action` son de forma libre (distinta por juego), este cliente solo los pasa de largo.
+// Sin matchmaking: se desafía a un usuario puntual (opponentId), no hay cola pública.
+
+export type GameType = "TIC_TAC_TOE";
+export type MatchStatus = "IN_PROGRESS" | "FINISHED" | "ABANDONED";
+
+export type MatchPlayerSummaryDto = { user: UserSummaryDto; playerIndex: number };
+
+export type MatchResponseDto = {
+  id: string;
+  gameType: GameType;
+  status: MatchStatus;
+  state: unknown;
+  version: number;
+  players: MatchPlayerSummaryDto[];
+  winnerId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+};
+
+export type CreateMatchRequest = { gameType: GameType; opponentId: string };
+export type MatchActionRequest = { action: unknown; expectedVersion?: number };
+
+export type GameEventType = "MATCH_CREATED" | "MATCH_STATE_UPDATED" | "MATCH_FINISHED";
+export type GameEventDto = {
+  type: GameEventType;
+  matchId: string;
+  gameType: GameType;
+  version: number;
+  payload: MatchResponseDto;
+};
+
+// Forma real de MatchResponseDto.state/MatchActionRequest.action para TIC_TAC_TOE — no viene
+// tipado desde el backend (es JSON libre), pero esta SÍ es la forma exacta que produce/espera
+// TicTacToeEngine (ver TicTacToeState/TicTacToeAction en menzoapi).
+export type TicTacToeStateDto = { players: string[]; board: (string | null)[]; currentPlayerIndex: number };
+export type TicTacToeActionDto = { cell: number };

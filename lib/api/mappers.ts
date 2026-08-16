@@ -49,7 +49,7 @@ function synthArray(count: number, includeMe: boolean): string[] {
   return Array.from({ length: Math.max(count, 0) }, (_, i) => (includeMe && i === 0 ? LOCAL_USER_ID : `other-${i}`));
 }
 
-function toGradient(value: string | null | undefined, fallback: GradientId = "fire"): GradientId {
+export function toGradient(value: string | null | undefined, fallback: GradientId = "fire"): GradientId {
   return value && value in Gradients ? (value as GradientId) : fallback;
 }
 
