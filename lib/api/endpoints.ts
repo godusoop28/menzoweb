@@ -27,6 +27,8 @@ import type {
   MyCommunityDto,
   ModerationActionRequest,
   ModerationActionType,
+  ModerationQueueItemDto,
+  ModerationQueueStatus,
   MusicSessionDto,
   MusicSettingsRequest,
   NotificationDto,
@@ -41,6 +43,8 @@ import type {
   ReorderQueueRequest,
   RequestSongRequest,
   RoomMemberDto,
+  SecurityAuditLogDto,
+  SecurityEventType,
   SeekRequest,
   SendMessageRequest,
   SettingsDto,
@@ -345,6 +349,28 @@ export const adminApi = {
   moderationLog: (page = 0, size = 30, actorId?: string, actionType?: ModerationActionType) =>
     apiFetch<PageResponse<ModerationActionDto>>(
       `/api/admin/moderation-log${qs({ page, size, actorId, actionType })}`
+    ),
+  // Cola de contenido marcado automáticamente por la pipeline de seguridad (LEADER+) y su audit
+  // log (MASTER-only) — ver ModerationQueueService/SecurityAuditService en menzoapi. Vacío hasta
+  // que esa pipeline se conecte a endpoints reales (FASE F del plan de seguridad).
+  moderationQueue: (page = 0, size = 30, status?: ModerationQueueStatus, contentType?: string) =>
+    apiFetch<PageResponse<ModerationQueueItemDto>>(
+      `/api/admin/security/moderation-queue${qs({ page, size, status, contentType })}`
+    ),
+  moderationQueuePendingCount: () => apiFetch<number>("/api/admin/security/moderation-queue/pending-count"),
+  dismissModerationQueueItem: (id: string, body: ReasonRequest) =>
+    apiFetch<ModerationQueueItemDto>(`/api/admin/security/moderation-queue/${id}/dismiss`, {
+      method: "POST",
+      body,
+    }),
+  actionModerationQueueItem: (id: string, body: ReasonRequest) =>
+    apiFetch<ModerationQueueItemDto>(`/api/admin/security/moderation-queue/${id}/action`, {
+      method: "POST",
+      body,
+    }),
+  securityAuditLog: (page = 0, size = 30, eventType?: SecurityEventType, subjectId?: string) =>
+    apiFetch<PageResponse<SecurityAuditLogDto>>(
+      `/api/admin/security/audit-log${qs({ page, size, eventType, subjectId })}`
     ),
 };
 

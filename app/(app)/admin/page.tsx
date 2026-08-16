@@ -3,12 +3,18 @@
 import Link from "next/link";
 
 import { useAppState } from "@/lib/AppStateContext";
-import { BellIcon, ChatIcon, CrownIcon, EyeIcon, UsersIcon } from "@/components/icons";
+import { BellIcon, CheckIcon, ChatIcon, CrownIcon, EyeIcon, EyeOffIcon, UsersIcon } from "@/components/icons";
 
 const LINKS = [
   { href: "/admin/users", label: "Usuarios", description: "Buscar cuentas, suspender o eliminar.", icon: UsersIcon },
   { href: "/admin/posts", label: "Publicaciones", description: "Buscar, ocultar o eliminar publicaciones.", icon: EyeIcon },
   { href: "/admin/roles", label: "Roles", description: "Asignar o revocar Curador/Líder.", icon: CrownIcon },
+  {
+    href: "/admin/security/moderation-queue",
+    label: "Cola de moderación",
+    description: "Contenido marcado automáticamente por la pipeline de seguridad.",
+    icon: CheckIcon,
+  },
 ];
 
 const MASTER_LINKS = [
@@ -17,6 +23,12 @@ const MASTER_LINKS = [
     label: "Log de moderación",
     description: "Historial completo de acciones de staff, con motivo.",
     icon: ChatIcon,
+  },
+  {
+    href: "/admin/security/audit-log",
+    label: "Registro de seguridad",
+    description: "Eventos automáticos: rate limit, spam, subidas rechazadas, imágenes flaggeadas.",
+    icon: EyeOffIcon,
   },
 ];
 

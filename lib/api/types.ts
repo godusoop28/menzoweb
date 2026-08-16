@@ -594,6 +594,48 @@ export type ModerationActionDto = {
   createdAt: string;
 };
 
+// ---- Seguridad: cola de moderación automática y audit log (ver com.menzo.menzo.security.moderation
+// en menzoapi) — a diferencia de ModerationAction (arriba), esto no lo genera un humano, lo genera
+// la pipeline de contenido (FASE A-D). Vacío hasta que esa pipeline se conecte a endpoints reales.
+
+export type ModerationQueueStatus = "PENDING" | "DISMISSED" | "ACTIONED";
+
+export type ModerationQueueItemDto = {
+  id: string;
+  contentType: string;
+  contentId: string | null;
+  author: UserSummaryDto | null;
+  contentSnapshot: string | null;
+  riskLevel: string;
+  reasons: string[];
+  status: ModerationQueueStatus;
+  reviewedBy: UserSummaryDto | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+};
+
+export type SecurityEventType =
+  | "CONTENT_BLOCKED"
+  | "CONTENT_FLAGGED_FOR_REVIEW"
+  | "RATE_LIMITED"
+  | "SPAM_DETECTED"
+  | "UPLOAD_REJECTED"
+  | "IMAGE_MODERATION_FLAGGED"
+  | "IDENTIFIER_SPOOF_DETECTED"
+  | "PII_DETECTED";
+
+export type SecurityAuditLogDto = {
+  id: string;
+  eventType: SecurityEventType;
+  subject: UserSummaryDto | null;
+  contentType: string | null;
+  contentId: string | null;
+  riskLevel: string | null;
+  reasons: string[];
+  createdAt: string;
+};
+
 // ---- Stickers (packs públicos desde su creación, ver StickerService en menzoapi) --------------
 
 export type StickerDto = { id: string; imageUrl: string; sortOrder: number };
