@@ -82,7 +82,15 @@ export default function TicTacToeMatchPage() {
     return <p className="mx-auto w-full max-w-md px-4 py-10 text-center text-sm text-[var(--color-text-muted)]">No encontramos esta partida.</p>;
   }
 
-  const state = match.state as TicTacToeStateDto;
+  const state = match.state as TicTacToeStateDto | undefined;
+  if (!state || !Array.isArray(state.board) || !Array.isArray(state.players) || typeof state.currentPlayerIndex !== "number") {
+    console.warn("[menzo/web] unexpected match.state shape", match.state);
+    return (
+      <p className="mx-auto w-full max-w-md px-4 py-10 text-center text-sm text-[var(--color-text-muted)]">
+        No pudimos mostrar esta partida — probá recargar la página.
+      </p>
+    );
+  }
   const players = [...match.players].sort((a, b) => a.playerIndex - b.playerIndex);
   const me = players.find((p) => p.user.id === myId);
   const opponent = players.find((p) => p.user.id !== myId);
