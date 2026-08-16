@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 import { BlockEditor } from "./post/BlockEditor";
+import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { useToast } from "@/lib/ToastContext";
 import type { PostBlockDto } from "@/lib/api/types";
 
 import { GradientButton } from "./GradientButton";
@@ -19,6 +21,7 @@ function hasRealContent(blocks: PostBlockDto[]) {
 
 export function CreatePostComposer() {
   const { actions } = useAppState();
+  const showToast = useToast();
   const [mode, setMode] = useState<Mode>("text");
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState<PostBlockDto[]>([]);
@@ -50,6 +53,7 @@ export function CreatePostComposer() {
       reset();
     } catch (error) {
       console.warn("[menzo/web] createPost failed", error);
+      showToast(error instanceof ApiError ? error.message : "No se pudo publicar.");
     } finally {
       setSubmitting(false);
     }

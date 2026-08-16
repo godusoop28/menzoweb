@@ -309,6 +309,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     ) {
       dispatch({ type: "UPDATE_PROFILE", payload });
       if (!hasSession()) return;
+      try {
+        await persistProfileUpdate(payload, files);
+      } catch (error) {
+        // El PATCH falló (p. ej. la pipeline de seguridad rechazó el contenido) — el dispatch
+        // optimista de arriba ya mostraba el cambio como aplicado, así que hay que resincronizar
+        // con lo que el backend realmente tiene, no dejar al usuario viendo algo que no se guardó.
+        refreshProfile().catch(() => undefined);
+        throw error;
+      }
+    }
+
+    async function persistProfileUpdate(
+      payload: Partial<UserProfile>,
+      files?: { avatar?: File; cover?: File; background?: File }
+    ) {
       const avatarUri =
         payload.avatarUri !== undefined ? await ensureUploaded(payload.avatarUri, files?.avatar) : undefined;
       const coverUri =
@@ -583,7 +598,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       postsApi
         .addComment(postId, body)
         .then((dto) => dispatch({ type: "ADD_COMMENT", payload: mapComment(dto, getMyRealId()) }))
-        .catch((error) => console.warn("[menzo/api] addComment failed", error));
+        .catch((error) => {
+          console.warn("[menzo/api] addComment failed", error);
+          showToast(error instanceof ApiError ? error.message : "No se pudo publicar el comentario.");
+        });
     }
 
     /** Antes esto actualizaba el estado local de forma optimista (sin esperar al servidor) y
@@ -675,7 +693,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "ADD_WALL_MESSAGE", payload: mapWallMessage(dto, getMyRealId()) });
       } catch (error) {
         console.warn("[menzo/api] addWallMessage failed", error);
-        showToast("No pudimos publicar en el muro. Inténtalo de nuevo.");
+        showToast(error instanceof ApiError ? error.message : "No pudimos publicar en el muro. Inténtalo de nuevo.");
       }
     }
 
@@ -709,7 +727,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "ADD_WALL_COMMENT", payload: mapWallComment(dto, getMyRealId()) });
       } catch (error) {
         console.warn("[menzo/api] addWallComment failed", error);
-        showToast("No pudimos publicar el comentario. Inténtalo de nuevo.");
+        showToast(error instanceof ApiError ? error.message : "No pudimos publicar el comentario. Inténtalo de nuevo.");
       }
     }
 

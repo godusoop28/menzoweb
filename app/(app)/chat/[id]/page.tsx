@@ -185,6 +185,7 @@ export default function ChatRoomPage() {
       requestAnimationFrame(() => scrollToBottom(true));
     } catch (error) {
       console.warn("[menzo/web] sendMessage failed", error);
+      showToast(error instanceof ApiError ? error.message : "No se pudo enviar el mensaje.");
     } finally {
       setSending(false);
     }
@@ -198,6 +199,7 @@ export default function ChatRoomPage() {
       requestAnimationFrame(() => scrollToBottom(true));
     } catch (error) {
       console.warn("[menzo/web] sendSticker failed", error);
+      showToast(error instanceof ApiError ? error.message : "No se pudo enviar el sticker.");
     }
   }
 

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { stickersApi, uploadsApi } from "@/lib/api";
+import { ApiError, stickersApi, uploadsApi } from "@/lib/api";
 import { BackIcon, CloseIcon, PlusIcon } from "@/components/icons";
 
 type Draft = { file: File; previewUrl: string };
@@ -41,7 +41,7 @@ export default function CreateStickerPackPage() {
       router.back();
     } catch (err) {
       console.warn("[menzo/web] createStickerPack failed", err);
-      setError("No pudimos crear el pack — probá de nuevo.");
+      setError(err instanceof ApiError ? err.message : "No pudimos crear el pack — probá de nuevo.");
     } finally {
       setSaving(false);
     }

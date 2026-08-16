@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { CameraIcon } from "@/components/icons";
 import { GradientButton } from "@/components/GradientButton";
 import { auras } from "@/data/auras";
+import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
 import { Colors, gradientCss } from "@/lib/theme";
 import type { AuraId } from "@/lib/types";
@@ -107,7 +108,7 @@ export default function EditProfilePage() {
       router.push("/profile");
     } catch (e) {
       console.warn("[menzo/web] updateProfile failed", e);
-      setError("No pudimos guardar los cambios. Revisa tu conexión e inténtalo de nuevo.");
+      setError(e instanceof ApiError ? e.message : "No pudimos guardar los cambios. Revisa tu conexión e inténtalo de nuevo.");
     } finally {
       setSaving(false);
     }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { communitiesApi, uploadsApi } from "@/lib/api";
+import { ApiError, communitiesApi, uploadsApi } from "@/lib/api";
 import type {
   CommunityDetailDto,
   CommunityNavigationConfig,
@@ -120,7 +120,7 @@ export default function CommunityAppearancePage() {
       setImages((prev) => ({ ...prev, [key]: url }));
     } catch (err) {
       console.warn("[menzo/web] upload failed", err);
-      setError("No pudimos subir la imagen.");
+      setError(err instanceof ApiError ? err.message : "No pudimos subir la imagen.");
     }
   }
 
@@ -130,7 +130,7 @@ export default function CommunityAppearancePage() {
       setTheme((prev) => ({ ...prev, [key]: url }));
     } catch (err) {
       console.warn("[menzo/web] upload failed", err);
-      setError("No pudimos subir la imagen.");
+      setError(err instanceof ApiError ? err.message : "No pudimos subir la imagen.");
     }
   }
 
@@ -140,7 +140,7 @@ export default function CommunityAppearancePage() {
       setTheme((prev) => ({ ...prev, decorations: [...(prev.decorations ?? []), url] }));
     } catch (err) {
       console.warn("[menzo/web] upload failed", err);
-      setError("No pudimos subir la imagen.");
+      setError(err instanceof ApiError ? err.message : "No pudimos subir la imagen.");
     }
   }
 
@@ -174,7 +174,7 @@ export default function CommunityAppearancePage() {
       router.push("/communities");
     } catch (err) {
       console.warn("[menzo/web] save community customization failed", err);
-      setError("No pudimos guardar los cambios.");
+      setError(err instanceof ApiError ? err.message : "No pudimos guardar los cambios.");
     } finally {
       setSaving(false);
     }
