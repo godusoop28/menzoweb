@@ -424,5 +424,6 @@ export function mapNotification(dto: NotificationDto, myRealId: string | null): 
     relatedRoomId: dto.relatedRoomId ?? undefined,
     relatedUserId: dto.relatedUserId ? alias(dto.relatedUserId, myRealId) : undefined,
     relatedEventId: dto.relatedEventId ?? undefined,
+    relatedMatchId: dto.relatedMatchId ?? undefined,
   };
 }

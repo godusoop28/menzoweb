@@ -13,7 +13,7 @@ import { CommunitySwitcher } from "./communities/CommunitySwitcher";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
 import { MenziDjPlayerHost } from "./music/MenziDjPlayerHost";
 import { Avatar } from "./Avatar";
-import { BellIcon, ChatIcon, CompassIcon, CrownIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
+import { BellIcon, ChatIcon, CompassIcon, CrownIcon, GameIcon, HomeIcon, LogoutIcon, ProfileIcon, SearchIcon, SettingsIcon, UsersIcon } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 
 const NAV_ITEMS = [
@@ -26,6 +26,7 @@ const NAV_ITEMS = [
 const SECONDARY_ITEMS = [
   { href: "/communities", label: "Comunidades", icon: CompassIcon },
   { href: "/chat/public", label: "Chats públicos", icon: ChatIcon },
+  { href: "/games", label: "Juegos", icon: GameIcon },
   { href: "/search", label: "Buscar", icon: SearchIcon },
   { href: "/notifications", label: "Notificaciones", icon: BellIcon },
   { href: "/settings", label: "Configuración", icon: SettingsIcon },

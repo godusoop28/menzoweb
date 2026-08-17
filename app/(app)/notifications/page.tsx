@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { BellIcon, CalendarIcon, ChatIcon, CheckIcon, CommentIcon, HeartIcon, ProfileIcon } from "@/components/icons";
+import { BellIcon, CalendarIcon, ChatIcon, CheckIcon, CommentIcon, GameIcon, HeartIcon, MicIcon, ProfileIcon } from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAppState } from "@/lib/AppStateContext";
 import { relativeTime } from "@/lib/time";
@@ -18,6 +18,7 @@ const categories: { value: Category; label: string }[] = [
   { value: "mensajes", label: "Mensajes" },
   { value: "eventos", label: "Eventos" },
   { value: "seguimientos", label: "Seguimientos" },
+  { value: "juegos", label: "Juegos" },
 ];
 
 const categoryIcon: Record<NotificationCategory, typeof HeartIcon> = {
@@ -26,6 +27,8 @@ const categoryIcon: Record<NotificationCategory, typeof HeartIcon> = {
   mensajes: ChatIcon,
   eventos: CalendarIcon,
   seguimientos: ProfileIcon,
+  en_vivo: MicIcon,
+  juegos: GameIcon,
 };
 
 export default function NotificationsPage() {
@@ -44,7 +47,8 @@ export default function NotificationsPage() {
 
   function handleClick(n: Notification) {
     actions.markNotificationRead(n.id);
-    if (n.relatedPostId) router.push(`/post/${n.relatedPostId}`);
+    if (n.relatedMatchId) router.push(`/games/matches/${n.relatedMatchId}`);
+    else if (n.relatedPostId) router.push(`/post/${n.relatedPostId}`);
     else if (n.relatedRoomId) router.push(`/chat/${n.relatedRoomId}`);
     else if (n.relatedUserId) router.push(`/member/${n.relatedUserId}`);
     else if (n.relatedEventId) router.push(`/events/${n.relatedEventId}`);

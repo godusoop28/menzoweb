@@ -231,7 +231,7 @@ export type WallComment = {
   likedByMe: boolean;
 };
 
-export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos";
+export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos" | "en_vivo" | "juegos";
 
 export type Notification = {
   id: string;
@@ -244,6 +244,7 @@ export type Notification = {
   relatedRoomId?: string;
   relatedUserId?: string;
   relatedEventId?: string;
+  relatedMatchId?: string;
 };
 
 // ---- LIVE moderado ----------------------------------------------------------------------------

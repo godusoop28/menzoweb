@@ -3,7 +3,7 @@
 export type PostType = "text" | "image" | "poll" | "question" | "event";
 export type MessageType = "text" | "system" | "sticker";
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
-export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos";
+export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos" | "en_vivo" | "juegos";
 export type ActivityKind = "post" | "member";
 
 export type PageResponse<T> = {
@@ -447,6 +447,7 @@ export type NotificationDto = {
   relatedRoomId: string | null;
   relatedUserId: string | null;
   relatedEventId: string | null;
+  relatedMatchId: string | null;
 };
 
 export type AuraDto = { id: string; name: string; description: string; gradient: string };
