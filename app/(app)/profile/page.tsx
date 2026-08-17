@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
+import { LevelBadge } from "@/components/LevelBadge";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { UserTitles } from "@/components/UserTitles";
@@ -93,12 +94,13 @@ export default function ProfilePage() {
             {!!profile.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{profile.statusText}</p>}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-yellow)]">
-              <span aria-hidden>★</span>
-              Nivel {profile.level}
-            </span>
-          </div>
+          <LevelBadge
+            level={profile.level}
+            levelName={profile.levelName}
+            xp={profile.xp}
+            xpForCurrentLevel={profile.xpForCurrentLevel}
+            xpForNextLevel={profile.xpForNextLevel}
+          />
 
           <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
             <Stat value={profile.reputation} label="Reputación" />

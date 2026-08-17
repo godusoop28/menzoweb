@@ -472,6 +472,19 @@ export function CompassIcon({ size = 20, className = "" }: IconProps) {
   );
 }
 
+export function StarIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="m12 3 2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function GameIcon({ size = 20, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

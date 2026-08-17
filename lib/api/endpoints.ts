@@ -27,6 +27,7 @@ import type {
   MatchActionRequest,
   MatchResponseDto,
   MatchStatus,
+  LevelDefinitionDto,
   ModerationActionDto,
   MyCommunityDto,
   ModerationActionRequest,
@@ -376,6 +377,11 @@ export const adminApi = {
     apiFetch<PageResponse<SecurityAuditLogDto>>(
       `/api/admin/security/audit-log${qs({ page, size, eventType, subjectId })}`
     ),
+  // LEADER+ (ver AdminAuthorizationService.requireLeader en menzoapi) — nombres de los 20
+  // niveles del sistema de XP por tiempo activo (ver LevelCurve/LevelNameService).
+  listLevels: () => apiFetch<LevelDefinitionDto[]>("/api/admin/levels"),
+  renameLevel: (level: number, name: string) =>
+    apiFetch<LevelDefinitionDto>(`/api/admin/levels/${level}`, { method: "PUT", body: { name } }),
 };
 
 /** Dominio nuevo (multi-comunidad: Naruto, Anime, etc.) — `/api/communities` (plural), separado

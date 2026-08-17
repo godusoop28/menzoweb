@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { useAppState } from "@/lib/AppStateContext";
-import { BellIcon, CheckIcon, ChatIcon, CrownIcon, EyeIcon, EyeOffIcon, UsersIcon } from "@/components/icons";
+import { BellIcon, CheckIcon, ChatIcon, CrownIcon, EyeIcon, EyeOffIcon, StarIcon, UsersIcon } from "@/components/icons";
 
 const LINKS = [
   { href: "/admin/users", label: "Usuarios", description: "Buscar cuentas, suspender o eliminar.", icon: UsersIcon },
@@ -15,6 +15,10 @@ const LINKS = [
     description: "Contenido marcado automáticamente por la pipeline de seguridad.",
     icon: CheckIcon,
   },
+];
+
+const LEADER_LINKS = [
+  { href: "/admin/levels", label: "Niveles", description: "Renombrar los 20 niveles del sistema de XP.", icon: StarIcon },
 ];
 
 const MASTER_LINKS = [
@@ -34,8 +38,10 @@ const MASTER_LINKS = [
 
 export default function AdminDashboardPage() {
   const { state } = useAppState();
-  const isMaster = state.profile?.globalRole === "MASTER";
-  const links = isMaster ? [...LINKS, ...MASTER_LINKS] : LINKS;
+  const role = state.profile?.globalRole;
+  const isMaster = role === "MASTER";
+  const isLeaderPlus = isMaster || role === "LEADER";
+  const links = [...LINKS, ...(isLeaderPlus ? LEADER_LINKS : []), ...(isMaster ? MASTER_LINKS : [])];
 
   return (
     <div className="flex flex-col gap-6">

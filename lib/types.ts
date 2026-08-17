@@ -37,7 +37,10 @@ export type UserProfile = {
   interests: InterestId[];
   joinedAt: string;
   level: number;
+  levelName?: string;
   xp: number;
+  xpForCurrentLevel: number;
+  xpForNextLevel: number;
   reputation: number;
   followers: number;
   following: number;

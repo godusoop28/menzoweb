@@ -58,7 +58,10 @@ export type UserProfileDto = {
   interests: string[];
   joinedAt: string;
   level: number;
+  levelName: string | null;
   xp: number;
+  xpForCurrentLevel: number;
+  xpForNextLevel: number;
   reputation: number;
   followers: number;
   following: number;
@@ -74,6 +77,9 @@ export type UserProfileDto = {
 };
 
 export type RelationshipStatus = "SELF" | "NONE" | "FOLLOWING" | "FOLLOWS_YOU" | "FRIENDS";
+
+// LEADER+ — nombre editable de cada uno de los 20 niveles (ver LevelDefinition en menzoapi).
+export type LevelDefinitionDto = { level: number; name: string };
 
 export type AuthResponseDto = {
   accessToken: string;
