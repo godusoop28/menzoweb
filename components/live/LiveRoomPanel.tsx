@@ -90,9 +90,10 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--color-background)] to-transparent" aria-hidden />
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {/* Cabecera fija */}
-        <div className="flex shrink-0 items-center gap-2 px-4 py-3">
-          <span className="flex items-center gap-1 rounded-full bg-[var(--color-coral)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+        {/* Cabecera fija — barra de vidrio en vez de flotar directo sobre el fondo, mismo
+            lenguaje visual que la barra de controles de abajo. */}
+        <div className="mx-3 mt-3 flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-black/35 px-3.5 py-2.5 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
+          <span className="flex items-center gap-1 rounded-full bg-[var(--color-coral)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_var(--color-coral)]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
             Live
           </span>
@@ -107,7 +108,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
               onClick={() => setShowSettings(true)}
               aria-label="Configuración del LIVE"
               title="Configuración del LIVE"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white cursor-pointer transition-colors hover:bg-white/20"
             >
               <SettingsIcon size={17} />
             </button>
@@ -116,14 +117,14 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
             onClick={onMinimize}
             aria-label="Minimizar"
             title="Minimizar"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white cursor-pointer"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white cursor-pointer transition-colors hover:bg-white/20"
           >
             <MinimizeIcon size={17} />
           </button>
         </div>
 
         {announcement && (
-          <div className="mx-4 mb-2 flex shrink-0 items-start gap-2 rounded-2xl bg-black/40 px-3 py-2 text-xs backdrop-blur-sm">
+          <div className="mx-3 mb-2 mt-2 flex shrink-0 items-start gap-2 rounded-2xl border border-white/10 bg-black/35 px-3.5 py-2.5 text-xs shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
             <span aria-hidden>📣</span>
             <p className="line-clamp-2">{announcement}</p>
           </div>
@@ -167,7 +168,10 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
                   />
                 ))}
                 {stage.length === 0 && (
-                  <p className="col-span-full py-8 text-center text-sm text-[var(--color-text-muted)]">Nadie está hablando todavía.</p>
+                  <div className="col-span-full flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-black/20 py-8 backdrop-blur-sm">
+                    <span className="text-2xl" aria-hidden>🎙️</span>
+                    <p className="text-sm text-[var(--color-text-muted)]">Nadie está hablando todavía.</p>
+                  </div>
                 )}
               </div>
             </>
@@ -179,7 +183,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
           <div className="shrink-0 px-4 pb-1">
             <button
               onClick={() => setShowAudience((v) => !v)}
-              className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-muted)] cursor-pointer"
+              className="mb-1.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] backdrop-blur-sm cursor-pointer transition-colors hover:bg-black/40"
             >
               <UsersIcon size={13} /> Escuchando ({audience.length}) {showAudience ? "▲" : "▼"}
             </button>
@@ -485,8 +489,8 @@ function LiveControls({
   return (
     <>
       <div
-        className="flex shrink-0 flex-wrap items-center justify-center gap-3 px-4 py-4"
-        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+        className="mx-3 mb-3 flex shrink-0 flex-wrap items-center justify-center gap-3 rounded-3xl border border-white/10 bg-black/35 px-4 py-3.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md"
+        style={{ marginBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
         {live.canSpeak && (
           <ControlButton
