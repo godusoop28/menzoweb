@@ -6,16 +6,20 @@ import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { GradientButton } from "@/components/GradientButton";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, LiveIcon, UsersIcon } from "@/components/icons";
 import { LevelBadge } from "@/components/LevelBadge";
+import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
-import { ApiError, gamesApi } from "@/lib/api";
+import { ApiError, communitiesApi, gamesApi } from "@/lib/api";
+import { toGradient } from "@/lib/api/mappers";
+import type { CommunityMemberDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useToast } from "@/lib/ToastContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, wallMessagesForProfile } from "@/lib/store/selectors";
@@ -29,12 +33,40 @@ export default function MemberProfilePage() {
   const router = useRouter();
   const { state, actions } = useAppState();
   const showToast = useToast();
+  const { activeCommunity, activeCommunityDetail } = useCommunity();
   const [tab, setTab] = useState<Tab>("posts");
   const [openingChat, setOpeningChat] = useState(false);
   const [challenging, setChallenging] = useState(false);
+  const [rosterMembers, setRosterMembers] = useState<CommunityMemberDto[]>([]);
+  const [rosterLoadedFor, setRosterLoadedFor] = useState<string | undefined>(undefined);
 
   const isSelf = id === LOCAL_USER_ID;
   const user = state.social.users.find((u) => u.id === id);
+
+  // Panel derecho (lg:+, ver más abajo) — mismos datos reales que ya usa Inicio/Miembros
+  // (communitiesApi.members), acá pedidos por esta pantalla porque el muro puede ser lo primero
+  // que se abre sin haber pasado antes por Inicio.
+  useEffect(() => {
+    if (!activeCommunity || activeCommunity.id === rosterLoadedFor) return;
+    let cancelled = false;
+    communitiesApi
+      .members(activeCommunity.id, 0, 30)
+      .then((res) => {
+        if (cancelled) return;
+        setRosterMembers(res.items);
+        setRosterLoadedFor(activeCommunity.id);
+      })
+      .catch((error) => {
+        console.warn("[menzo/web] load community roster failed", error);
+        if (!cancelled) setRosterLoadedFor(activeCommunity.id);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCommunity, rosterLoadedFor]);
+
+  const liveRooms = state.social.rooms.filter((r) => r.type === "public" && r.live);
+  const onlineMembersList = rosterMembers.filter((m) => m.user.isOnline).slice(0, 8);
 
   useEffect(() => {
     if (!id || isSelf) return;
@@ -105,7 +137,8 @@ export default function MemberProfilePage() {
   const canManageTitles = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
 
   const content = (
-    <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
+    <div className="flex w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
+    <div className="mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-[720px] lg:flex-1">
       <button onClick={() => router.back()} className="mb-4 flex items-center gap-2 text-sm text-[var(--color-text-secondary)] cursor-pointer">
         <BackIcon size={20} />
         Volver
@@ -218,6 +251,70 @@ export default function MemberProfilePage() {
           </>
         )}
       </div>
+    </div>
+
+    {activeCommunity && (
+      <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+        {tab === "wall" && (
+          <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+            <h3 className="font-display text-sm font-bold">Acerca de este muro</h3>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Este es el muro público de {user.displayName}. Los miembros de la comunidad pueden dejar mensajes,
+              saludos y recomendaciones. Sé respetuoso y disfruta del espacio.
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h3 className="font-display text-sm font-bold">Comunidad</h3>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2">
+              <p className="font-bold">{activeCommunity.memberCount.toLocaleString("es-ES")}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">Miembros</p>
+            </div>
+            <div className="rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2">
+              <p className="font-bold">{activeCommunityDetail?.onlineMemberCount ?? "—"}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">En línea</p>
+            </div>
+          </div>
+        </div>
+
+        {liveRooms.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+            <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
+              <LiveIcon size={16} className="text-[var(--color-coral)]" />
+              Salas en vivo
+            </h3>
+            <LiveRoomsCarousel rooms={liveRooms} />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
+            <UsersIcon size={16} />
+            En línea ahora
+          </h3>
+          {onlineMembersList.length === 0 ? (
+            <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {onlineMembersList.map((member) => (
+                <Link key={member.user.id} href={`/member/${member.user.id}`} title={member.user.displayName}>
+                  <Avatar
+                    name={member.user.displayName}
+                    avatarUri={member.user.avatarUri ?? undefined}
+                    gradient={toGradient(member.user.avatarGradient)}
+                    size={36}
+                    showOnline
+                    online
+                  />
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+    )}
     </div>
   );
 

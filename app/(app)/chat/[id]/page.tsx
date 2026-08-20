@@ -16,7 +16,7 @@ import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { TypingBubble } from "@/components/TypingBubble";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReasonDialog } from "@/components/ui/ReasonDialog";
-import { ApiError, chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/api";
+import { ApiError, chatApi, getMyRealId, mapRoomMember, mapUserProfile, usersApi } from "@/lib/api";
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -27,7 +27,9 @@ import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { dateSeparatorLabel, isSameDay } from "@/lib/time";
 import { useToast } from "@/lib/ToastContext";
-import type { Message } from "@/lib/types";
+import type { ChatRoomRole, Message, RoomMember } from "@/lib/types";
+
+const ROOM_ROLE_LABEL: Record<ChatRoomRole, string> = { owner: "Anfitrión", co_host: "Coanfitrión", member: "Miembro" };
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
@@ -61,6 +63,7 @@ export default function ChatRoomPage() {
   const messages = useMemo(() => messagesForRoom(state.social, id), [state.social, id]);
   const { typingUsers, publishTyping, removalReason } = useRoomSocket(id);
   const [memberRoles, setMemberRoles] = useState<Map<string, RoomRole>>(new Map());
+  const [roomMembers, setRoomMembers] = useState<RoomMember[]>([]);
   const [peerAreFriends, setPeerAreFriends] = useState(false);
 
   useEffect(() => {
@@ -81,9 +84,14 @@ export default function ChatRoomPage() {
           map.set(dto.user.id === myRealId ? LOCAL_USER_ID : dto.user.id, dto.role);
         }
         setMemberRoles(map);
+        setRoomMembers(dtos.map((dto) => mapRoomMember(dto, myRealId)));
       })
       .catch((error) => console.warn("[menzo/web] loadRoomMembers failed", error));
   }, [id, room?.type]);
+
+  // Panel derecho (lg:+, solo salas públicas) — mismos datos ya pedidos arriba para las etiquetas
+  // de rol en los mensajes, sin ningún fetch adicional.
+  const onlineRoomMembers = useMemo(() => roomMembers.filter((m) => m.user.isOnline).slice(0, 10), [roomMembers]);
 
   // room.peer viene con los datos livianos del DTO de la sala (sin info de relación) — para saber
   // si es amigo hay que pedir su perfil completo aparte, solo cuando el chat es directo. La JSX
@@ -276,7 +284,8 @@ export default function ChatRoomPage() {
   const canModerateMessages = isGlobalStaff && room.type === "public";
 
   return (
-    <div className="relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col">
+    <div className="flex h-full min-h-0 w-full lg:gap-4">
+    <div className="relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col lg:mx-0 lg:max-w-[720px] lg:flex-1">
       {/* El fondo de la sala vive acá, anclado a este contenedor de altura estable (h-full, no
           crece con los mensajes) — antes se aplicaba como bg-cover directo sobre el div de
           mensajes, cuya altura es auto y crece con la conversación, así que "cover" se
@@ -583,6 +592,48 @@ export default function ChatRoomPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+    </div>
+
+    {room.type === "public" && (
+      <aside className="hidden lg:flex lg:h-full lg:w-72 lg:shrink-0 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:py-4">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h3 className="font-display text-sm font-bold">Sobre la sala</h3>
+          {room.description && <p className="text-xs text-[var(--color-text-secondary)]">{room.description}</p>}
+          <div className="grid grid-cols-2 gap-2 text-center text-sm">
+            <div className="rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2">
+              <p className="font-bold">{room.memberIds.length}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">Miembros</p>
+            </div>
+            <div className="rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2">
+              <p className="font-bold">{room.onlineCount}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">En línea</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-sm font-bold">En línea ({room.onlineCount})</h3>
+            <button onClick={() => setShowInfo(true)} className="text-xs font-semibold text-[var(--color-cyan)] cursor-pointer">
+              Ver todos
+            </button>
+          </div>
+          {onlineRoomMembers.length === 0 ? (
+            <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {onlineRoomMembers.map((member) => (
+                <div key={member.user.id} className="flex items-center gap-2.5">
+                  <Avatar name={member.user.displayName} avatarUri={member.user.avatarUri} gradient={member.user.avatarGradient} size={32} showOnline online />
+                  <span className="min-w-0 flex-1 truncate text-sm">{member.user.displayName}</span>
+                  <span className="shrink-0 text-[11px] text-[var(--color-text-muted)]">{ROOM_ROLE_LABEL[member.role]}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+    )}
     </div>
   );
 }

@@ -114,7 +114,8 @@ export default function MembersPage() {
   const leaders = members.filter((m) => LEADER_ROLES.has(m.communityRole));
   const mods = members.filter((m) => MOD_ROLES.has(m.communityRole));
   const rest = members.filter((m) => !LEADER_ROLES.has(m.communityRole) && !MOD_ROLES.has(m.communityRole));
-  const online = members.filter((m) => m.user.isOnline).length;
+  const onlineMembers = members.filter((m) => m.user.isOnline);
+  const online = onlineMembers.length;
 
   if (!activeCommunity) {
     return (
@@ -132,7 +133,8 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8">
+    <div className="flex min-h-full w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 lg:mx-0 lg:max-w-[720px] lg:flex-1">
       <div className="menzo-fade-in relative overflow-hidden rounded-3xl shadow-xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/banners/banner-connections.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -202,6 +204,46 @@ export default function MembersPage() {
           )}
         </>
       )}
+    </div>
+
+    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-center">
+        <div>
+          <p className="text-lg font-bold">{members.length}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">Miembros</p>
+        </div>
+        <div>
+          <p className="text-lg font-bold">{leaders.length}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">Líderes</p>
+        </div>
+        <div>
+          <p className="text-lg font-bold">{mods.length}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">Mods</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <h3 className="font-display text-sm font-bold">Conectados ahora ({online})</h3>
+        {onlineMembers.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {onlineMembers.slice(0, 16).map((member) => (
+              <Link key={member.user.id} href={`/member/${member.user.id}`} title={member.user.displayName}>
+                <Avatar
+                  name={member.user.displayName}
+                  avatarUri={member.user.avatarUri ?? undefined}
+                  gradient={toGradient(member.user.avatarGradient)}
+                  size={36}
+                  showOnline
+                  online
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </aside>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
@@ -11,6 +12,7 @@ import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
+import { interestById } from "@/data/interests";
 import { getMyRealId } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
@@ -19,11 +21,22 @@ import { formatJoinDate } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 
 type Tab = "posts" | "wall" | "saved";
+const VALID_TABS: Tab[] = ["posts", "wall", "saved"];
 
 export default function ProfilePage() {
   const { state, actions } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<Tab>("posts");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab = VALID_TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "posts";
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tabSyncedFor, setTabSyncedFor] = useState(tabParam);
+  // El sidebar navega a /profile?tab=wall|saved — mismo patrón de "ajustar estado durante el
+  // render" que app/(app)/page.tsx, sin pisar el tab si el usuario ya lo cambió a mano.
+  if (tabParam !== tabSyncedFor) {
+    setTab(initialTab);
+    setTabSyncedFor(tabParam);
+  }
   const profile = state.profile;
 
   useEffect(() => {
@@ -58,7 +71,8 @@ export default function ProfilePage() {
   const canManageTitles = profile.globalRole === "LEADER" || profile.globalRole === "MASTER";
 
   const content = (
-    <div className="menzo-fade-in mx-auto w-full max-w-2xl px-4 py-6 md:px-8">
+    <div className="flex w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
+    <div className="menzo-fade-in mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-[720px] lg:flex-1">
       <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
         {profile.coverUri ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -152,6 +166,33 @@ export default function ProfilePage() {
             mySaved.map((post) => <PostCard key={post.id} post={post} />)
           ))}
       </div>
+    </div>
+
+    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-center">
+        <div>
+          <p className="text-lg font-bold">{myPosts.length}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">Publicaciones</p>
+        </div>
+        <div>
+          <p className="text-lg font-bold">{myWall.length}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">Mensajes en el muro</p>
+        </div>
+      </div>
+
+      {profile.interests.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h3 className="font-display text-sm font-bold">Intereses</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {profile.interests.map((interest) => (
+              <span key={interest} className="rounded-full bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs font-medium">
+                {interestById(interest)?.label ?? interest}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </aside>
     </div>
   );
 
