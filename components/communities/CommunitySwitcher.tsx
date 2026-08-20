@@ -11,7 +11,7 @@ import { useCommunity } from "@/lib/communities/CommunityContext";
  * mis comunidades, explorar). Fase A dejó CommunityContext montado pero sin ningún consumidor;
  * este es el primer lugar que lo usa de verdad. */
 export function CommunitySwitcher() {
-  const { activeCommunity, memberships, loading, switchCommunity } = useCommunity();
+  const { activeCommunity, activeCommunityDetail, memberships, loading, switchCommunity } = useCommunity();
   const { state } = useAppState();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -37,22 +37,34 @@ export function CommunitySwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+        className="flex w-full flex-col gap-2 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3 text-left transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
       >
-        <CommunityBadge
-          name={activeCommunity?.name}
-          iconUrl={activeCommunity?.iconUrl}
-          color={activeCommunity?.primaryColor}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">
-            {loading ? "Cargando…" : (activeCommunity?.name ?? "Elegí una comunidad")}
+        <div className="flex items-center gap-2.5">
+          <CommunityBadge
+            name={activeCommunity?.name}
+            iconUrl={activeCommunity?.iconUrl}
+            color={activeCommunity?.primaryColor}
+            size={44}
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold">
+              {loading ? "Cargando…" : (activeCommunity?.name ?? "Elegí una comunidad")}
+            </span>
+            <span className="block text-[11px] text-[var(--color-text-muted)]">
+              {memberships.length} comunidad{memberships.length === 1 ? "" : "es"}
+            </span>
           </span>
-          <span className="block text-[11px] text-[var(--color-text-muted)]">
-            {memberships.length} comunidad{memberships.length === 1 ? "" : "es"}
-          </span>
-        </span>
-        <ChevronDownIcon className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDownIcon className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+        {activeCommunity?.shortDescription && (
+          <p className="line-clamp-2 text-xs text-[var(--color-text-secondary)]">{activeCommunity.shortDescription}</p>
+        )}
+        {activeCommunity && (
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            {activeCommunity.memberCount.toLocaleString("es-ES")} miembros
+            {activeCommunityDetail && ` · ${activeCommunityDetail.onlineMemberCount} en línea`}
+          </p>
+        )}
       </button>
 
       {open && (

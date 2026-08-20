@@ -551,6 +551,20 @@ export function EditIcon({ size = 18, className = "" }: IconProps) {
   );
 }
 
+export function LiveIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+      <path
+        d="M7.5 8.2a6 6 0 0 0 0 7.6M16.5 8.2a6 6 0 0 1 0 7.6M4.5 5a10.5 10.5 0 0 0 0 14M19.5 5a10.5 10.5 0 0 1 0 14"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function PaletteIcon({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

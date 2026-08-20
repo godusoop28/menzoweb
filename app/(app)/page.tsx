@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { Avatar } from "@/components/Avatar";
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityContextNav } from "@/components/communities/CommunityContextNav";
 import { CommunityHero } from "@/components/CommunityHero";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
+import { LiveIcon, UsersIcon } from "@/components/icons";
 import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
-import { getMyRealId, mapPost, postsApi } from "@/lib/api";
+import { communitiesApi, getMyRealId, mapPost, postsApi } from "@/lib/api";
+import { toGradient } from "@/lib/api/mappers";
+import type { CommunityMemberDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
@@ -21,18 +26,33 @@ import type { Post } from "@/lib/types";
 
 type HomeTab = "recientes" | "destacados" | "descubrir" | "blogs";
 type RoomSort = "recent" | "popular";
+const VALID_TABS: HomeTab[] = ["recientes", "destacados", "blogs", "descubrir"];
+const LEADER_ROLES = new Set(["COMMUNITY_OWNER", "COMMUNITY_ADMIN"]);
 
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
   const communityTheme = useCommunityTheme();
   const { activeCommunity } = useCommunity();
-  const [tab, setTab] = useState<HomeTab>("recientes");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab = VALID_TABS.includes(tabParam as HomeTab) ? (tabParam as HomeTab) : "recientes";
+  const [tab, setTab] = useState<HomeTab>(initialTab);
+  const [tabSyncedFor, setTabSyncedFor] = useState(tabParam);
+  // El sidebar navega a /?tab=blogs (ver AppShell) — si el query param cambia (otro link del
+  // sidebar mientras esta misma página ya está montada) hay que reflejarlo, pero sin pisar el
+  // tab si el usuario lo cambió a mano tocando las pestañas después de llegar acá.
+  if (tabParam !== tabSyncedFor) {
+    setTab(initialTab);
+    setTabSyncedFor(tabParam);
+  }
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [blogs, setBlogs] = useState<Post[]>([]);
   const [blogsLoadedFor, setBlogsLoadedFor] = useState<string | undefined>(undefined);
+  const [rosterMembers, setRosterMembers] = useState<CommunityMemberDto[]>([]);
+  const [rosterLoadedFor, setRosterLoadedFor] = useState<string | undefined>(undefined);
   const blogsFetchKey = tab === "blogs" ? `blogs:${activeCommunity?.id ?? "none"}` : undefined;
   // "Ajustar estado durante el render" en vez de un setState síncrono al abrir el effect de abajo
   // (mismo patrón que lib/chat/useChatAppearance.ts) — evita el render extra que dispararía un
@@ -61,6 +81,31 @@ export default function FeedPage() {
       cancelled = true;
     };
   }, [blogsFetchKey, blogsLoadedFor, activeCommunity?.id]);
+
+  // Líderes / En línea ahora del panel derecho (solo lg:+, ver el JSX más abajo) — mismos datos
+  // reales que ya usa /members (communitiesApi.members), pedidos acá una sola vez por comunidad
+  // en vez de que cada widget del rail haga su propio fetch por separado.
+  useEffect(() => {
+    if (!activeCommunity || activeCommunity.id === rosterLoadedFor) return;
+    let cancelled = false;
+    communitiesApi
+      .members(activeCommunity.id, 0, 30)
+      .then((res) => {
+        if (cancelled) return;
+        setRosterMembers(res.items);
+        setRosterLoadedFor(activeCommunity.id);
+      })
+      .catch((error) => {
+        console.warn("[menzo/web] load community roster failed", error);
+        if (!cancelled) setRosterLoadedFor(activeCommunity.id);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCommunity, rosterLoadedFor]);
+
+  const leaders = rosterMembers.filter((m) => LEADER_ROLES.has(m.communityRole)).slice(0, 4);
+  const onlineMembersList = rosterMembers.filter((m) => m.user.isOnline).slice(0, 8);
 
   useEffect(() => {
     if (tab === "descubrir") actions.loadDiscoverRooms(roomSort);
@@ -105,11 +150,11 @@ export default function FeedPage() {
   }
 
   return (
-    <div
-      className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8"
-      style={communityTheme.feed.style}
-    >
-      <CommunityContextNav />
+    <div className="flex min-h-full w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6" style={communityTheme.feed.style}>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 lg:mx-0 lg:max-w-[720px] lg:flex-1">
+      <div className="md:hidden">
+        <CommunityContextNav />
+      </div>
 
       <CommunityHero previewMembers={onlineMembers} />
 
@@ -155,8 +200,10 @@ export default function FeedPage() {
             </div>
           )}
 
+          {/* En lg:+ "Salas en vivo" vive solo en el panel derecho (ver <aside> más abajo) — no
+              tiene sentido mostrar la misma lista dos veces en la misma pantalla. */}
           {liveRooms.length > 0 && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:hidden">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden /> Salas en vivo
@@ -292,6 +339,95 @@ export default function FeedPage() {
           </Link>
         </div>
       )}
+    </div>
+
+    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-sm font-bold">Líderes</h3>
+          <Link href="/members" className="text-xs font-semibold text-[var(--color-cyan)]">
+            Ver todos
+          </Link>
+        </div>
+        {leaders.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">Sin líderes todavía.</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {leaders.map((member) => (
+              <Link
+                key={member.user.id}
+                href={`/member/${member.user.id}`}
+                className="flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-[var(--color-surface-secondary)]"
+              >
+                <Avatar
+                  name={member.user.displayName}
+                  avatarUri={member.user.avatarUri ?? undefined}
+                  gradient={toGradient(member.user.avatarGradient)}
+                  size={36}
+                  showOnline
+                  online={member.user.isOnline}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {member.customTitle || member.user.displayName}
+                  </span>
+                  <span className="block truncate text-[11px] text-[var(--color-text-muted)]">@{member.user.username}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {liveRooms.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
+            <LiveIcon size={16} className="text-[var(--color-coral)]" />
+            Salas en vivo
+          </h3>
+          <div className="flex flex-col gap-2">
+            {liveRooms.slice(0, 4).map((room) => (
+              <Link
+                key={room.id}
+                href={`/chat/${room.id}`}
+                className="flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-[var(--color-surface-secondary)]"
+              >
+                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{room.name}</span>
+                  <span className="block text-[11px] text-[var(--color-text-muted)]">{room.onlineCount} conectados</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
+          <UsersIcon size={16} />
+          En línea ahora
+        </h3>
+        {onlineMembersList.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {onlineMembersList.map((member) => (
+              <Link key={member.user.id} href={`/member/${member.user.id}`} title={member.user.displayName}>
+                <Avatar
+                  name={member.user.displayName}
+                  avatarUri={member.user.avatarUri ?? undefined}
+                  gradient={toGradient(member.user.avatarGradient)}
+                  size={36}
+                  showOnline
+                  online
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </aside>
     </div>
   );
 }
