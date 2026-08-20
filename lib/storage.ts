@@ -29,4 +29,16 @@ export const StorageKeys = {
   // Compartida entre CommunityContext (dueño) y AppStateContext (solo lee, para scopear el
   // snapshot inicial de posts/salas) — ver Contexto §8/§21 del pedido original.
   activeCommunityId: "menzo.activeCommunityId",
+  // Prefijo de la apariencia de chat personal por usuario+sala — nunca se envía al backend, ver
+  // lib/chat/chatAppearance.ts. La clave real es `${chatAppearancePrefix}.${userId}.${roomId}`.
+  chatAppearancePrefix: "menzo.chatAppearance",
+  // Preferencias de accesibilidad, por DISPOSITIVO (no por usuario) — ver
+  // lib/AccessibilityPrefsContext.tsx.
+  accessibilityPrefs: "menzo.accessibilityPrefs",
 } as const;
+
+/** Clave de storage para la apariencia personal de una sala — un usuario nunca ve la
+ * personalización de otro, y la misma persona puede tener wallpapers distintos en dos salas. */
+export function chatAppearanceKey(userId: string, roomId: string): string {
+  return `${StorageKeys.chatAppearancePrefix}.${userId}.${roomId}`;
+}

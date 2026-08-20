@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, CloseIcon, SendIcon, SettingsIcon } from "@/components/icons";
+import { BackIcon, CloseIcon, PaletteIcon, SendIcon, SettingsIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
+import { ChatAppearanceSheet } from "@/components/chat/ChatAppearanceSheet";
 import { StickerPickerSheet } from "@/components/chat/StickerPickerSheet";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
@@ -19,6 +20,7 @@ import { ApiError, chatApi, getMyRealId, mapUserProfile, usersApi } from "@/lib/
 import type { RoomRole } from "@/lib/api/types";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useChatAppearance } from "@/lib/chat/useChatAppearance";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findRoom, findUser, messagesForRoom } from "@/lib/store/selectors";
@@ -46,6 +48,8 @@ export default function ChatRoomPage() {
   const [confirmStartLive, setConfirmStartLive] = useState(false);
   const [startingLive, setStartingLive] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [showAppearanceSheet, setShowAppearanceSheet] = useState(false);
+  const chatAppearance = useChatAppearance(id);
   const [pendingDelete, setPendingDelete] = useState<{ message: Message; isSelf: boolean } | null>(null);
   const [deletingMessage, setDeletingMessage] = useState(false);
   const listEndRef = useRef<HTMLDivElement>(null);
@@ -282,10 +286,19 @@ export default function ChatRoomPage() {
           sobre una caja de tamaño fijo (h-full) siempre recorta igual, nunca deforma. Header y
           composer llevan su propio fondo opaco/blur (ver más abajo) así que igual la tapan donde
           corresponde. */}
-      {room.backgroundUri && (
+      {/* Precedencia: el wallpaper personal del usuario que MIRA la sala (local, ver
+          lib/chat/chatAppearance.ts) reemplaza visualmente room.backgroundUri solo para él —
+          nunca lo modifica ni lo escribe. Si no configuró uno, cae al fondo compartido de la
+          sala (owner/co-host, RoomSettingsPanel) exactamente como antes. */}
+      {(chatAppearance.prefs.wallpaperUrl || room.backgroundUri) && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={room.backgroundUri} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <img
+            src={chatAppearance.prefs.wallpaperUrl || room.backgroundUri!}
+            alt=""
+            className="absolute inset-0 -z-10 h-full w-full object-cover"
+            style={chatAppearance.prefs.wallpaperUrl ? { opacity: chatAppearance.prefs.wallpaperOpacity } : undefined}
+          />
           <div className="absolute inset-0 -z-10 bg-[rgba(7,9,13,0.62)]" />
         </>
       )}
@@ -356,6 +369,16 @@ export default function ChatRoomPage() {
               </button>
             )
           )}
+          {/* Siempre visible para cualquier miembro (a diferencia de la tuerca de abajo, que es
+              solo owner/co-host) — la apariencia es personal, no administración de la sala. */}
+          <button
+            onClick={() => setShowAppearanceSheet(true)}
+            aria-label="Apariencia de este chat"
+            title="Apariencia de este chat"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 cursor-pointer"
+          >
+            <PaletteIcon size={16} />
+          </button>
           {canModerate && (
             <button
               onClick={() => {
@@ -416,6 +439,7 @@ export default function ChatRoomPage() {
                     isOwn={m.authorId === LOCAL_USER_ID}
                     role={memberRoles.get(m.authorId)}
                     grouped={grouped}
+                    appearance={chatAppearance.prefs}
                     onReply={
                       m.type === "system"
                         ? undefined
@@ -518,6 +542,13 @@ export default function ChatRoomPage() {
         <StickerPickerSheet onPick={(sticker) => handlePickSticker(sticker.id)} onClose={() => setShowStickerPicker(false)} />
       )}
 
+      <ChatAppearanceSheet
+        open={showAppearanceSheet}
+        onClose={() => setShowAppearanceSheet(false)}
+        prefs={chatAppearance.prefs}
+        onChange={chatAppearance.setPrefs}
+        onReset={chatAppearance.reset}
+      />
       {showInfo && <RoomInfoModal room={room} onClose={() => setShowInfo(false)} />}
       {showSettings && (
         <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab={settingsInitialTab} />

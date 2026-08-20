@@ -141,8 +141,20 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .menzo-fade-in,
+  .menzo-typing-dot,
   .menzi-dj-breathe,
   .menzi-dj-bar {
     animation: none;
   }
+}
+
+/* Toggle manual "Reducir movimiento" en Ajustes > Accesibilidad (ver
+   AccessibilityPrefsContext.tsx) — mismo efecto que la media query de arriba, pero controlable
+   aunque el sistema operativo no tenga activado prefers-reduced-motion. */
+html[data-reduce-motion] .menzo-fade-in,
+html[data-reduce-motion] .menzo-typing-dot,
+html[data-reduce-motion] .menzi-dj-breathe,
+html[data-reduce-motion] .menzi-dj-bar {
+  animation: none;
 }

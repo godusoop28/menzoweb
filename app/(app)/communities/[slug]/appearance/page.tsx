@@ -12,6 +12,7 @@ import type {
 } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
+import { withNavDefaults } from "@/lib/communities/navigationDefaults";
 import { BackIcon } from "@/components/icons";
 
 const IMAGE_FIELDS: { key: keyof Pick<CommunityDetailDto, "iconUrl" | "logoUrl" | "coverUrl" | "backgroundUrl" | "bannerUrl">; label: string }[] = [
@@ -28,33 +29,31 @@ const COLOR_FIELDS: { key: keyof Pick<CommunityDetailDto, "primaryColor" | "seco
   { key: "accentColor", label: "Color de acento" },
 ];
 
-const THEME_IMAGE_FIELDS: { key: "navBackgroundUrl" | "feedBackgroundUrl" | "chatBackgroundUrl"; label: string }[] = [
+type ThemeImageKey =
+  | "navBackgroundUrl"
+  | "feedBackgroundUrl"
+  | "chatBackgroundUrl"
+  | "overlayDecorationUrl"
+  | "featuredVisualUrl";
+
+/** `chatBackgroundUrl` pinta la LISTA de chats de la comunidad, no una conversación — el
+ * wallpaper de una conversación es personal por usuario+sala y vive local en cada cliente (ver
+ * lib/chat/chatAppearance.ts). No "completar" este campo hacia significar eso: son sistemas
+ * independientes a propósito. */
+const THEME_IMAGE_FIELDS: { key: ThemeImageKey; label: string; helper?: string }[] = [
   { key: "navBackgroundUrl", label: "Fondo del menú/navegación" },
   { key: "feedBackgroundUrl", label: "Fondo del feed" },
-  { key: "chatBackgroundUrl", label: "Fondo de la bandeja de mensajes" },
+  {
+    key: "chatBackgroundUrl",
+    label: "Fondo de la lista de chats",
+    helper: "Solo se ve en la lista de chats de la comunidad — el fondo de cada conversación lo elige cada persona.",
+  },
+  { key: "overlayDecorationUrl", label: "Overlay / decoración", helper: "PNG transparente, se aplica en slots seguros." },
+  { key: "featuredVisualUrl", label: "Imagen destacada", helper: "Para hero secundarios, eventos o cards destacadas." },
 ];
 
 const HEADER_STYLES = ["default", "compact", "banner", "minimal"];
 const CARD_STYLES = ["rounded", "square", "flat", "elevated"];
-
-const NAV_SECTION_DEFAULTS: { key: CommunityNavigationSectionKey; label: string; order: number }[] = [
-  { key: "home", label: "Inicio", order: 1 },
-  { key: "posts", label: "Publicaciones", order: 2 },
-  { key: "blogs", label: "Blogs", order: 3 },
-  { key: "chats", label: "Chats", order: 4 },
-  { key: "live", label: "LIVE", order: 5 },
-  { key: "members", label: "Miembros", order: 6 },
-  { key: "events", label: "Eventos", order: 7 },
-  { key: "about", label: "Información", order: 8 },
-];
-
-function withNavDefaults(config: CommunityNavigationConfig): CommunityNavigationConfig {
-  const next: CommunityNavigationConfig = { ...config };
-  for (const { key, label, order } of NAV_SECTION_DEFAULTS) {
-    if (!next[key]) next[key] = { enabled: true, order, label };
-  }
-  return next;
-}
 
 /** COMMUNITY_ADMIN+ de esta comunidad, o cuenta global LEADER+ — ver
  * CommunityPermissionEvaluator.requireCanEditAppearance en menzoapi (el backend re-valida
@@ -124,7 +123,7 @@ export default function CommunityAppearancePage() {
     }
   }
 
-  async function handleThemeImageUpload(key: "navBackgroundUrl" | "feedBackgroundUrl" | "chatBackgroundUrl", file: File) {
+  async function handleThemeImageUpload(key: ThemeImageKey, file: File) {
     try {
       const url = await uploadsApi.upload(file);
       setTheme((prev) => ({ ...prev, [key]: url }));
@@ -252,7 +251,7 @@ export default function CommunityAppearancePage() {
         <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
           Fondos adicionales
         </h2>
-        {THEME_IMAGE_FIELDS.map(({ key, label }) => (
+        {THEME_IMAGE_FIELDS.map(({ key, label, helper }) => (
           <div key={key} className="flex items-center gap-3">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-surface-secondary)]">
               {theme[key] ? (
@@ -264,6 +263,7 @@ export default function CommunityAppearancePage() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium">{label}</p>
+              {helper && <p className="text-xs text-[var(--color-text-muted)]">{helper}</p>}
               <label className="mt-1 inline-block cursor-pointer rounded-full bg-[var(--color-surface-secondary)] px-3 py-1.5 text-xs font-semibold">
                 Cambiar
                 <input

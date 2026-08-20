@@ -5,9 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
-import { communityBackgroundStyle } from "@/lib/communities/backgroundStyle";
-import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useAppHeight } from "@/lib/useAppHeight";
+import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 
 import { CommunitySwitcher } from "./communities/CommunitySwitcher";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
@@ -39,9 +38,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { state, actions } = useAppState();
   const accent = useAccent();
-  const { activeCommunity, activeCommunityDetail } = useCommunity();
-  const navBackgroundUrl = activeCommunityDetail?.themeConfig?.navBackgroundUrl;
-  const navStyle = communityBackgroundStyle(activeCommunity, navBackgroundUrl);
+  const communityTheme = useCommunityTheme();
+  const navStyle = communityTheme.nav.style;
   const unread = state.social.notifications.filter((n) => !n.read).length;
   const isStaff = !!state.profile && state.profile.globalRole !== "USER";
   const secondaryItems = isStaff ? [...SECONDARY_ITEMS, ADMIN_ITEM] : SECONDARY_ITEMS;
@@ -73,7 +71,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="relative hidden md:flex md:h-full md:w-64 md:flex-col md:gap-6 md:overflow-y-auto md:px-4 md:py-6 md:shadow-[2px_0_16px_rgba(0,0,0,0.45)]"
         style={navStyle}
       >
-        {navStyle && <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(7,9,13,0.88)" }} />}
         <div className="relative flex h-full flex-col gap-6">
         <Link href="/" className="group flex items-center gap-2.5 px-2">
           <div className="relative">

@@ -7,10 +7,21 @@ import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import type { BubbleStyle, ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
 
 const ROLE_BADGE: Partial<Record<RoomRole, string>> = { OWNER: "👑", CO_HOST: "⭐" };
+
+/** `mode: "default"` devuelve `undefined` para que el llamador conserve exactamente el cálculo
+ * de color que ya tenía (accent de comunidad / tinte de autor) — la apariencia personal solo
+ * pisa ese comportamiento cuando el usuario eligió explícitamente un color o gradiente propio. */
+function resolveBubbleBackground(style: BubbleStyle | undefined): string | undefined {
+  if (!style || style.mode === "default") return undefined;
+  if (style.mode === "solid") return style.color;
+  if (style.mode === "gradient") return style.gradient;
+  return undefined;
+}
 
 /** Mismo set fijo que menzomovil/_quickReactionEmojis — un puñado de reacciones rápidas, no un
  * selector completo de emojis (eso sería una feature aparte). */
@@ -70,6 +81,7 @@ export function ChatBubble({
   onReply,
   onReact,
   onDelete,
+  appearance,
 }: {
   message: Message;
   author?: DemoUser;
@@ -89,9 +101,18 @@ export function ChatBubble({
    * siempre; CURATOR+ para el de otros, ver chat/[id]/page.tsx) — el propio botón no vuelve a
    * chequear permisos. */
   onDelete?: (message: Message) => void;
+  /** Apariencia personal del usuario que MIRA la sala (local, ver lib/chat/chatAppearance.ts) —
+   * ausente = comportamiento idéntico al de antes de este prop. */
+  appearance?: ChatAppearancePrefs;
 }) {
   const accent = useAccent();
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const bubbleOpacity = appearance?.bubbleOpacity ?? 1;
+  const textScale = appearance?.textScale ?? 1;
+  const compact = appearance?.compactMode ?? false;
+  const showAvatars = appearance?.showAvatars ?? true;
+  const outgoingBg = resolveBubbleBackground(appearance?.outgoingBubble);
+  const incomingBg = resolveBubbleBackground(appearance?.incomingBubble);
 
   if (message.type === "system") {
     return (
@@ -107,8 +128,10 @@ export function ChatBubble({
   // avatar/nombre/hora como cualquier otro mensaje, solo cambia el contenido central.
   if (message.type === "sticker" && message.sticker && !message.deleted) {
     return (
-      <div className={`group flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}>
-        {grouped ? (
+      <div
+        className={`group flex max-w-[86%] items-end ${compact ? "gap-1.5" : "gap-2"} ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}
+      >
+        {grouped || !showAvatars ? (
           <div className="w-[30px] shrink-0" aria-hidden />
         ) : author ? (
           <Link href={`/member/${author.id}`} className="shrink-0">
@@ -166,11 +189,13 @@ export function ChatBubble({
   // wash muy sutil de fondo más una franja sólida al costado, nunca opaco encima del texto.
   const authorTint = !isOwn && author ? gradientCss(author.avatarGradient) : undefined;
 
+  const bubbleBackground = isOwn ? outgoingBg ?? accent.color : incomingBg;
+
   return (
     <div
-      className={`group flex max-w-[86%] items-end gap-2 ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}
+      className={`group flex max-w-[86%] items-end ${compact ? "gap-1.5" : "gap-2"} ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}
     >
-      {grouped ? (
+      {grouped || !showAvatars ? (
         <div className="w-[30px] shrink-0" aria-hidden />
       ) : author ? (
         <Link href={`/member/${author.id}`} className="shrink-0">
@@ -181,24 +206,25 @@ export function ChatBubble({
       )}
       <div className={`flex min-w-0 flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}>
       <div
-        className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] px-4 py-2 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
+        className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] ${compact ? "px-3 py-1.5" : "px-4 py-2"} shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
           isOwn
             ? "rounded-tr-lg text-[var(--color-text-on-accent)]"
-            : "rounded-tl-lg border-l-[3px] bg-[var(--color-surface-secondary)]/90"
+            : `rounded-tl-lg ${incomingBg ? "" : "border-l-[3px]"} bg-[var(--color-surface-secondary)]/90`
         }`}
-        style={
-          isOwn
-            ? { background: accent.color }
-            : authorTint
-              ? { borderLeftColor: authorTint }
-              : undefined
-        }
+        style={{
+          background: bubbleBackground,
+          opacity: bubbleOpacity,
+          ...(!isOwn && !incomingBg && authorTint ? { borderLeftColor: authorTint } : {}),
+        }}
       >
-        {authorTint && !isOwn && (
+        {authorTint && !isOwn && !incomingBg && (
           <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.09]" style={{ background: authorTint }} aria-hidden />
         )}
         {!isOwn && !grouped && (
-          <span className="flex items-center gap-1 text-xs font-bold text-[var(--color-cyan)]">
+          <span
+            className="flex items-center gap-1 text-xs font-bold text-[var(--color-cyan)]"
+            style={textScale !== 1 ? { fontSize: `${12 * textScale}px` } : undefined}
+          >
             {author ? (
               <Link href={`/member/${author.id}`} className="hover:underline">
                 {author.displayName}
@@ -214,6 +240,7 @@ export function ChatBubble({
             className={`flex flex-col gap-0.5 rounded-lg border-l-2 px-2 py-1 text-xs ${
               isOwn ? "border-black/30 bg-black/10" : "border-[var(--color-cyan)] bg-black/15"
             }`}
+            style={textScale !== 1 ? { fontSize: `${12 * textScale}px` } : undefined}
           >
             {message.replyTo.deleted ? (
               <span className="italic text-[var(--color-text-muted)]">Mensaje eliminado</span>
@@ -233,7 +260,11 @@ export function ChatBubble({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={message.imageUri} alt="" className="h-[150px] w-[200px] rounded-lg object-cover" />
             )}
-            {!!message.body && <p className="whitespace-pre-wrap text-sm">{message.body}</p>}
+            {!!message.body && (
+              <p className="whitespace-pre-wrap text-sm" style={textScale !== 1 ? { fontSize: `${14 * textScale}px` } : undefined}>
+                {message.body}
+              </p>
+            )}
           </>
         )}
         <span className={`self-end text-[10px] ${isOwn ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>

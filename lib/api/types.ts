@@ -720,8 +720,24 @@ export type CommunityThemeConfig = {
   cardStyle?: string;
   navBackgroundUrl?: string;
   feedBackgroundUrl?: string;
+  /** Fondo de la LISTA de chats de la comunidad (chat/page.tsx) — no confundir con el wallpaper
+   * personal de una conversación, que es local por usuario+sala y nunca vive en themeConfig. Ver
+   * lib/chat/chatAppearance.ts. */
   chatBackgroundUrl?: string;
+  /** Alias preferido de navBackgroundUrl en la spec de rediseño; el resolver cae a
+   * navBackgroundUrl si esta clave no está configurada (compatibilidad con comunidades ya
+   * creadas antes de este campo). */
+  navigationBackgroundUrl?: string;
+  /** PNG/decoración transparente aplicada en slots seguros — ver lib/theme/communityTheme.ts. */
+  overlayDecorationUrl?: string;
+  /** Visual flexible para hero secundarios/eventos/cards destacadas (no exclusivo de DJ Menzi). */
+  featuredVisualUrl?: string;
+  layoutPreset?: string;
+  density?: string;
   decorations?: string[];
+  /** 0-1, opacidad del scrim de legibilidad sobre nav/feed. Sin configurar, el resolver usa un
+   * default seguro (ver lib/theme/communityTheme.ts) — opcional a propósito. */
+  backgroundOverlay?: number;
   [key: string]: unknown;
 };
 

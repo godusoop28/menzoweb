@@ -66,3 +66,38 @@ export const Radius = {
   xl: 26,
   pill: 999,
 } as const;
+
+/**
+ * Agrupación semántica de `Colors` para el nivel "Menzo global" del theme de tres capas
+ * (Menzo global -> tema de comunidad -> apariencia personal de chat). No introduce valores
+ * nuevos: reexporta las mismas constantes de `Colors` bajo los nombres que pide la spec de
+ * rediseño, para que el resolver de comunidad y las capas de apariencia personal tengan un
+ * único vocabulario de fallback. `warning` no existía como concepto propio en `Colors`; se
+ * mapea a `Colors.yellow` (mismo tono ya usado para advertencias/nivel alto) en vez de
+ * inventar un hex nuevo que pueda desalinearse de `app/globals.css`.
+ */
+export type MenzoTokens = {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  textPrimary: string;
+  textSecondary: string;
+  border: string;
+  accentMenzo: string;
+  danger: string;
+  success: string;
+  warning: string;
+};
+
+export const MenzoTokens: MenzoTokens = {
+  background: Colors.background,
+  surface: Colors.surface,
+  surfaceElevated: Colors.surfaceElevated,
+  textPrimary: Colors.textPrimary,
+  textSecondary: Colors.textSecondary,
+  border: Colors.border,
+  accentMenzo: Colors.orange,
+  danger: Colors.danger,
+  success: Colors.success,
+  warning: Colors.yellow,
+};

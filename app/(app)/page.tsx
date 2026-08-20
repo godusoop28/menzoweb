@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
+import { CommunityContextNav } from "@/components/communities/CommunityContextNav";
 import { CommunityHero } from "@/components/CommunityHero";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
@@ -12,8 +13,7 @@ import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
-import { communityFallbackGradient } from "@/lib/communities/backgroundStyle";
-import { useCommunity } from "@/lib/communities/CommunityContext";
+import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
 
 type HomeTab = "recientes" | "destacados" | "descubrir";
@@ -22,9 +22,7 @@ type RoomSort = "recent" | "popular";
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
-  const { activeCommunity, activeCommunityDetail } = useCommunity();
-  const feedBackgroundUrl = activeCommunityDetail?.themeConfig?.feedBackgroundUrl || activeCommunityDetail?.backgroundUrl;
-  const feedFallbackGradient = communityFallbackGradient(activeCommunity);
+  const communityTheme = useCommunityTheme();
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
@@ -79,22 +77,7 @@ export default function FeedPage() {
   return (
     <div
       className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8"
-      style={
-        feedBackgroundUrl || feedFallbackGradient
-          ? {
-              backgroundImage: [
-                "linear-gradient(rgba(7,9,13,0.88), rgba(7,9,13,0.88))",
-                feedBackgroundUrl ? `url(${feedBackgroundUrl})` : null,
-                feedFallbackGradient,
-              ]
-                .filter(Boolean)
-                .join(", "),
-              backgroundSize: "cover",
-              backgroundPosition: "top center",
-              backgroundAttachment: "fixed",
-            }
-          : undefined
-      }
+      style={communityTheme.feed.style}
     >
       <div className="menzo-fade-in flex items-center justify-between">
         <div>
@@ -111,6 +94,8 @@ export default function FeedPage() {
           {refreshing ? "Actualizando…" : "Actualizar"}
         </button>
       </div>
+
+      <CommunityContextNav />
 
       <CommunityHero previewMembers={onlineMembers} />
 

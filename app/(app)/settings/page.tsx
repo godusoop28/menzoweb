@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { usersApi } from "@/lib/api";
+import { useAccessibilityPrefs } from "@/lib/AccessibilityPrefsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import type { SettingsDto } from "@/lib/api";
 
@@ -40,6 +41,7 @@ export default function SettingsPage() {
   const { actions } = useAppState();
   const router = useRouter();
   const [settings, setSettings] = useState<SettingsDto | null>(null);
+  const { prefs: accessibilityPrefs, setPrefs: setAccessibilityPrefs } = useAccessibilityPrefs();
 
   useEffect(() => {
     usersApi
@@ -90,6 +92,36 @@ export default function SettingsPage() {
         >
           Cerrar sesión
         </button>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Apariencia</h2>
+        <div className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-sm">
+          <p className="font-medium">Cada chat tiene su propia apariencia</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            El wallpaper, el color de las burbujas, la opacidad y el tamaño de texto se personalizan desde el ícono de
+            paleta dentro de cada conversación — solo vos ves esos cambios en ese chat.
+          </p>
+        </div>
+      </div>
+
+      {/* Por-dispositivo (no se envía a menzoapi) — ver AccessibilityPrefsContext.tsx. A
+          diferencia de la apariencia de chat, esto no es expresión personal ligada a la cuenta:
+          no debe reactivarse silenciosamente al cambiar de usuario en un equipo compartido. */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Accesibilidad</h2>
+        <SettingRow
+          label="Reducir fondos personalizados"
+          description="Oculta las imágenes de tema de comunidad y wallpapers de chat, usando solo color."
+          value={accessibilityPrefs.reduceCustomBackgrounds}
+          onChange={(v) => setAccessibilityPrefs({ reduceCustomBackgrounds: v })}
+        />
+        <SettingRow
+          label="Reducir movimiento"
+          description="Detiene animaciones decorativas (como la de DJ Menzi) en este dispositivo."
+          value={accessibilityPrefs.reduceMotion}
+          onChange={(v) => setAccessibilityPrefs({ reduceMotion: v })}
+        />
       </div>
 
       {settings && (
