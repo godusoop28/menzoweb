@@ -8,26 +8,22 @@ import { Avatar } from "@/components/Avatar";
 import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { GradientButton } from "@/components/GradientButton";
 import { BackIcon, LiveIcon, UsersIcon } from "@/components/icons";
-import { LevelBadge } from "@/components/LevelBadge";
 import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
+import { ProfileHero } from "@/components/ProfileHero";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
-import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
-import { auraById } from "@/data/auras";
 import { ApiError, communitiesApi, gamesApi } from "@/lib/api";
 import { toGradient } from "@/lib/api/mappers";
 import type { CommunityMemberDto } from "@/lib/api/types";
-import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useToast } from "@/lib/ToastContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, wallMessagesForProfile } from "@/lib/store/selectors";
 import { formatJoinDate } from "@/lib/time";
-import { gradientCss } from "@/lib/theme";
 
 type Tab = "posts" | "wall" | "blogs";
 
@@ -36,7 +32,6 @@ export default function MemberProfilePage() {
   const router = useRouter();
   const { state, actions } = useAppState();
   const showToast = useToast();
-  const accent = useAccent();
   const { activeCommunity, activeCommunityDetail } = useCommunity();
   const [tab, setTab] = useState<Tab>("posts");
   const [openingChat, setOpeningChat] = useState(false);
@@ -155,96 +150,55 @@ export default function MemberProfilePage() {
         Volver
       </button>
 
-      <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
-        <div className="relative h-56 w-full">
-          {user.coverUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.coverUri} alt="" className="h-full w-full object-cover" />
+      <ProfileHero
+        user={user}
+        canManageTitles={canManageTitles}
+        onAddTitle={(text, color) => actions.addUserTitle(user.id, text, color)}
+        onRemoveTitle={(title) => actions.removeUserTitle(user.id, title.id)}
+        nameBadge={
+          isFriend ? (
+            <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-cyan)]">Amigos</span>
           ) : (
-            <div className="h-full w-full" style={{ background: gradientCss(auraById(user.aura).gradient) }} />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
-        </div>
-
-        <div className="-mt-14 flex flex-col gap-3 px-6 pb-6">
-          <div className="flex items-end justify-between gap-3">
-            <div
-              className="rounded-full"
-              style={{ boxShadow: `0 0 0 4px var(--color-surface), 0 0 28px 2px ${accent.color}66` }}
+            !isFollowing &&
+            followsMe && (
+              <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">Te sigue</span>
+            )
+          )
+        }
+        actions={
+          <>
+            <GradientButton
+              label={followButtonLabel}
+              onClick={() => actions.toggleFollow(user.id)}
+              gradient={isFollowing ? "community" : "fire"}
+              size="md"
+              fullWidth={false}
+            />
+            <button
+              onClick={handleMessage}
+              disabled={openingChat}
+              className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
             >
-              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={104} showOnline online={user.isOnline} level={user.level} />
-            </div>
-            <div className="flex gap-2">
-              <GradientButton
-                label={followButtonLabel}
-                onClick={() => actions.toggleFollow(user.id)}
-                gradient={isFollowing ? "community" : "fire"}
-                size="md"
-                fullWidth={false}
-              />
-              <button
-                onClick={handleMessage}
-                disabled={openingChat}
-                className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
-              >
-                Mensaje
-              </button>
-              <button
-                onClick={handleChallenge}
-                disabled={challenging}
-                className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
-              >
-                Jugar
-              </button>
-            </div>
-          </div>
+              Mensaje
+            </button>
+            <button
+              onClick={handleChallenge}
+              disabled={challenging}
+              className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              Jugar
+            </button>
+          </>
+        }
+      />
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-display text-xl font-bold">{user.displayName}</h1>
-              {isFriend ? (
-                <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-cyan)]">
-                  Amigos
-                </span>
-              ) : (
-                !isFollowing &&
-                followsMe && (
-                  <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">
-                    Te sigue
-                  </span>
-                )
-              )}
-            </div>
-            <p className="text-sm text-[var(--color-text-muted)]">@{user.username}</p>
-            {!!user.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{user.statusText}</p>}
-          </div>
-
-          <UserTitles
-            titles={user.titles}
-            canManage={canManageTitles}
-            onAdd={(text, color) => actions.addUserTitle(user.id, text, color)}
-            onRemove={(title) => actions.removeUserTitle(user.id, title.id)}
-          />
-
-          <LevelBadge
-            level={user.level}
-            levelName={user.levelName}
-            xp={user.xp}
-            xpForCurrentLevel={user.xpForCurrentLevel}
-            xpForNextLevel={user.xpForNextLevel}
-          />
-
-          <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
-            <Stat value={user.reputation} label="Reputación" />
-            <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />
-            <Stat value={user.followers} label="Seguidores" href={`/connections/${user.id}/followers`} />
-            <Stat value={user.visitors} label="Visitantes" />
-          </div>
-
-          {!!user.bio && <p className="text-sm text-[var(--color-text-secondary)]">{user.bio}</p>}
-          <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(user.joinedAt)}</p>
-        </div>
+      <div className="mt-4 grid grid-cols-4 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-4 text-center">
+        <Stat value={user.reputation} label="Reputación" />
+        <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />
+        <Stat value={user.followers} label="Seguidores" href={`/connections/${user.id}/followers`} />
+        <Stat value={user.visitors} label="Visitantes" />
       </div>
+      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)] lg:text-left">Miembro desde {formatJoinDate(user.joinedAt)}</p>
 
       <div className="mt-6">
         <SegmentedTabs

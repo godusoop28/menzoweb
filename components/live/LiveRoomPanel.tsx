@@ -140,6 +140,18 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
     }
   }
 
+  /** "Reacciones" del control bar — no existe un canal de reacciones efímeras propio en el
+   * backend de LIVE (ver LiveService), así que se adapta usando lo que SÍ es real: el mismo chat
+   * de la sala de arriba, con un emoji como cuerpo del mensaje. Aparece como un mensaje más en
+   * `chatMessages` (viene del mismo store global, ver arriba), nunca un overlay flotante fake. */
+  async function sendReaction(emoji: string) {
+    try {
+      await actions.sendMessage(room.id, emoji);
+    } catch {
+      showToast("No pudimos enviar tu reacción.");
+    }
+  }
+
   const stage = isConnectedHere ? live.participants.filter((p) => STAGE_ROLES.includes(p.role)) : [];
   const audience = isConnectedHere ? live.participants.filter((p) => !STAGE_ROLES.includes(p.role)) : [];
   const announcement = live.watchedRoomId === room.id ? live.viewingState?.announcement : room.liveSummary?.announcement;
@@ -329,6 +341,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
             room={room}
             unreadChat={chatAtBottom ? 0 : unreadChat}
             onOpenChat={scrollChatToBottom}
+            onSendReaction={sendReaction}
             onOpenSettings={() => setShowSettings(true)}
             onOpenMusic={() => setShowMusic(true)}
             onExit={onMinimize}
@@ -340,7 +353,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
           plegable de la spec de rediseño, sección 8/13). En <lg no se renderiza: la misma lista
           vive en la tira colapsable de arriba. */}
       {isConnectedHere && (
-        <aside className="hidden shrink-0 flex-col lg:flex lg:w-72">
+        <aside className="hidden shrink-0 flex-col gap-3 lg:flex lg:w-72">
           <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
             <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 px-3.5 py-2.5 text-xs font-semibold text-[var(--color-text-muted)]">
               <UsersIcon size={13} /> Escuchando ({audience.length})
@@ -351,6 +364,36 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
               </div>
             </div>
           </div>
+
+          {!!music.session?.queue.length && (
+            <div className="shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
+              <div className="flex items-center gap-1.5 border-b border-white/10 px-3.5 py-2.5 text-xs font-semibold text-[var(--color-text-muted)]">
+                <MusicNoteIcon size={13} /> En la cola ({music.session.queue.length})
+              </div>
+              <div className="flex flex-col gap-2 p-3">
+                {music.session.queue.slice(0, 3).map((item) => (
+                  <div key={item.id} className="flex items-center gap-2.5">
+                    {item.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.thumbnailUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-br from-[#402460] to-[#182b44]" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold">{item.title}</p>
+                      <p className="truncate text-[10px] text-[var(--color-text-muted)]">{item.channelTitle}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowMusic(true)}
+                className="w-full border-t border-white/10 px-3.5 py-2.5 text-center text-xs font-medium text-[var(--color-text-secondary)] cursor-pointer hover:bg-white/5"
+              >
+                Ver toda la cola
+              </button>
+            </div>
+          )}
         </aside>
       )}
       </div>
@@ -610,10 +653,13 @@ function ControlButton({
   );
 }
 
+const QUICK_REACTION_EMOJIS = ["❤️", "😂", "👍", "😮", "😢", "🙏"];
+
 function LiveControls({
   room,
   unreadChat,
   onOpenChat,
+  onSendReaction,
   onOpenSettings,
   onOpenMusic,
   onExit,
@@ -621,6 +667,7 @@ function LiveControls({
   room: ChatRoom;
   unreadChat: number;
   onOpenChat: () => void;
+  onSendReaction: (emoji: string) => void;
   onOpenSettings: () => void;
   onOpenMusic: () => void;
   onExit: () => void;
@@ -630,6 +677,7 @@ function LiveControls({
   const [confirmEndForAll, setConfirmEndForAll] = useState(false);
   const [endingForAll, setEndingForAll] = useState(false);
   const [screenShareBusy, setScreenShareBusy] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const canModerate = room.role === "owner" || room.role === "co_host";
   const myId = getMyRealId();
   const someoneElseSharing = live.participants.some((p) => p.screenSharing && p.user.id !== myId);
@@ -729,6 +777,34 @@ function LiveControls({
             <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
           </button>
         )}
+        <div className="relative">
+          {showReactions && (
+            <>
+              {/* Cierra el popover al tocar afuera — capa invisible detrás, mismo patrón que
+                  Sheet/dropdown del resto de la app. */}
+              <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
+              <div className="absolute bottom-full left-1/2 z-20 mb-2 flex -translate-x-1/2 gap-1.5 rounded-2xl border border-white/10 bg-[#0d1722] p-2 shadow-xl">
+                {QUICK_REACTION_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      onSendReaction(emoji);
+                      setShowReactions(false);
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-white/10 cursor-pointer"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <ControlButton onClick={() => setShowReactions((v) => !v)} label="Reacciones" variant={showReactions ? "on" : "neutral"}>
+            <span aria-hidden className="text-base leading-none">
+              ☺
+            </span>
+          </ControlButton>
+        </div>
         <ControlButton onClick={onOpenChat} label="Mensajes" badge={unreadChat}>
           <ChatIcon size={18} />
         </ControlButton>

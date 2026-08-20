@@ -4,31 +4,25 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Avatar } from "@/components/Avatar";
 import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
-import { LevelBadge } from "@/components/LevelBadge";
 import { PostCard } from "@/components/PostCard";
+import { ProfileHero } from "@/components/ProfileHero";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
-import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
-import { auraById } from "@/data/auras";
 import { interestById } from "@/data/interests";
 import { getMyRealId } from "@/lib/api";
-import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, savedPosts, wallMessagesForProfile } from "@/lib/store/selectors";
 import { formatJoinDate } from "@/lib/time";
-import { gradientCss } from "@/lib/theme";
 
 type Tab = "posts" | "wall" | "blogs" | "saved";
 const VALID_TABS: Tab[] = ["posts", "wall", "blogs", "saved"];
 
 export default function ProfilePage() {
   const { state, actions } = useAppState();
-  const accent = useAccent();
   const [refreshing, setRefreshing] = useState(false);
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -79,77 +73,35 @@ export default function ProfilePage() {
   const content = (
     <div className="flex w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
     <div className="menzo-fade-in mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-[720px] lg:flex-1">
-      <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
-        <div className="relative h-56 w-full">
-          {profile.coverUri ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.coverUri} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="h-full w-full" style={{ background: gradientCss(auraById(profile.aura).gradient) }} />
-          )}
-          {/* Transición cinematográfica hacia la tarjeta de abajo, en vez de que la portada corte
-              en seco contra el panel plano — mismo criterio que las referencias de diseño. */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
-        </div>
-
-        <div className="-mt-14 flex flex-col gap-3 px-6 pb-6">
-          <div className="flex items-end justify-between">
-            <div
-              className="rounded-full"
-              style={{ boxShadow: `0 0 0 4px var(--color-surface), 0 0 28px 2px ${accent.color}66` }}
+      <ProfileHero
+        user={profile}
+        canManageTitles={canManageTitles}
+        onAddTitle={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
+        onRemoveTitle={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
+        actions={
+          <>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-full border border-[var(--color-border-soft)] px-4 py-2 text-sm text-[var(--color-text-secondary)] disabled:opacity-50 cursor-pointer"
             >
-              <Avatar name={profile.displayName} avatarUri={profile.avatarUri} gradient={profile.avatarGradient} size={104} showOnline online level={profile.level} />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="rounded-full border border-[var(--color-border-soft)] px-4 py-2 text-sm text-[var(--color-text-secondary)] disabled:opacity-50 cursor-pointer"
-              >
-                {refreshing ? "…" : "Actualizar"}
-              </button>
-              <Link
-                href="/profile/edit"
-                className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium cursor-pointer"
-              >
-                Editar perfil
-              </Link>
-            </div>
-          </div>
+              {refreshing ? "…" : "Actualizar"}
+            </button>
+            <Link href="/profile/edit" className="rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-medium cursor-pointer">
+              Editar perfil
+            </Link>
+          </>
+        }
+      />
 
-          <div>
-            <h1 className="font-display text-xl font-bold">{profile.displayName}</h1>
-            <p className="text-sm text-[var(--color-text-muted)]">@{profile.username}</p>
-            {!!profile.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{profile.statusText}</p>}
-          </div>
-
-          <UserTitles
-            titles={profile.titles}
-            canManage={canManageTitles}
-            onAdd={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
-            onRemove={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
-          />
-
-          <LevelBadge
-            level={profile.level}
-            levelName={profile.levelName}
-            xp={profile.xp}
-            xpForCurrentLevel={profile.xpForCurrentLevel}
-            xpForNextLevel={profile.xpForNextLevel}
-          />
-
-          <div className="grid grid-cols-5 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
-            <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
-            <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
-            <Stat value={profile.reputation} label="Reputación" />
-            <Stat value={allMyPosts.length} label="Publicaciones" />
-            <Stat value={myBlogs.length} label="Blogs" />
-          </div>
-
-          {!!profile.bio && <p className="text-sm text-[var(--color-text-secondary)]">{profile.bio}</p>}
-          <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
-        </div>
+      <div className="mt-4 grid grid-cols-5 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-4 text-center">
+        <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
+        <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
+        <Stat value={profile.reputation} label="Reputación" />
+        <Stat value={allMyPosts.length} label="Publicaciones" />
+        <Stat value={myBlogs.length} label="Blogs" />
       </div>
+      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)] lg:text-left">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
 
       <div className="mt-6">
         <SegmentedTabs
