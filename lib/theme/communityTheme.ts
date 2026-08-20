@@ -59,8 +59,13 @@ function resolveOverlay(themeConfig: CommunityDetailDto["themeConfig"] | undefin
  * grande encima — un overlay bajo se ve "épico" ahí. La sidebar es al revés: nav de texto chico,
  * siempre visible, en cualquier pantalla — la misma imagen con el mismo overlay bajo se vuelve un
  * patrón ruidoso detrás de "Inicio/Chats/Miembros" y rompe la legibilidad. Ninguna referencia de
- * diseño muestra la sidebar así de "cargada"; siempre es oscura y discreta. */
-const NAV_OVERLAY_FLOOR = 0.85;
+ * diseño muestra la sidebar así de "cargada"; siempre es oscura y discreta.
+ *
+ * 0.85 no alcanza con imágenes muy saturadas/brillantes (fan-art neón, capturas con blancos
+ * puros): al 12% de opacidad remanente el patrón seguía leyéndose con claridad. 0.94 deja como
+ * mucho un 6% de la imagen original — suficiente para dar "mood"/color de marca sin nunca
+ * competir con el texto de la nav, sea cual sea la imagen que suba la comunidad. */
+const NAV_OVERLAY_FLOOR = 0.94;
 
 function resolveNavOverlay(themeConfig: CommunityDetailDto["themeConfig"] | undefined): number {
   return Math.max(resolveOverlay(themeConfig), NAV_OVERLAY_FLOOR);
