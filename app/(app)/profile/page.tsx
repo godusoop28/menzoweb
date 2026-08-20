@@ -14,6 +14,7 @@ import { WallMessageCard } from "@/components/WallMessageCard";
 import { auraById } from "@/data/auras";
 import { interestById } from "@/data/interests";
 import { getMyRealId } from "@/lib/api";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { postsByAuthor, savedPosts, wallMessagesForProfile } from "@/lib/store/selectors";
@@ -25,6 +26,7 @@ const VALID_TABS: Tab[] = ["posts", "wall", "saved"];
 
 export default function ProfilePage() {
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const [refreshing, setRefreshing] = useState(false);
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -74,17 +76,25 @@ export default function ProfilePage() {
     <div className="flex w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
     <div className="menzo-fade-in mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-[720px] lg:flex-1">
       <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
-        {profile.coverUri ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.coverUri} alt="" className="h-40 w-full object-cover" />
-        ) : (
-          <div className="h-40 w-full" style={{ background: gradientCss(auraById(profile.aura).gradient) }} />
-        )}
+        <div className="relative h-56 w-full">
+          {profile.coverUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.coverUri} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full" style={{ background: gradientCss(auraById(profile.aura).gradient) }} />
+          )}
+          {/* Transición cinematográfica hacia la tarjeta de abajo, en vez de que la portada corte
+              en seco contra el panel plano — mismo criterio que las referencias de diseño. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
+        </div>
 
-        <div className="-mt-11 flex flex-col gap-3 px-6 pb-6">
+        <div className="-mt-14 flex flex-col gap-3 px-6 pb-6">
           <div className="flex items-end justify-between">
-            <div className="rounded-full ring-4 ring-[var(--color-surface)] shadow-xl">
-              <Avatar name={profile.displayName} avatarUri={profile.avatarUri} gradient={profile.avatarGradient} size={92} showOnline online level={profile.level} />
+            <div
+              className="rounded-full"
+              style={{ boxShadow: `0 0 0 4px var(--color-surface), 0 0 28px 2px ${accent.color}66` }}
+            >
+              <Avatar name={profile.displayName} avatarUri={profile.avatarUri} gradient={profile.avatarGradient} size={104} showOnline online level={profile.level} />
             </div>
             <div className="flex gap-2">
               <button

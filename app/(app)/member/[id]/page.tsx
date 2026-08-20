@@ -18,6 +18,7 @@ import { auraById } from "@/data/auras";
 import { ApiError, communitiesApi, gamesApi } from "@/lib/api";
 import { toGradient } from "@/lib/api/mappers";
 import type { CommunityMemberDto } from "@/lib/api/types";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useToast } from "@/lib/ToastContext";
@@ -33,6 +34,7 @@ export default function MemberProfilePage() {
   const router = useRouter();
   const { state, actions } = useAppState();
   const showToast = useToast();
+  const accent = useAccent();
   const { activeCommunity, activeCommunityDetail } = useCommunity();
   const [tab, setTab] = useState<Tab>("posts");
   const [openingChat, setOpeningChat] = useState(false);
@@ -136,26 +138,37 @@ export default function MemberProfilePage() {
   const hasBackground = !!(user.backgroundUri || user.backgroundColor);
   const canManageTitles = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
 
+  // El panel derecho solo existe con una comunidad activa (ver más abajo) — sin ella, la columna
+  // no debe quedar igual de angosta con medio viewport vacío al lado (mismo bug que /chat/[id]
+  // con salas directas).
+  const memberColumnWidthClass = activeCommunity ? "lg:mx-0 lg:max-w-[720px] lg:flex-1" : "lg:mx-auto lg:max-w-3xl lg:flex-1";
+
   const content = (
     <div className="flex w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
-    <div className="mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-[720px] lg:flex-1">
+    <div className={`mx-auto w-full max-w-2xl ${memberColumnWidthClass}`}>
       <button onClick={() => router.back()} className="mb-4 flex items-center gap-2 text-sm text-[var(--color-text-secondary)] cursor-pointer">
         <BackIcon size={20} />
         Volver
       </button>
 
       <div className="overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
-        {user.coverUri ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.coverUri} alt="" className="h-40 w-full object-cover" />
-        ) : (
-          <div className="h-40 w-full" style={{ background: gradientCss(auraById(user.aura).gradient) }} />
-        )}
+        <div className="relative h-56 w-full">
+          {user.coverUri ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.coverUri} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full" style={{ background: gradientCss(auraById(user.aura).gradient) }} />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
+        </div>
 
-        <div className="-mt-11 flex flex-col gap-3 px-6 pb-6">
+        <div className="-mt-14 flex flex-col gap-3 px-6 pb-6">
           <div className="flex items-end justify-between gap-3">
-            <div className="rounded-full ring-4 ring-[var(--color-surface)] shadow-xl">
-              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={92} showOnline online={user.isOnline} level={user.level} />
+            <div
+              className="rounded-full"
+              style={{ boxShadow: `0 0 0 4px var(--color-surface), 0 0 28px 2px ${accent.color}66` }}
+            >
+              <Avatar name={user.displayName} avatarUri={user.avatarUri} gradient={user.avatarGradient} size={104} showOnline online={user.isOnline} level={user.level} />
             </div>
             <div className="flex gap-2">
               <GradientButton

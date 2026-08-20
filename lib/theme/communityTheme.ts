@@ -54,6 +54,18 @@ function resolveOverlay(themeConfig: CommunityDetailDto["themeConfig"] | undefin
   return typeof raw === "number" && raw >= 0 && raw <= 1 ? raw : DEFAULT_OVERLAY;
 }
 
+/** Piso de oscurecido propio de la barra lateral, más alto que el que la comunidad configura para
+ * el hero del feed (`overlay` a secas). El feed muestra su arte una sola vez, grande, con texto
+ * grande encima — un overlay bajo se ve "épico" ahí. La sidebar es al revés: nav de texto chico,
+ * siempre visible, en cualquier pantalla — la misma imagen con el mismo overlay bajo se vuelve un
+ * patrón ruidoso detrás de "Inicio/Chats/Miembros" y rompe la legibilidad. Ninguna referencia de
+ * diseño muestra la sidebar así de "cargada"; siempre es oscura y discreta. */
+const NAV_OVERLAY_FLOOR = 0.85;
+
+function resolveNavOverlay(themeConfig: CommunityDetailDto["themeConfig"] | undefined): number {
+  return Math.max(resolveOverlay(themeConfig), NAV_OVERLAY_FLOOR);
+}
+
 function resolveSurface(
   community: CommunitySummaryDto | null | undefined,
   imageUrl: string | undefined,
@@ -102,6 +114,7 @@ export function resolveCommunityTheme(
 ): ResolvedCommunityTheme {
   const themeConfig = detail?.themeConfig;
   const overlay = resolveOverlay(themeConfig);
+  const navOverlay = resolveNavOverlay(themeConfig);
 
   const rawNavImage = (themeConfig?.navigationBackgroundUrl as string | undefined) || (themeConfig?.navBackgroundUrl as string | undefined) || undefined;
   const rawFeedImage = (themeConfig?.feedBackgroundUrl as string | undefined) || detail?.backgroundUrl || undefined;
@@ -122,9 +135,9 @@ export function resolveCommunityTheme(
     accentColor: detail?.accentColor || Colors.orange,
     textColor: detail?.textColor || MenzoTokens.textPrimary,
     surfaceColor: detail?.surfaceColor || MenzoTokens.surface,
-    nav: resolveSurface(community, navImage, overlay, "center"),
+    nav: resolveSurface(community, navImage, navOverlay, "center"),
     feed: resolveSurface(community, feedImage, overlay, "top center", "fixed"),
-    navigationBackground: resolveSurface(community, navImage, overlay, "center"),
+    navigationBackground: resolveSurface(community, navImage, navOverlay, "center"),
     overlayDecoration: { imageUrl: overlayDecorationImage },
     featuredVisual: { imageUrl: featuredVisualImage },
     banner: { imageUrl: bannerImage },

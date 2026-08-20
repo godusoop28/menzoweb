@@ -283,9 +283,14 @@ export default function ChatRoomPage() {
   const isGlobalStaff = globalRole === "CURATOR" || globalRole === "LEADER" || globalRole === "MASTER";
   const canModerateMessages = isGlobalStaff && room.type === "public";
 
+  // Las salas DIRECT no tienen panel derecho (no hay "sobre la sala"/miembros que mostrar en un
+  // 1-a-1) — sin esto, la columna se quedaba clavada en max-w-[720px] igual, dejando medio
+  // viewport de escritorio vacío y negro al lado de la conversación.
+  const roomMaxWidthClass = room.type === "public" ? "lg:mx-0 lg:max-w-[720px] lg:flex-1" : "lg:mx-auto lg:max-w-3xl lg:flex-1";
+
   return (
     <div className="flex h-full min-h-0 w-full lg:gap-4">
-    <div className="relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col lg:mx-0 lg:max-w-[720px] lg:flex-1">
+    <div className={`relative mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col ${roomMaxWidthClass}`}>
       {/* El fondo de la sala vive acá, anclado a este contenedor de altura estable (h-full, no
           crece con los mensajes) — antes se aplicaba como bg-cover directo sobre el div de
           mensajes, cuya altura es auto y crece con la conversación, así que "cover" se
