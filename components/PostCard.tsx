@@ -6,7 +6,6 @@ import { useAppState } from "@/lib/AppStateContext";
 import { relativeTime } from "@/lib/time";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findUser } from "@/lib/store/selectors";
-import { gradientCss } from "@/lib/theme";
 import type { Post } from "@/lib/types";
 
 import { AbstractArtwork } from "./AbstractArtwork";

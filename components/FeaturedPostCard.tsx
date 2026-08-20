@@ -13,6 +13,11 @@ export function FeaturedPostCard({ post, variant = "medium" }: { post: Post; var
   const { state } = useAppState();
   const author = findUser(state.social, post.authorId);
   const isHero = variant === "hero";
+  // Foto real (imageUri legacy o primer bloque image/gif) si la hay — antes esta tarjeta ignoraba
+  // la portada real del post y siempre mostraba arte procedural, aunque el autor hubiera subido
+  // una imagen de verdad (mismo criterio que PostCard.tsx: nunca reemplazar contenido real del
+  // usuario por un decorado genérico cuando existe).
+  const coverImage = post.imageUri ?? post.blocks.find((b) => b.type === "image" || b.type === "gif")?.url;
 
   return (
     <Link
@@ -21,13 +26,23 @@ export function FeaturedPostCard({ post, variant = "medium" }: { post: Post; var
         isHero ? "h-52" : "h-[150px]"
       }`}
     >
-      <AbstractArtwork
-        preset={post.abstractVisual?.preset ?? "prism"}
-        className="absolute inset-0 h-full w-full transition-transform duration-300 group-hover:scale-105"
-        dim
-      />
+      {coverImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={coverImage}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <AbstractArtwork
+          preset={post.abstractVisual?.preset ?? "prism"}
+          className="absolute inset-0 h-full w-full transition-transform duration-300 group-hover:scale-105"
+          dim
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
       <span className="absolute left-3 top-3 rounded-full bg-[rgba(255,190,46,0.92)] px-2.5 py-1 text-xs font-bold text-[var(--color-text-on-accent)]">
-        Destacado
+        {post.type === "blog" ? "Blog destacado" : "Destacado"}
       </span>
       <div className="relative flex flex-col gap-1.5 p-4">
         {!!post.title && (

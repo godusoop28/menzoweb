@@ -8,8 +8,9 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useToast } from "@/lib/ToastContext";
 import type { PostBlockDto } from "@/lib/api/types";
 
+import { Avatar } from "./Avatar";
 import { GradientButton } from "./GradientButton";
-import { CloseIcon } from "./icons";
+import { CloseIcon, ImageIcon } from "./icons";
 
 type Mode = "text" | "image" | "poll" | "blog";
 
@@ -20,7 +21,7 @@ function hasRealContent(blocks: PostBlockDto[]) {
 }
 
 export function CreatePostComposer() {
-  const { actions } = useAppState();
+  const { state, actions } = useAppState();
   const showToast = useToast();
   const [mode, setMode] = useState<Mode>("text");
   const [title, setTitle] = useState("");
@@ -28,7 +29,15 @@ export function CreatePostComposer() {
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [nsfw, setNsfw] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  function commitTagDraft() {
+    const next = tagDraft.trim().replace(/^#/, "").slice(0, 24);
+    if (next && !tags.includes(next) && tags.length < 6) setTags((current) => [...current, next]);
+    setTagDraft("");
+  }
 
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
   const valid = mode === "poll" ? pollQuestion.trim().length >= 3 && filledOptions.length >= 2 : hasRealContent(blocks);
@@ -39,6 +48,8 @@ export function CreatePostComposer() {
     setPollQuestion("");
     setPollOptions(["", ""]);
     setNsfw(false);
+    setTags([]);
+    setTagDraft("");
     setMode("text");
   }
 
@@ -49,6 +60,7 @@ export function CreatePostComposer() {
       await actions.createPost({
         title: title.trim() || undefined,
         body: mode === "poll" ? pollQuestion.trim() : "",
+        tags: mode === "poll" ? undefined : tags.length > 0 ? tags : undefined,
         pollOptions: mode === "poll" ? filledOptions : undefined,
         blocks: mode === "poll" ? undefined : blocks,
         postType: mode === "blog" ? "blog" : undefined,
@@ -65,15 +77,30 @@ export function CreatePostComposer() {
 
   return (
     <div className="menzo-fade-in flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
+        {state.profile && (
+          <Avatar
+            name={state.profile.displayName}
+            avatarUri={state.profile.avatarUri}
+            gradient={state.profile.avatarGradient}
+            size={38}
+          />
+        )}
+        <p className="text-sm text-[var(--color-text-muted)]">
+          ¿Qué tienes en mente{state.profile ? `, ${state.profile.displayName}` : ""}?
+        </p>
+      </div>
+
+      <div className="flex gap-2 border-t border-[var(--color-border-soft)] pt-3">
         {(["text", "image", "blog", "poll"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer ${
               mode === m ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]"
             }`}
           >
+            {m === "image" && <ImageIcon size={14} />}
             {m === "text" ? "Texto" : m === "image" ? "Imagen" : m === "blog" ? "Blog" : "Encuesta"}
           </button>
         ))}
@@ -129,6 +156,40 @@ export function CreatePostComposer() {
             className="w-full rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
           />
           <BlockEditor blocks={blocks} onChange={setBlocks} />
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="flex items-center gap-1 rounded-full bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs text-[var(--color-cyan)]"
+              >
+                #{tag}
+                <button
+                  onClick={() => setTags((current) => current.filter((t) => t !== tag))}
+                  aria-label={`Quitar etiqueta ${tag}`}
+                  className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                >
+                  <CloseIcon size={12} />
+                </button>
+              </span>
+            ))}
+            {tags.length < 6 && (
+              <input
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    commitTagDraft();
+                  }
+                }}
+                onBlur={commitTagDraft}
+                placeholder="Agregar etiqueta…"
+                className="min-w-[110px] flex-1 bg-transparent px-1 py-1 text-xs outline-none placeholder:text-[var(--color-text-muted)]"
+              />
+            )}
+          </div>
+
           {mode === "blog" && (
             <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
               <input

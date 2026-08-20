@@ -5,13 +5,24 @@ import { useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
+import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { CompassIcon, UsersIcon } from "@/components/icons";
 import { GradientButton } from "@/components/GradientButton";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { communityFallbackGradient } from "@/lib/communities/backgroundStyle";
 import { useCommunity } from "@/lib/communities/CommunityContext";
+
+type ChatListTab = "directos" | "publicas";
+
+// Favoritas primero dentro de cada pestaña — reemplaza la sección "Favoritos" separada de arriba
+// (ver referencia diseñoWeb/: dos pestañas, no tres bloques apilados); la estrella en
+// ChatRoomListItem sigue marcando cuáles son.
+function sortFavoritesFirst<T extends { favorite: boolean }>(rooms: T[]): T[] {
+  return [...rooms].sort((a, b) => Number(b.favorite) - Number(a.favorite));
+}
 
 export default function ChatListPage() {
   const { state, actions } = useAppState();
@@ -23,12 +34,12 @@ export default function ChatListPage() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [tab, setTab] = useState<ChatListTab>("directos");
 
   const allMyRooms = state.social.rooms.filter((r) => r.type === "direct" || r.joined);
   const myRooms = onlyFavorites ? allMyRooms.filter((r) => r.favorite) : allMyRooms;
-  const favoriteRooms = myRooms.filter((r) => r.favorite);
-  const directRooms = myRooms.filter((r) => !r.favorite && r.type === "direct");
-  const publicRooms = myRooms.filter((r) => !r.favorite && r.type === "public");
+  const directRooms = sortFavoritesFirst(myRooms.filter((r) => r.type === "direct"));
+  const publicRooms = sortFavoritesFirst(myRooms.filter((r) => r.type === "public"));
   // Panel derecho (lg:+): contactos en línea entre mis conversaciones directas — dato real, no
   // existe un concepto de "amigos" separado de un chat directo ya iniciado.
   const onlineDirectRooms = allMyRooms.filter((r) => r.type === "direct" && r.peer?.isOnline).slice(0, 10);
@@ -70,15 +81,29 @@ export default function ChatListPage() {
       }
     >
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold">Mis chats</h1>
+        <div>
+          <h1 className="font-display text-2xl font-bold">Chats / Mensajes</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Conecta, habla y comparte tu pasión</p>
+        </div>
         <button
           onClick={() => setShowCreate((v) => !v)}
           style={{ background: accent.color }}
-          className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] cursor-pointer"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-[var(--color-text-on-accent)] cursor-pointer"
+          aria-label="Crear sala"
+          title="Crear sala"
         >
-          + Crear sala
+          +
         </button>
       </div>
+
+      <SegmentedTabs
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "directos", label: "Mensajes directos" },
+          { value: "publicas", label: "Salas públicas" },
+        ]}
+      />
 
       {showCreate && (
         <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
@@ -92,7 +117,7 @@ export default function ChatListPage() {
         </div>
       )}
 
-      {myRooms.length === 0 && (
+      {myRooms.length === 0 ? (
         <MenziIllustrationState
           image="/illustrations/menzi/menzi-chat.webp"
           alt=""
@@ -101,52 +126,29 @@ export default function ChatListPage() {
           size="medium"
           priority
         />
-      )}
-
-      {favoriteRooms.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Favoritos</h2>
-          <div className="flex flex-col gap-2">
-            {favoriteRooms.map((room) => (
-              <ChatRoomListItem key={room.id} room={room} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {directRooms.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Mensajes directos</h2>
+      ) : tab === "directos" ? (
+        directRooms.length === 0 ? (
+          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no tienes conversaciones directas.</p>
+        ) : (
           <div className="flex flex-col gap-2">
             {directRooms.map((room) => (
               <ChatRoomListItem key={room.id} room={room} />
             ))}
           </div>
-        </div>
-      )}
-
-      {myRooms.length > 0 && (
+        )
+      ) : publicRooms.length === 0 ? (
+        <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Tus próximas historias comienzan aquí.</p>
+      ) : (
         <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Salas públicas</h2>
-          {publicRooms.length === 0 ? (
-            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Tus próximas historias comienzan aquí.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {publicRooms.map((room) => (
-                <ChatRoomListItem key={room.id} room={room} />
-              ))}
-            </div>
-          )}
+          {publicRooms.map((room) => (
+            <ChatRoomListItem key={room.id} room={room} />
+          ))}
         </div>
       )}
     </div>
 
-    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
-          <UsersIcon size={16} />
-          Contactos en línea
-        </h3>
+    <ContextSidebar>
+      <ContextSidebarSection title="Amigos en línea" icon={<UsersIcon size={16} />}>
         {onlineDirectRooms.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
         ) : (
@@ -163,10 +165,9 @@ export default function ChatListPage() {
             ))}
           </div>
         )}
-      </div>
+      </ContextSidebarSection>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <h3 className="font-display text-sm font-bold">Filtros rápidos</h3>
+      <ContextSidebarSection title="Filtros rápidos">
         <label className="flex cursor-pointer items-center justify-between gap-3 text-sm">
           <span>Solo favoritas</span>
           <input
@@ -176,10 +177,9 @@ export default function ChatListPage() {
             className="h-4 w-4 accent-[var(--color-orange)]"
           />
         </label>
-      </div>
+      </ContextSidebarSection>
 
-      <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <h3 className="mb-1 font-display text-sm font-bold">Acciones rápidas</h3>
+      <ContextSidebarSection title="Acciones rápidas">
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2.5 rounded-xl px-2 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
@@ -200,8 +200,8 @@ export default function ChatListPage() {
           <CompassIcon size={16} />
           Explorar comunidades
         </Link>
-      </div>
-    </aside>
+      </ContextSidebarSection>
+    </ContextSidebar>
     </div>
   );
 }

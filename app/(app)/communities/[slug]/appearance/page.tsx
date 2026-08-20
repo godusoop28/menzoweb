@@ -13,7 +13,8 @@ import type {
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, CheckIcon, HomeIcon, ChatIcon, UsersIcon } from "@/components/icons";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 
 const IMAGE_FIELDS: { key: keyof Pick<CommunityDetailDto, "iconUrl" | "logoUrl" | "coverUrl" | "backgroundUrl" | "bannerUrl">; label: string }[] = [
   { key: "iconUrl", label: "Icono" },
@@ -55,6 +56,8 @@ const THEME_IMAGE_FIELDS: { key: ThemeImageKey; label: string; helper?: string }
 const HEADER_STYLES = ["default", "compact", "banner", "minimal"];
 const CARD_STYLES = ["rounded", "square", "flat", "elevated"];
 
+type SettingsTab = "apariencia" | "colores" | "navegacion";
+
 /** COMMUNITY_ADMIN+ de esta comunidad, o cuenta global LEADER+ — ver
  * CommunityPermissionEvaluator.requireCanEditAppearance en menzoapi (el backend re-valida
  * siempre; esta pantalla solo evita ofrecer el botón donde de todos modos rebotaría).
@@ -74,6 +77,7 @@ export default function CommunityAppearancePage() {
   const [theme, setTheme] = useState<CommunityThemeConfig>({});
   const [nav, setNav] = useState<CommunityNavigationConfig>({});
   const [newDecorationUrl, setNewDecorationUrl] = useState("");
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("apariencia");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,16 +199,44 @@ export default function CommunityAppearancePage() {
     (a, b) => (nav[a]?.order ?? 0) - (nav[b]?.order ?? 0)
   );
 
+  const previewName = community.name;
+  const previewIcon = images.iconUrl;
+  const previewCover = images.coverUrl || images.bannerUrl;
+  const previewPrimary = colors.primaryColor || "#e74c3c";
+  const previewSecondary = colors.secondaryColor || "#2c3e50";
+  const previewNavBg = (theme.navigationBackgroundUrl as string | undefined) || (theme.navBackgroundUrl as string | undefined);
+  const previewNavSections = (Object.keys(nav) as CommunityNavigationSectionKey[])
+    .map((key) => ({ key, ...nav[key]! }))
+    .filter((s) => s.enabled)
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 4);
+
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-6 md:px-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-8">
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="text-[var(--color-text-secondary)] cursor-pointer">
           <BackIcon />
         </button>
-        <h1 className="font-display text-xl font-bold">Apariencia de {community.name}</h1>
+        <div>
+          <h1 className="font-display text-xl font-bold">Personalización de {community.name}</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Personaliza la apariencia visual de tu comunidad en web y móvil.</p>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="flex w-full flex-col gap-4 lg:max-w-xl">
+        <SegmentedTabs
+          value={settingsTab}
+          onChange={setSettingsTab}
+          options={[
+            { value: "apariencia", label: "Apariencia" },
+            { value: "colores", label: "Colores" },
+            { value: "navegacion", label: "Navegación" },
+          ]}
+        />
+
+        {settingsTab === "apariencia" && (
+        <>
         <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Imágenes</h2>
         {IMAGE_FIELDS.map(({ key, label }) => (
           <div key={key} className="flex items-center gap-3">
@@ -231,20 +263,6 @@ export default function CommunityAppearancePage() {
                 />
               </label>
             </div>
-          </div>
-        ))}
-
-        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Colores</h2>
-        {COLOR_FIELDS.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <input
-              type="color"
-              value={colors[key] || "#888888"}
-              onChange={(e) => setColors((prev) => ({ ...prev, [key]: e.target.value }))}
-              className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-[var(--color-border-soft)] bg-transparent"
-            />
-            <p className="flex-1 text-sm font-medium">{label}</p>
-            <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
           </div>
         ))}
 
@@ -357,10 +375,34 @@ export default function CommunityAppearancePage() {
             Agregar
           </button>
         </div>
+        </>
+        )}
 
-        <h2 className="mt-2 text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
+        {settingsTab === "colores" && (
+        <>
+        <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Colores principales</h2>
+        <p className="text-xs text-[var(--color-text-muted)]">Define la paleta de colores que se aplicará en toda tu comunidad.</p>
+        {COLOR_FIELDS.map(({ key, label }) => (
+          <div key={key} className="flex items-center gap-3">
+            <input
+              type="color"
+              value={colors[key] || "#888888"}
+              onChange={(e) => setColors((prev) => ({ ...prev, [key]: e.target.value }))}
+              className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-[var(--color-border-soft)] bg-transparent"
+            />
+            <p className="flex-1 text-sm font-medium">{label}</p>
+            <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
+          </div>
+        ))}
+        </>
+        )}
+
+        {settingsTab === "navegacion" && (
+        <>
+        <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
           Navegación
         </h2>
+        <p className="text-xs text-[var(--color-text-muted)]">Visibilidad, orden y etiqueta de cada sección — los miembros ven exactamente esto.</p>
         <div className="flex flex-col gap-2">
           {sortedNavKeys.map((key) => {
             const section = nav[key]!;
@@ -388,16 +430,119 @@ export default function CommunityAppearancePage() {
             );
           })}
         </div>
+        </>
+        )}
 
         {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="mt-2 rounded-full bg-[var(--color-coral)] py-3 text-sm font-bold text-white disabled:opacity-50 cursor-pointer"
-        >
-          {saving ? "Guardando…" : "Guardar cambios"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.back()}
+            className="rounded-full border border-[var(--color-border-soft)] px-5 py-3 text-sm font-medium text-[var(--color-text-secondary)] cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 rounded-full bg-[var(--color-orange)] py-3 text-sm font-bold text-[var(--color-text-on-accent)] disabled:opacity-50 cursor-pointer"
+          >
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </button>
+        </div>
+      </div>
+
+      {/* Vista previa en tiempo real — usa el mismo estado que ya se está editando (images/colors/
+          theme/nav), nunca contenido de ejemplo: lo que se ve acá es exactamente lo que se va a
+          guardar (ver Contexto §15 del pedido: "los cambios se deben poder previsualizar
+          inmediatamente"). Es una maqueta simplificada, no un clon del AppShell real — insertar la
+          app completa acá adentro para "previsualizar" duplicaría toda su lógica de datos solo
+          para una vista de referencia. */}
+      <div className="flex w-full flex-col gap-4 lg:sticky lg:top-6 lg:max-w-sm">
+        <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold">Vista previa en tiempo real</h2>
+
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Escritorio</p>
+          <div className="mb-4 flex overflow-hidden rounded-xl border border-[var(--color-border-soft)]" style={{ background: "#07090D" }}>
+            <div
+              className="flex w-24 shrink-0 flex-col gap-2 p-2.5"
+              style={{
+                backgroundImage: previewNavBg
+                  ? `linear-gradient(rgba(7,9,13,0.9), rgba(7,9,13,0.9)), url(${previewNavBg})`
+                  : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                {previewIcon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewIcon} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white" style={{ background: previewPrimary }}>
+                    {previewName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="truncate text-[9px] font-bold">{previewName}</span>
+              </div>
+              {previewNavSections.map((s) => (
+                <span key={s.key} className="truncate text-[8px] text-white/70">
+                  {s.label}
+                </span>
+              ))}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                className="relative flex h-16 w-full flex-col justify-end p-2"
+                style={{
+                  backgroundImage: previewCover
+                    ? `linear-gradient(rgba(7,9,13,0.15), rgba(7,9,13,0.85)), url(${previewCover})`
+                    : `linear-gradient(135deg, ${previewPrimary}, ${previewSecondary})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                <span className="truncate text-[9px] font-bold text-white">{previewName}</span>
+              </div>
+              <div className="flex flex-col gap-1 p-2">
+                <div className="h-2 w-3/4 rounded-full" style={{ background: "var(--color-surface-soft)" }} />
+                <div className="h-2 w-1/2 rounded-full" style={{ background: "var(--color-surface-soft)" }} />
+                <span
+                  className="mt-1 flex w-fit items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold text-white"
+                  style={{ background: previewPrimary }}
+                >
+                  <CheckIcon size={8} /> Seguir
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Móvil</p>
+          <div className="mx-auto w-32 overflow-hidden rounded-2xl border border-[var(--color-border-soft)]" style={{ background: "#07090D" }}>
+            <div
+              className="relative flex h-20 w-full flex-col justify-end p-2"
+              style={{
+                backgroundImage: previewCover
+                  ? `linear-gradient(rgba(7,9,13,0.15), rgba(7,9,13,0.85)), url(${previewCover})`
+                  : `linear-gradient(135deg, ${previewPrimary}, ${previewSecondary})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <span className="truncate text-[9px] font-bold text-white">{previewName}</span>
+            </div>
+            <div className="flex items-center justify-around border-t border-white/10 px-2 py-1.5">
+              <HomeIcon size={12} className="text-white/70" />
+              <UsersIcon size={12} className="text-white/70" />
+              <ChatIcon size={12} className="text-white/70" />
+            </div>
+          </div>
+
+          <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
+            Los cambios se aplican en Web y Móvil (iOS y Android) para todos los miembros de la comunidad.
+          </p>
+        </div>
+      </div>
       </div>
     </div>
   );

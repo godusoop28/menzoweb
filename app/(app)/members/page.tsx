@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
+import { CommunityHero } from "@/components/CommunityHero";
+import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
+import { SearchIcon } from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { communitiesApi } from "@/lib/api";
 import { toGradient } from "@/lib/api/mappers";
@@ -23,6 +26,8 @@ const ROLE_LABEL: Record<string, string> = {
 
 const LEADER_ROLES = new Set(["COMMUNITY_OWNER", "COMMUNITY_ADMIN"]);
 const MOD_ROLES = new Set(["COMMUNITY_MODERATOR", "COMMUNITY_CURATOR"]);
+
+type MemberFilter = "todos" | "conectados" | "lideres" | "moderadores";
 
 function MemberRow({ member }: { member: CommunityMemberDto }) {
   return (
@@ -63,6 +68,8 @@ export default function MembersPage() {
   const [hasNext, setHasNext] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | undefined>(undefined);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<MemberFilter>("todos");
   // "Ajustar estado durante el render" en vez de un setState síncrono al abrir el effect de abajo
   // (mismo patrón que lib/chat/useChatAppearance.ts) — evita el render extra que dispararía un
   // useEffect con un setState(true) como primera línea.
@@ -113,9 +120,26 @@ export default function MembersPage() {
 
   const leaders = members.filter((m) => LEADER_ROLES.has(m.communityRole));
   const mods = members.filter((m) => MOD_ROLES.has(m.communityRole));
-  const rest = members.filter((m) => !LEADER_ROLES.has(m.communityRole) && !MOD_ROLES.has(m.communityRole));
   const onlineMembers = members.filter((m) => m.user.isOnline);
   const online = onlineMembers.length;
+
+  // Búsqueda y filtro son client-side sobre lo ya cargado (mismo criterio que "Cargar más" de
+  // abajo) — communitiesApi.members no tiene un parámetro de búsqueda propio, así que no hay forma
+  // de pedirle al backend "buscar en toda la comunidad" sin inventar un endpoint nuevo.
+  const filteredMembers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return members.filter((m) => {
+      if (filter === "conectados" && !m.user.isOnline) return false;
+      if (filter === "lideres" && !LEADER_ROLES.has(m.communityRole)) return false;
+      if (filter === "moderadores" && !MOD_ROLES.has(m.communityRole)) return false;
+      if (!q) return true;
+      return (
+        m.user.displayName.toLowerCase().includes(q) ||
+        m.user.username.toLowerCase().includes(q) ||
+        (m.customTitle ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [members, query, filter]);
 
   if (!activeCommunity) {
     return (
@@ -135,18 +159,74 @@ export default function MembersPage() {
   return (
     <div className="flex min-h-full w-full flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row lg:items-start lg:gap-6">
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 lg:mx-0 lg:max-w-[720px] lg:flex-1">
-      <div className="menzo-fade-in relative overflow-hidden rounded-3xl shadow-xl">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/banners/banner-connections.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-[rgba(7,9,13,0.35)]" />
-        <div className="relative flex flex-col gap-1.5 p-6 text-white">
-          <h1 className="font-display text-2xl font-bold">Miembros de {activeCommunity.name}</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[var(--color-online)]" />
-            <span className="text-sm font-medium">{online} conectados</span>
-          </div>
+      <CommunityHero />
+
+      <div className="flex flex-col gap-1">
+        <h1 className="font-display text-xl font-bold">Miembros de {activeCommunity.name}</h1>
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          {members.length.toLocaleString("es-ES")} miembros en total · {online} conectados
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-1 items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3.5 py-2.5">
+          <SearchIcon size={16} className="shrink-0 text-[var(--color-text-muted)]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar miembros…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { value: "todos", label: `Todos ${members.length}` },
+              { value: "conectados", label: `Conectados ${online}` },
+              { value: "lideres", label: `Líderes ${leaders.length}` },
+              { value: "moderadores", label: `Moderadores ${mods.length}` },
+            ] as { value: MemberFilter; label: string }[]
+          ).map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setFilter(option.value)}
+              className={`rounded-full px-3.5 py-2 text-xs font-semibold whitespace-nowrap cursor-pointer ${
+                filter === option.value
+                  ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]"
+                  : "border border-[var(--color-border-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {onlineMembers.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Conectados ahora</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {onlineMembers.slice(0, 16).map((member) => (
+              <Link
+                key={member.user.id}
+                href={`/member/${member.user.id}`}
+                className="flex shrink-0 flex-col items-center gap-1.5"
+                title={member.user.displayName}
+              >
+                <Avatar
+                  name={member.user.displayName}
+                  avatarUri={member.user.avatarUri ?? undefined}
+                  gradient={toGradient(member.user.avatarGradient)}
+                  size={52}
+                  showOnline
+                  online
+                />
+                <span className="max-w-[64px] truncate text-[11px] text-[var(--color-text-secondary)]">{member.user.displayName}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Cargando miembros…</p>
@@ -160,38 +240,13 @@ export default function MembersPage() {
         />
       ) : (
         <>
-          {leaders.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Líderes</h2>
-              <div className="flex flex-col gap-2">
-                {leaders.map((m) => (
-                  <MemberRow key={m.user.id} member={m} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {mods.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Moderadores</h2>
-              <div className="flex flex-col gap-2">
-                {mods.map((m) => (
-                  <MemberRow key={m.user.id} member={m} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {rest.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Todos los miembros</h2>
-              <div className="flex flex-col gap-2">
-                {rest.map((m) => (
-                  <MemberRow key={m.user.id} member={m} />
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            {filteredMembers.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Nadie coincide con esa búsqueda.</p>
+            ) : (
+              filteredMembers.map((m) => <MemberRow key={m.user.id} member={m} />)
+            )}
+          </div>
 
           {hasNext && (
             <button
@@ -206,7 +261,7 @@ export default function MembersPage() {
       )}
     </div>
 
-    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+    <ContextSidebar>
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-center">
         <div>
           <p className="text-lg font-bold">{members.length}</p>
@@ -222,28 +277,36 @@ export default function MembersPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <h3 className="font-display text-sm font-bold">Conectados ahora ({online})</h3>
-        {onlineMembers.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
+      <ContextSidebarSection title="Líderes">
+        {leaders.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">Sin líderes todavía.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {onlineMembers.slice(0, 16).map((member) => (
-              <Link key={member.user.id} href={`/member/${member.user.id}`} title={member.user.displayName}>
-                <Avatar
-                  name={member.user.displayName}
-                  avatarUri={member.user.avatarUri ?? undefined}
-                  gradient={toGradient(member.user.avatarGradient)}
-                  size={36}
-                  showOnline
-                  online
-                />
+          <div className="flex flex-col gap-2.5">
+            {leaders.map((m) => (
+              <Link key={m.user.id} href={`/member/${m.user.id}`} className="flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-[var(--color-surface-secondary)]">
+                <Avatar name={m.user.displayName} avatarUri={m.user.avatarUri ?? undefined} gradient={toGradient(m.user.avatarGradient)} size={32} showOnline online={m.user.isOnline} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.user.displayName}</span>
               </Link>
             ))}
           </div>
         )}
-      </div>
-    </aside>
+      </ContextSidebarSection>
+
+      <ContextSidebarSection title={`Moderadores (${mods.length})`}>
+        {mods.length === 0 ? (
+          <p className="text-xs text-[var(--color-text-muted)]">Sin moderadores todavía.</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {mods.slice(0, 6).map((m) => (
+              <Link key={m.user.id} href={`/member/${m.user.id}`} className="flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-[var(--color-surface-secondary)]">
+                <Avatar name={m.user.displayName} avatarUri={m.user.avatarUri ?? undefined} gradient={toGradient(m.user.avatarGradient)} size={32} showOnline online={m.user.isOnline} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.user.displayName}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </ContextSidebarSection>
+    </ContextSidebar>
     </div>
   );
 }

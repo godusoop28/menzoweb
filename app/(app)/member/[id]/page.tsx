@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
+import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { GradientButton } from "@/components/GradientButton";
 import { BackIcon, LiveIcon, UsersIcon } from "@/components/icons";
 import { LevelBadge } from "@/components/LevelBadge";
 import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
@@ -27,7 +29,7 @@ import { postsByAuthor, wallMessagesForProfile } from "@/lib/store/selectors";
 import { formatJoinDate } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 
-type Tab = "posts" | "wall";
+type Tab = "posts" | "wall" | "blogs";
 
 export default function MemberProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -110,7 +112,9 @@ export default function MemberProfilePage() {
   // "Siguiendo" y "Amigos" nunca se muestran a la vez (ver punto 16 del pedido) — una vez que hay
   // amistad, el botón pasa a describir la acción real (dejar de seguir) en vez de repetir el badge.
   const followButtonLabel = isFriend ? "Dejar de seguir" : isFollowing ? "Siguiendo" : followsMe ? "Seguir también" : "Seguir";
-  const posts = postsByAuthor(state.social, user.id);
+  const allPosts = postsByAuthor(state.social, user.id);
+  const posts = allPosts.filter((p) => p.type !== "blog");
+  const blogs = allPosts.filter((p) => p.type === "blog");
   const wall = wallMessagesForProfile(state.social, user.id);
 
   async function handleMessage() {
@@ -211,8 +215,16 @@ export default function MemberProfilePage() {
                 )
               )}
             </div>
+            <p className="text-sm text-[var(--color-text-muted)]">@{user.username}</p>
             {!!user.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{user.statusText}</p>}
           </div>
+
+          <UserTitles
+            titles={user.titles}
+            canManage={canManageTitles}
+            onAdd={(text, color) => actions.addUserTitle(user.id, text, color)}
+            onRemove={(title) => actions.removeUserTitle(user.id, title.id)}
+          />
 
           <LevelBadge
             level={user.level}
@@ -231,18 +243,19 @@ export default function MemberProfilePage() {
 
           {!!user.bio && <p className="text-sm text-[var(--color-text-secondary)]">{user.bio}</p>}
           <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(user.joinedAt)}</p>
-          <UserTitles
-            titles={user.titles}
-            canManage={canManageTitles}
-            onAdd={(text, color) => actions.addUserTitle(user.id, text, color)}
-            onRemove={(title) => actions.removeUserTitle(user.id, title.id)}
-          />
         </div>
       </div>
 
-      <div className="mt-6 flex gap-2">
-        <TabButton active={tab === "posts"} onClick={() => setTab("posts")} label="Publicaciones" />
-        <TabButton active={tab === "wall"} onClick={() => setTab("wall")} label="Muro" />
+      <div className="mt-6">
+        <SegmentedTabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "posts", label: "Publicaciones" },
+            { value: "wall", label: "Muro" },
+            { value: "blogs", label: "Blogs" },
+          ]}
+        />
       </div>
 
       <div className="mt-4 flex flex-col gap-4">
@@ -263,23 +276,28 @@ export default function MemberProfilePage() {
             )}
           </>
         )}
+
+        {tab === "blogs" &&
+          (blogs.length === 0 ? (
+            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">{user.displayName} todavía no ha escrito ningún blog.</p>
+          ) : (
+            blogs.map((post) => <PostCard key={post.id} post={post} />)
+          ))}
       </div>
     </div>
 
     {activeCommunity && (
-      <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+      <ContextSidebar>
         {tab === "wall" && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-            <h3 className="font-display text-sm font-bold">Acerca de este muro</h3>
+          <ContextSidebarSection title="Acerca de este muro">
             <p className="text-xs text-[var(--color-text-secondary)]">
               Este es el muro público de {user.displayName}. Los miembros de la comunidad pueden dejar mensajes,
               saludos y recomendaciones. Sé respetuoso y disfruta del espacio.
             </p>
-          </div>
+          </ContextSidebarSection>
         )}
 
-        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-          <h3 className="font-display text-sm font-bold">Comunidad</h3>
+        <ContextSidebarSection title="Comunidad">
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2">
               <p className="font-bold">{activeCommunity.memberCount.toLocaleString("es-ES")}</p>
@@ -290,23 +308,15 @@ export default function MemberProfilePage() {
               <p className="text-[11px] text-[var(--color-text-muted)]">En línea</p>
             </div>
           </div>
-        </div>
+        </ContextSidebarSection>
 
         {liveRooms.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-            <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
-              <LiveIcon size={16} className="text-[var(--color-coral)]" />
-              Salas en vivo
-            </h3>
+          <ContextSidebarSection title="Salas en vivo" icon={<LiveIcon size={16} className="text-[var(--color-coral)]" />}>
             <LiveRoomsCarousel rooms={liveRooms} />
-          </div>
+          </ContextSidebarSection>
         )}
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-          <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
-            <UsersIcon size={16} />
-            En línea ahora
-          </h3>
+        <ContextSidebarSection title="En línea ahora" icon={<UsersIcon size={16} />}>
           {onlineMembersList.length === 0 ? (
             <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
           ) : (
@@ -325,8 +335,8 @@ export default function MemberProfilePage() {
               ))}
             </div>
           )}
-        </div>
-      </aside>
+        </ContextSidebarSection>
+      </ContextSidebar>
     )}
     </div>
   );
@@ -354,17 +364,4 @@ function Stat({ value, label, href }: { value: number; label: string; href?: str
     );
   }
   return <div>{content}</div>;
-}
-
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-medium cursor-pointer ${
-        active ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
 }

@@ -213,9 +213,9 @@ export default function FeedPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             {posts.length === 0 ? (
-              <p className="col-span-full py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
+              <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
             ) : (
               posts.map((post) => <PostCard key={post.id} post={post} />)
             )}
@@ -276,7 +276,7 @@ export default function FeedPage() {
         ) : blogs.length === 0 ? (
           <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay blogs.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             {blogs.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

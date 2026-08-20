@@ -5,9 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
+import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { LevelBadge } from "@/components/LevelBadge";
 import { PostCard } from "@/components/PostCard";
 import { ScreenBackground } from "@/components/ScreenBackground";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { UserTitles } from "@/components/UserTitles";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
@@ -21,8 +23,8 @@ import { postsByAuthor, savedPosts, wallMessagesForProfile } from "@/lib/store/s
 import { formatJoinDate } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 
-type Tab = "posts" | "wall" | "saved";
-const VALID_TABS: Tab[] = ["posts", "wall", "saved"];
+type Tab = "posts" | "wall" | "blogs" | "saved";
+const VALID_TABS: Tab[] = ["posts", "wall", "blogs", "saved"];
 
 export default function ProfilePage() {
   const { state, actions } = useAppState();
@@ -65,7 +67,9 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   const myRealId = getMyRealId();
-  const myPosts = postsByAuthor(state.social, LOCAL_USER_ID);
+  const allMyPosts = postsByAuthor(state.social, LOCAL_USER_ID);
+  const myPosts = allMyPosts.filter((p) => p.type !== "blog");
+  const myBlogs = allMyPosts.filter((p) => p.type === "blog");
   const myWall = wallMessagesForProfile(state.social, LOCAL_USER_ID);
   const mySaved = savedPosts(state.social, LOCAL_USER_ID);
 
@@ -115,8 +119,16 @@ export default function ProfilePage() {
 
           <div>
             <h1 className="font-display text-xl font-bold">{profile.displayName}</h1>
+            <p className="text-sm text-[var(--color-text-muted)]">@{profile.username}</p>
             {!!profile.statusText && <p className="text-sm text-[var(--color-text-secondary)]">{profile.statusText}</p>}
           </div>
+
+          <UserTitles
+            titles={profile.titles}
+            canManage={canManageTitles}
+            onAdd={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
+            onRemove={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
+          />
 
           <LevelBadge
             level={profile.level}
@@ -126,28 +138,30 @@ export default function ProfilePage() {
             xpForNextLevel={profile.xpForNextLevel}
           />
 
-          <div className="grid grid-cols-4 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
-            <Stat value={profile.reputation} label="Reputación" />
-            <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
+          <div className="grid grid-cols-5 gap-2 border-t border-[var(--color-border-soft)] pt-4 text-center">
             <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
-            <Stat value={profile.visitors} label="Visitantes" />
+            <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
+            <Stat value={profile.reputation} label="Reputación" />
+            <Stat value={allMyPosts.length} label="Publicaciones" />
+            <Stat value={myBlogs.length} label="Blogs" />
           </div>
 
           {!!profile.bio && <p className="text-sm text-[var(--color-text-secondary)]">{profile.bio}</p>}
           <p className="text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
-          <UserTitles
-            titles={profile.titles}
-            canManage={canManageTitles}
-            onAdd={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
-            onRemove={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
-          />
         </div>
       </div>
 
-      <div className="mt-6 flex gap-2">
-        <TabButton active={tab === "posts"} onClick={() => setTab("posts")} label="Publicaciones" />
-        <TabButton active={tab === "wall"} onClick={() => setTab("wall")} label="Muro" />
-        <TabButton active={tab === "saved"} onClick={() => setTab("saved")} label="Guardados" />
+      <div className="mt-6">
+        <SegmentedTabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "posts", label: "Publicaciones" },
+            { value: "wall", label: "Muro" },
+            { value: "blogs", label: "Blogs" },
+            { value: "saved", label: "Guardados" },
+          ]}
+        />
       </div>
 
       <div className="mt-4 flex flex-col gap-4">
@@ -169,6 +183,13 @@ export default function ProfilePage() {
           </>
         )}
 
+        {tab === "blogs" &&
+          (myBlogs.length === 0 ? (
+            <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no has escrito ningún blog.</p>
+          ) : (
+            myBlogs.map((post) => <PostCard key={post.id} post={post} />)
+          ))}
+
         {tab === "saved" &&
           (mySaved.length === 0 ? (
             <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no has guardado ningún recuerdo.</p>
@@ -178,10 +199,10 @@ export default function ProfilePage() {
       </div>
     </div>
 
-    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
+    <ContextSidebar>
       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-center">
         <div>
-          <p className="text-lg font-bold">{myPosts.length}</p>
+          <p className="text-lg font-bold">{allMyPosts.length}</p>
           <p className="text-[11px] text-[var(--color-text-muted)]">Publicaciones</p>
         </div>
         <div>
@@ -191,8 +212,7 @@ export default function ProfilePage() {
       </div>
 
       {profile.interests.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-          <h3 className="font-display text-sm font-bold">Intereses</h3>
+        <ContextSidebarSection title="Intereses">
           <div className="flex flex-wrap gap-1.5">
             {profile.interests.map((interest) => (
               <span key={interest} className="rounded-full bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs font-medium">
@@ -200,9 +220,9 @@ export default function ProfilePage() {
               </span>
             ))}
           </div>
-        </div>
+        </ContextSidebarSection>
       )}
-    </aside>
+    </ContextSidebar>
     </div>
   );
 
@@ -229,17 +249,4 @@ function Stat({ value, label, href }: { value: number; label: string; href?: str
     );
   }
   return <div>{content}</div>;
-}
-
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-medium cursor-pointer ${
-        active ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
 }

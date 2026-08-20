@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { getMyRealId } from "@/lib/api";
+import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { useWallCommentsSocket } from "@/lib/realtime/useWallCommentsSocket";
@@ -13,9 +14,11 @@ import type { WallComment, WallMessage } from "@/lib/types";
 
 import { Avatar } from "./Avatar";
 import { CloseIcon, HeartIcon, ImageIcon, SendIcon } from "./icons";
+import { renderWithMentions } from "./Mentions";
 
 export function WallMessageCard({ message }: { message: WallMessage }) {
   const { state, actions } = useAppState();
+  const accent = useAccent();
   const author = findUser(state.social, message.authorId);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -96,7 +99,9 @@ export function WallMessageCard({ message }: { message: WallMessage }) {
         <Link href={`/member/${author.id}`} className="text-sm font-semibold">
           {author.displayName}
         </Link>
-        {message.body && <p className="text-sm text-[var(--color-text-secondary)]">{message.body}</p>}
+        {message.body && (
+          <p className="text-sm text-[var(--color-text-secondary)]">{renderWithMentions(message.body, accent.color)}</p>
+        )}
         {message.imageUri && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={message.imageUri} alt="" className="mt-2 max-h-72 w-full rounded-xl object-cover" />

@@ -45,6 +45,21 @@ export default function NotificationsPage() {
     .filter((n) => category === "todo" || n.category === category)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+  // Agrupa Hoy/Ayer/Anteriores en vez de una lista plana — mismo criterio que
+  // menzomovil/lib/features/notifications/notifications_screen.dart.
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const today = startOfDay(now);
+  const groups: { label: string; items: Notification[] }[] = [
+    { label: "Hoy", items: [] },
+    { label: "Ayer", items: [] },
+    { label: "Anteriores", items: [] },
+  ];
+  for (const n of notifications) {
+    const diffDays = Math.round((today - startOfDay(new Date(n.createdAt))) / 86400000);
+    groups[diffDays <= 0 ? 0 : diffDays === 1 ? 1 : 2].items.push(n);
+  }
+
   function handleClick(n: Notification) {
     actions.markNotificationRead(n.id);
     if (n.relatedMatchId) router.push(`/games/matches/${n.relatedMatchId}`);
@@ -81,7 +96,7 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-5">
         {notifications.length === 0 ? (
           <MenziIllustrationState
             image="/illustrations/menzi/menzi-notifications.webp"
@@ -92,30 +107,37 @@ export default function NotificationsPage() {
             priority
           />
         ) : (
-          notifications.map((n) => {
-            const Icon = categoryIcon[n.category] ?? BellIcon;
-            return (
-              <button
-                key={n.id}
-                onClick={() => handleClick(n)}
-                className={`flex items-start gap-3 rounded-xl border p-4 text-left shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all cursor-pointer hover:-translate-y-0.5 ${
-                  n.read
-                    ? "border-[var(--color-border-soft)] bg-[var(--color-surface)]"
-                    : "border-[var(--color-orange)]/35 bg-[var(--color-surface-secondary)] shadow-[0_4px_18px_-6px_rgba(255,122,26,0.25)]"
-                }`}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-elevated)]">
-                  <Icon size={18} className="text-[var(--color-text-secondary)]" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{n.title}</span>
-                  <span className="block text-sm text-[var(--color-text-secondary)]">{n.body}</span>
-                  <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{relativeTime(n.createdAt)}</span>
-                </span>
-                {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-coral)]" />}
-              </button>
-            );
-          })
+          groups
+            .filter((g) => g.items.length > 0)
+            .map((group) => (
+              <div key={group.label} className="flex flex-col gap-2">
+                <h2 className="px-1 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">{group.label}</h2>
+                {group.items.map((n) => {
+                  const Icon = categoryIcon[n.category] ?? BellIcon;
+                  return (
+                    <button
+                      key={n.id}
+                      onClick={() => handleClick(n)}
+                      className={`flex items-start gap-3 rounded-xl border p-4 text-left shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all cursor-pointer hover:-translate-y-0.5 ${
+                        n.read
+                          ? "border-[var(--color-border-soft)] bg-[var(--color-surface)]"
+                          : "border-[var(--color-orange)]/35 bg-[var(--color-surface-secondary)] shadow-[0_4px_18px_-6px_rgba(255,122,26,0.25)]"
+                      }`}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-elevated)]">
+                        <Icon size={18} className="text-[var(--color-text-secondary)]" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{n.title}</span>
+                        <span className="block text-sm text-[var(--color-text-secondary)]">{n.body}</span>
+                        <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{relativeTime(n.createdAt)}</span>
+                      </span>
+                      {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-coral)]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))
         )}
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Avatar } from "./Avatar";
 import { ReplyIcon, TrashIcon } from "./icons";
+import { renderWithMentions } from "./Mentions";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
@@ -262,7 +263,7 @@ export function ChatBubble({
             )}
             {!!message.body && (
               <p className="whitespace-pre-wrap text-sm" style={textScale !== 1 ? { fontSize: `${14 * textScale}px` } : undefined}>
-                {message.body}
+                {renderWithMentions(message.body, isOwn ? "var(--color-text-on-accent)" : accent.color)}
               </p>
             )}
           </>

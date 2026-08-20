@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 import type { ChatRoom } from "@/lib/types";
 
@@ -73,10 +74,18 @@ export function ChatRoomListItem({
         </span>
       )}
       <span className="relative min-w-0 flex-1">
-        <span className="block truncate font-display font-bold">{title}</span>
-        <span className="block truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
+        <span className="flex items-center justify-between gap-2">
+          <span className="truncate font-display font-bold">{title}</span>
+          {room.lastMessage && (
+            <span className="shrink-0 text-xs text-[var(--color-text-muted)]">{relativeTime(room.lastMessage.createdAt)}</span>
+          )}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="block min-w-0 flex-1 truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
+          {room.favorite && <span className="shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>}
+        </span>
       </span>
-      {onJoin && room.type === "public" && !room.joined ? (
+      {onJoin && room.type === "public" && !room.joined && (
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -88,8 +97,6 @@ export function ChatRoomListItem({
         >
           {joining ? "…" : "Unirse"}
         </button>
-      ) : (
-        room.favorite && <span className="relative shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>
       )}
     </Link>
   );
