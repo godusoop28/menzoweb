@@ -79,41 +79,62 @@ export default function FeedPage() {
       className="mx-auto flex min-h-full w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8"
       style={communityTheme.feed.style}
     >
-      <div className="menzo-fade-in flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">
-            Bienvenido de vuelta, <span className="text-[var(--color-orange)]">{state.profile?.displayName}</span>
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Hay nuevas historias esperándote.</p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="rounded-full border border-[var(--color-border-soft)] px-4 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] disabled:opacity-50 cursor-pointer"
-        >
-          {refreshing ? "Actualizando…" : "Actualizar"}
-        </button>
-      </div>
-
       <CommunityContextNav />
 
       <CommunityHero previewMembers={onlineMembers} />
 
-      <LiveRoomsCarousel rooms={liveRooms} />
-
-      <SegmentedTabs
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: "recientes", label: "Recientes" },
-          { value: "destacados", label: "Destacados" },
-          { value: "descubrir", label: "Descubrir" },
-        ]}
-      />
+      <div className="menzo-fade-in flex items-center justify-between gap-3">
+        <SegmentedTabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "recientes", label: "Recientes" },
+            { value: "destacados", label: "Destacados" },
+            { value: "descubrir", label: "Descubrir" },
+          ]}
+        />
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          aria-label="Actualizar"
+          title="Actualizar"
+          className="shrink-0 rounded-full border border-[var(--color-border-soft)] px-3 py-2 text-xs text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] disabled:opacity-50 cursor-pointer"
+        >
+          {refreshing ? "…" : "↻"}
+        </button>
+      </div>
 
       {tab === "recientes" && (
         <>
           <CreatePostComposer />
+
+          {featured.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">🔥 Destacado por líderes</h2>
+                <button onClick={() => setTab("destacados")} className="text-sm font-semibold text-[var(--color-orange)] cursor-pointer">
+                  Ver todo
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {featured.slice(0, 2).map((post) => (
+                  <FeaturedPostCard key={post.id} post={post} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {liveRooms.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden /> Salas en vivo
+                </h2>
+              </div>
+              <LiveRoomsCarousel rooms={liveRooms} />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {posts.length === 0 ? (
               <p className="col-span-full py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay publicaciones.</p>
