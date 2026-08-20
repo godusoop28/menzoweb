@@ -82,6 +82,10 @@ type LiveRoomContextValue = {
   localMutedUserIds: Set<string>;
   setLocalParticipantVolume: (userId: string, volume: number) => void;
   toggleLocalParticipantMute: (userId: string) => void;
+
+  // "Auriculares" — silencio LOCAL de todo el audio remoto de una vez, ver toggleDeafen.
+  deafened: boolean;
+  toggleDeafen: () => void;
 };
 
 const LiveRoomContext = createContext<LiveRoomContextValue | null>(null);
@@ -117,6 +121,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   // Ausente en el mapa = volumen normal (100). Distinto de `muteParticipant` (arriba, server-side).
   const [localVolumes, setLocalVolumes] = useState<Map<string, number>>(new Map());
   const [localMutedUserIds, setLocalMutedUserIds] = useState<Set<string>>(new Set());
+  // "Auriculares" del control bar (sección 27 del rediseño) — silencio LOCAL de TODO el audio
+  // remoto de golpe, distinto de localMutedUserIds (por participante). Nunca pega al backend ni
+  // afecta lo que escuchan los demás, mismo criterio que toggleLocalParticipantMute.
+  const [deafened, setDeafened] = useState(false);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -136,6 +144,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   // simplemente activó el mic recién) se reaplica la preferencia local guardada.
   const localVolumesRef = useRef<Map<string, number>>(new Map());
   const localMutedUserIdsRef = useRef<Set<string>>(new Set());
+  const deafenedRef = useRef(false);
 
   const stompRef = useRef<Client | null>(null);
 
@@ -158,6 +167,10 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localMutedUserIdsRef.current = localMutedUserIds;
   }, [localMutedUserIds]);
+
+  useEffect(() => {
+    deafenedRef.current = deafened;
+  }, [deafened]);
 
   // ---- WebSocket: un cliente STOMP persistente para todo el provider, con suscripciones que se
   // agregan/quitan dinámicamente por sala (watchedRoomId y activeRoomId pueden ser salas
@@ -513,6 +526,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     // participantes distintos, y reaplicarla ahí sería aleatorio/confuso.
     setLocalVolumes(new Map());
     setLocalMutedUserIds(new Set());
+    setDeafened(false);
   }, []);
 
   const join = useCallback(
@@ -572,7 +586,11 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
             user.audioTrack.play();
             // Reaplica la preferencia LOCAL guardada para este uid, si había una — el track es
             // nuevo (reconexión, o recién activó el mic) y por defecto arranca en volumen 100.
-            if (localMutedUserIdsRef.current.has(uid)) {
+            // "Auriculares" (deafenedRef) manda sobre cualquier preferencia por participante —
+            // mismo criterio que toggleDeafen más abajo.
+            if (deafenedRef.current) {
+              user.audioTrack.setVolume(0);
+            } else if (localMutedUserIdsRef.current.has(uid)) {
               user.audioTrack.setVolume(0);
             } else {
               const savedVolume = localVolumesRef.current.get(uid);
@@ -779,6 +797,22 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  /** "Auriculares" del control bar — silencia/reactiva TODO el audio remoto de una vez. Al
+   * reactivar, cada track vuelve a su propia preferencia individual (localVolumes/
+   * localMutedUserIds) en vez de saltar todos a 100 — un participante que ya tenía "ensordecer"
+   * puesto sigue silenciado para mí después de desactivar Auriculares. */
+  const toggleDeafen = useCallback(() => {
+    const next = !deafenedRef.current;
+    setDeafened(next);
+    for (const [uid, track] of remoteAudioTracksRef.current) {
+      if (next) {
+        track.setVolume(0);
+      } else if (!localMutedUserIdsRef.current.has(uid)) {
+        track.setVolume(localVolumesRef.current.get(uid) ?? 100);
+      }
+    }
+  }, []);
+
   // Suscripción en vivo al roster/roles/solicitudes de la sala a la que estoy conectado —
   // independiente de qué pantalla se esté mirando, para que un cambio de rol o un mute forzado
   // se aplique aunque el usuario haya navegado a otra parte (el LIVE sigue minimizado).
@@ -857,6 +891,8 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       localMutedUserIds,
       setLocalParticipantVolume,
       toggleLocalParticipantMute,
+      deafened,
+      toggleDeafen,
     }),
     [
       watchedRoomId,
@@ -900,6 +936,8 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       localMutedUserIds,
       setLocalParticipantVolume,
       toggleLocalParticipantMute,
+      deafened,
+      toggleDeafen,
     ]
   );
 

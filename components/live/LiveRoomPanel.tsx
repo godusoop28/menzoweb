@@ -1,20 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { IRemoteVideoTrack } from "agora-rtc-sdk-ng";
 
-import { HandRaiseIcon, MicIcon, MicOffIcon, MinimizeIcon, MusicNoteIcon, ScreenShareIcon, SettingsIcon, TrashIcon, UsersIcon, VolumeIcon } from "@/components/icons";
+import { Avatar } from "@/components/Avatar";
+import {
+  ChatIcon,
+  HandRaiseIcon,
+  HeadsetIcon,
+  HeadsetOffIcon,
+  MicIcon,
+  MicOffIcon,
+  MinimizeIcon,
+  MusicNoteIcon,
+  ScreenShareIcon,
+  SendIcon,
+  SettingsIcon,
+  TrashIcon,
+  UsersIcon,
+  VolumeIcon,
+} from "@/components/icons";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { RoomSettingsPanel } from "@/components/room/RoomSettingsPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Sheet } from "@/components/ui/Sheet";
 import { ApiError, getMyRealId } from "@/lib/api";
+import { useAppState } from "@/lib/AppStateContext";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 import { MenziDjPanel } from "@/components/music/MenziDjPanel";
 import { DjMenziOrb } from "@/components/music/DjMenziOrb";
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
+import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
+import { findUser, messagesForRoom } from "@/lib/store/selectors";
 import { useToast } from "@/lib/ToastContext";
-import type { ChatRoom, LiveParticipant, LiveParticipantRole } from "@/lib/types";
+import type { ChatRoom, LiveParticipant, LiveParticipantRole, Message } from "@/lib/types";
 
 import { LiveParticipantBubble } from "./LiveParticipantBubble";
 
@@ -57,6 +76,69 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
   const myId = getMyRealId();
   const isConnectedHere = live.activeRoomId === room.id;
   const elapsed = useElapsed(live.watchedRoomId === room.id ? live.viewingState?.startedAt : undefined);
+
+  // Chat con burbujas integrado (sección 26 del rediseño) — misma sala, mismo store/WebSocket que
+  // el chat normal (ver app/(app)/chat/[id]/page.tsx): si esa página sigue montada debajo (el
+  // LIVE se abre como overlay sobre ella, no como ruta aparte) ya tiene su propio useRoomSocket
+  // activo para este roomId; se llama acá también por si el panel se abrió desde otro lado (p.
+  // ej. LiveAutoplayBar) donde esa suscripción no existe. receiveRoomMessage dedupea por id en el
+  // store global, así que dos suscripciones al mismo tópico nunca duplican un mensaje.
+  const { state, actions } = useAppState();
+  const showToast = useToast();
+  useRoomSocket(isConnectedHere ? room.id : undefined);
+  const chatMessages = useMemo(() => messagesForRoom(state.social, room.id), [state.social, room.id]);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const [chatAtBottom, setChatAtBottom] = useState(true);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(chatMessages.length);
+
+  useEffect(() => {
+    if (chatMessages.length <= lastMessageCountRef.current) {
+      lastMessageCountRef.current = chatMessages.length;
+      return;
+    }
+    lastMessageCountRef.current = chatMessages.length;
+    const el = chatScrollRef.current;
+    const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) {
+      requestAnimationFrame(() => el?.scrollTo({ top: el.scrollHeight }));
+    } else {
+      setUnreadChat((n) => n + 1);
+    }
+  }, [chatMessages.length]);
+
+  function scrollChatToBottom() {
+    setUnreadChat(0);
+    setChatAtBottom(true);
+    requestAnimationFrame(() => {
+      const el = chatScrollRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    });
+  }
+
+  function handleChatScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setChatAtBottom(atBottom);
+    if (atBottom && unreadChat > 0) setUnreadChat(0);
+  }
+
+  const [chatDraft, setChatDraft] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
+
+  async function sendChat() {
+    const text = chatDraft.trim();
+    if (!text || sendingChat) return;
+    setChatDraft("");
+    setSendingChat(true);
+    try {
+      await actions.sendMessage(room.id, text);
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos enviar tu mensaje.");
+    } finally {
+      setSendingChat(false);
+    }
+  }
 
   const stage = isConnectedHere ? live.participants.filter((p) => STAGE_ROLES.includes(p.role)) : [];
   const audience = isConnectedHere ? live.participants.filter((p) => !STAGE_ROLES.includes(p.role)) : [];
@@ -134,8 +216,11 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
           </div>
         )}
 
-        {/* Escenario */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
+        {/* Escenario — ya no reclama todo el espacio disponible (antes era flex-1, así que un
+            LIVE con pocos hablantes dejaba un vacío enorme entre las burbujas y los controles,
+            sección 25 del rediseño): se acota a un alto máximo y deja el resto para el chat de
+            abajo. */}
+        <div className="max-h-[38vh] shrink-0 overflow-y-auto px-4 pb-2">
           {!isConnectedHere ? (
             <div className="flex h-full flex-col items-center justify-center">
               <MenziIllustrationState
@@ -200,10 +285,50 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
           </div>
         )}
 
+        {/* Chat con burbujas integrado (sección 26 del rediseño) — nunca abre una pantalla
+            aparte, vive en el espacio que deja libre el escenario de arriba. Mismos mensajes que
+            el chat normal de la sala (ver useRoomSocket/messagesForRoom más arriba), solo otra
+            vista sobre ellos. */}
+        {isConnectedHere && (
+          <div className="mx-3 mb-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
+            <div ref={chatScrollRef} onScroll={handleChatScroll} className="min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5">
+              {chatMessages.length === 0 ? (
+                <p className="py-4 text-center text-xs text-[var(--color-text-muted)]">Sé el primero en escribir en este LIVE.</p>
+              ) : (
+                chatMessages.map((m) => <LiveChatBubble key={m.id} message={m} author={findUser(state.social, m.authorId)} />)
+              )}
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendChat();
+              }}
+              className="flex shrink-0 items-center gap-2 border-t border-white/10 px-3 py-2.5"
+            >
+              <input
+                value={chatDraft}
+                onChange={(e) => setChatDraft(e.target.value)}
+                placeholder="Enviar mensaje…"
+                className="min-w-0 flex-1 rounded-full bg-white/5 px-3.5 py-2 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+              />
+              <button
+                type="submit"
+                disabled={!chatDraft.trim() || sendingChat}
+                aria-label="Enviar"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-orange)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <SendIcon size={16} />
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* Controles inferiores */}
         {isConnectedHere && (
           <LiveControls
             room={room}
+            unreadChat={chatAtBottom ? 0 : unreadChat}
+            onOpenChat={scrollChatToBottom}
             onOpenSettings={() => setShowSettings(true)}
             onOpenMusic={() => setShowMusic(true)}
             onExit={onMinimize}
@@ -237,6 +362,31 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       <ParticipantModerationSheet target={moderationTarget} onClose={() => setModerationTarget(null)} />
 
       <ParticipantVolumeSheet target={volumeTarget} onClose={() => setVolumeTarget(null)} />
+    </div>
+  );
+}
+
+/** Burbuja compacta del chat inline del LIVE — sección 26 del rediseño: "avatar, nombre + title,
+ * hora, mensaje". Vista deliberadamente más simple que <ChatBubble/> (sin replies/reacciones/
+ * apariencia personal): este panel es un complemento del audio, no un reemplazo del chat de
+ * sala completo, que sigue viviendo en su propia pantalla con todas esas capacidades. */
+function LiveChatBubble({ message, author }: { message: Message; author: ReturnType<typeof findUser> }) {
+  if (message.type === "system") {
+    return <p className="py-1 text-center text-xs text-[var(--color-text-muted)]">{message.body}</p>;
+  }
+  const time = new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="flex items-start gap-2 py-1">
+      <Avatar name={author?.displayName ?? "?"} avatarUri={author?.avatarUri} gradient={author?.avatarGradient ?? "fire"} size={26} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className="truncate text-xs font-bold text-[var(--color-accent,var(--color-orange))]">{author?.displayName ?? "?"}</span>
+          <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">{time}</span>
+        </div>
+        <div className="mt-0.5 inline-block rounded-xl bg-black/35 px-2.5 py-1.5 text-sm">
+          {message.deleted ? <span className="text-[var(--color-text-muted)]">Mensaje eliminado</span> : message.body}
+        </div>
+      </div>
     </div>
   );
 }
@@ -432,12 +582,14 @@ function ControlButton({
   label,
   variant = "neutral",
   disabled,
+  badge,
   children,
 }: {
   onClick: () => void;
   label: string;
   variant?: ControlVariant;
   disabled?: boolean;
+  badge?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -446,20 +598,29 @@ function ControlButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`flex h-12 w-12 items-center justify-center rounded-full cursor-pointer transition-colors disabled:cursor-wait disabled:opacity-70 ${VARIANT_CLASSES[variant]}`}
+      className={`relative flex h-12 w-12 items-center justify-center rounded-full cursor-pointer transition-colors disabled:cursor-wait disabled:opacity-70 ${VARIANT_CLASSES[variant]}`}
     >
       {children}
+      {!!badge && (
+        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-coral)] px-1 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
 
 function LiveControls({
   room,
+  unreadChat,
+  onOpenChat,
   onOpenSettings,
   onOpenMusic,
   onExit,
 }: {
   room: ChatRoom;
+  unreadChat: number;
+  onOpenChat: () => void;
   onOpenSettings: () => void;
   onOpenMusic: () => void;
   onExit: () => void;
@@ -545,6 +706,13 @@ function LiveControls({
             {live.muted || !live.localAudioPublished ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
           </ControlButton>
         )}
+        <ControlButton
+          onClick={live.toggleDeafen}
+          label={live.deafened ? "Reactivar audio" : "Auriculares"}
+          variant={live.deafened ? "danger" : "neutral"}
+        >
+          {live.deafened ? <HeadsetOffIcon size={18} /> : <HeadsetIcon size={18} />}
+        </ControlButton>
         {live.myRole === "audience" && (
           <button
             onClick={handleRequestToSpeak}
@@ -561,6 +729,9 @@ function LiveControls({
             <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
           </button>
         )}
+        <ControlButton onClick={onOpenChat} label="Mensajes" badge={unreadChat}>
+          <ChatIcon size={18} />
+        </ControlButton>
         <ControlButton onClick={onOpenMusic} label="DJ Menzi">
           <MusicNoteIcon size={18} />
         </ControlButton>

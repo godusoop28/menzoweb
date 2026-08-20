@@ -34,40 +34,7 @@ type RequestOptions = {
   skipAuth?: boolean;
 };
 
-const SLOW_REQUEST_THRESHOLD_MS = 6000;
 const HARD_TIMEOUT_MS = 4 * 60 * 1000;
-
-type SlowRequestListener = (active: boolean) => void;
-const slowRequestListeners = new Set<SlowRequestListener>();
-let activeSlowRequests = 0;
-
-/** Se activa cuando una petición lleva varios segundos sin responder (p. ej. el backend gratuito de Render se estaba despertando). */
-export function onSlowRequestChange(listener: SlowRequestListener): () => void {
-  slowRequestListeners.add(listener);
-  return () => {
-    slowRequestListeners.delete(listener);
-  };
-}
-
-function setSlowRequestActive(active: boolean) {
-  slowRequestListeners.forEach((listener) => listener(active));
-}
-
-function beginSlowWatch(): () => void {
-  activeSlowRequests += 1;
-  let finished = false;
-  const timer = setTimeout(() => {
-    if (!finished) setSlowRequestActive(true);
-  }, SLOW_REQUEST_THRESHOLD_MS);
-
-  return () => {
-    if (finished) return;
-    finished = true;
-    clearTimeout(timer);
-    activeSlowRequests = Math.max(0, activeSlowRequests - 1);
-    if (activeSlowRequests === 0) setSlowRequestActive(false);
-  };
-}
 
 type SessionExpiredListener = () => void;
 const sessionExpiredListeners = new Set<SessionExpiredListener>();
@@ -96,9 +63,8 @@ async function doRefresh(): Promise<boolean> {
   if (!session) return false;
   try {
     // Pasa por apiFetch (no por fetch crudo) para heredar los reintentos de red y el margen de
-    // 4 minutos que ya usan el resto de las peticiones: sin esto, un backend de Render que
-    // recién está despertando podía hacer fallar este refresh puntual y desloguear a alguien
-    // con una sesión perfectamente válida.
+    // 4 minutos que ya usan el resto de las peticiones: sin esto, un blip de red puntual podía
+    // hacer fallar este refresh y desloguear a alguien con una sesión perfectamente válida.
     const data = await apiFetch<AuthResponseDto>("/api/auth/refresh", {
       method: "POST",
       body: { refreshToken: session.refreshToken },
@@ -144,7 +110,6 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   async function attemptWithRetries(): Promise<Response> {
-    const endSlowWatch = beginSlowWatch();
     try {
       return await attempt();
     } catch (e) {
@@ -158,14 +123,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
         }
       }
       if (e instanceof Error && e.name === "AbortError") {
-        throw new ApiError(
-          0,
-          "Menzo tardó demasiado en responder. El servidor puede estar iniciando — inténtalo de nuevo en un minuto."
-        );
+        throw new ApiError(0, "Menzo tardó demasiado en responder. Inténtalo de nuevo en un momento.");
       }
       throw new ApiError(0, "No se pudo conectar con el servidor. Revisa tu conexión.");
-    } finally {
-      endSlowWatch();
     }
   }
 
@@ -186,7 +146,20 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  // Si algo delante del backend (proxy, CDN, balanceador) responde con una página de error que
+  // no es JSON — un 502/503/504 HTML, un timeout de gateway, un bloqueo de WAF — esto tiraba un
+  // SyntaxError sin capturar en ningún lado: no un ApiError con mensaje legible, una excepción
+  // cruda que rompía cualquier flujo async que estuviera esperando esta respuesta (p. ej. iniciar
+  // o unirse a un LIVE) en vez de mostrar un error manejable.
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    throw new ApiError(
+      response.status,
+      response.ok ? "Menzo devolvió una respuesta inesperada. Inténtalo de nuevo en un momento." : `Error ${response.status}`
+    );
+  }
 
   if (!response.ok) {
     const err = data as ErrorResponse | undefined;

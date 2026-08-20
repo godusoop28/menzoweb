@@ -255,6 +255,27 @@ export function HandRaiseIcon({ size = 18, className = "" }: IconProps) {
   );
 }
 
+export function HeadsetIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M4 13v-1a8 8 0 0 1 16 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="3" y="13" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="17" y="13" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function HeadsetOffIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M4 13v-1a8 8 0 0 1 16 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="3" y="13" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="17" y="13" width="4" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MinimizeIcon({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
