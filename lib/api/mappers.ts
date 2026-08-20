@@ -164,6 +164,7 @@ export function mapPost(dto: PostDto, myRealId: string | null): Post {
     blocks: dto.blocks ?? [],
     hidden: dto.hidden,
     communityId: dto.communityId,
+    nsfw: dto.nsfw,
   };
 }
 

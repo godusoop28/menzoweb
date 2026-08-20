@@ -14,6 +14,7 @@ import type {
   CreatePostRequest,
   CreateRoomRequest,
   CommunityDetailDto,
+  CommunityMemberDto,
   CommunityMembershipDto,
   CommunitySummaryDto,
   CreateStickerPackRequest,
@@ -135,6 +136,8 @@ export const postsApi = {
     apiFetch<PageResponse<PostDto>>(`/api/posts${qs({ communityId, page, size })}`),
   featured: (communityId?: string, page = 0, size = 20) =>
     apiFetch<PageResponse<PostDto>>(`/api/posts/featured${qs({ communityId, page, size })}`),
+  blogs: (communityId?: string, page = 0, size = 20) =>
+    apiFetch<PageResponse<PostDto>>(`/api/posts/blogs${qs({ communityId, page, size })}`),
   bookmarked: (page = 0, size = 20) => apiFetch<PageResponse<PostDto>>(`/api/posts/bookmarked${qs({ page, size })}`),
   search: (query: string, communityId?: string, page = 0, size = 20) =>
     apiFetch<PageResponse<PostDto>>(`/api/posts/search${qs({ query, communityId, page, size })}`),
@@ -402,6 +405,10 @@ export const communitiesApi = {
     apiFetch<CommunityDetailDto>(`/api/communities/${id}/theme`, { method: "PATCH", body }),
   updateNavigation: (id: string, body: UpdateCommunityNavigationRequest) =>
     apiFetch<CommunityDetailDto>(`/api/communities/${id}/navigation`, { method: "PATCH", body }),
+  // Mismo criterio de visibilidad que getBySlug (pública/no-listada abierta a cualquiera con
+  // sesión, privada requiere membresía activa) — ver CommunityPermissionEvaluator en menzoapi.
+  members: (id: string, page = 0, size = 30) =>
+    apiFetch<PageResponse<CommunityMemberDto>>(`/api/communities/${id}/members${qs({ page, size })}`),
 };
 
 export const stickersApi = {

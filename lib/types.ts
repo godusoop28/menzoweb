@@ -60,7 +60,7 @@ export type RelationshipStatus = "SELF" | "NONE" | "FOLLOWING" | "FOLLOWS_YOU" |
 
 export type DemoUser = UserProfile & { activityStatus: string };
 
-export type PostType = "text" | "image" | "poll" | "question" | "event";
+export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog";
 
 export type AbstractVisualPreset =
   | "fire"
@@ -112,6 +112,7 @@ export type Post = {
   blocks: PostBlock[];
   hidden: boolean;
   communityId: string | null;
+  nsfw: boolean;
 };
 
 export type Comment = { id: string; postId: string; authorId: string; body: string; createdAt: string };

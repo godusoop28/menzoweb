@@ -12,25 +12,55 @@ import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
+import { getMyRealId, mapPost, postsApi } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
+import type { Post } from "@/lib/types";
 
-type HomeTab = "recientes" | "destacados" | "descubrir";
+type HomeTab = "recientes" | "destacados" | "descubrir" | "blogs";
 type RoomSort = "recent" | "popular";
 
 export default function FeedPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
   const communityTheme = useCommunityTheme();
+  const { activeCommunity } = useCommunity();
   const [tab, setTab] = useState<HomeTab>("recientes");
   const [refreshing, setRefreshing] = useState(false);
   const [roomSort, setRoomSort] = useState<RoomSort>("recent");
   const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [blogs, setBlogs] = useState<Post[]>([]);
+  const [blogsLoadedFor, setBlogsLoadedFor] = useState<string | undefined>(undefined);
+  const blogsFetchKey = tab === "blogs" ? `blogs:${activeCommunity?.id ?? "none"}` : undefined;
+  // "Ajustar estado durante el render" en vez de un setState síncrono al abrir el effect de abajo
+  // (mismo patrón que lib/chat/useChatAppearance.ts) — evita el render extra que dispararía un
+  // useEffect con un setState(true) como primera línea.
+  const blogsLoading = blogsFetchKey !== undefined && blogsFetchKey !== blogsLoadedFor;
 
   const posts = recentPosts(state.social);
   const featured = featuredPosts(state.social);
   const onlineMembers = onlineUsers(state.social);
+
+  useEffect(() => {
+    if (!blogsFetchKey || blogsFetchKey === blogsLoadedFor) return;
+    let cancelled = false;
+    postsApi
+      .blogs(activeCommunity?.id)
+      .then((res) => {
+        if (cancelled) return;
+        setBlogs(res.items.map((dto) => mapPost(dto, getMyRealId())));
+        setBlogsLoadedFor(blogsFetchKey);
+      })
+      .catch((error) => {
+        console.warn("[menzo/web] load blogs failed", error);
+        if (!cancelled) setBlogsLoadedFor(blogsFetchKey);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blogsFetchKey, blogsLoadedFor, activeCommunity?.id]);
 
   useEffect(() => {
     if (tab === "descubrir") actions.loadDiscoverRooms(roomSort);
@@ -90,6 +120,7 @@ export default function FeedPage() {
           options={[
             { value: "recientes", label: "Recientes" },
             { value: "destacados", label: "Destacados" },
+            { value: "blogs", label: "Blogs" },
             { value: "descubrir", label: "Descubrir" },
           ]}
         />
@@ -189,6 +220,19 @@ export default function FeedPage() {
                 ))}
               </div>
             </div>
+          </div>
+        ))}
+
+      {tab === "blogs" &&
+        (blogsLoading ? (
+          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Cargando blogs…</p>
+        ) : blogs.length === 0 ? (
+          <p className="py-10 text-center text-sm text-[var(--color-text-muted)]">Todavía no hay blogs.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {blogs.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
           </div>
         ))}
 

@@ -1,6 +1,6 @@
 // Contrato 1:1 con menzoapi. Nombres de campo exactos, case-sensitive.
 
-export type PostType = "text" | "image" | "poll" | "question" | "event";
+export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog";
 export type MessageType = "text" | "system" | "sticker";
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
 export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos" | "en_vivo" | "juegos";
@@ -167,6 +167,7 @@ export type PostDto = {
   blocks: PostBlockDto[];
   hidden: boolean;
   communityId: string | null;
+  nsfw: boolean;
 };
 
 export type CreatePostRequest = {
@@ -181,6 +182,7 @@ export type CreatePostRequest = {
   eventId?: string;
   blocks?: PostBlockDto[];
   communityId?: string;
+  nsfw?: boolean;
 };
 
 export type UpdatePostRequest = {
@@ -190,6 +192,7 @@ export type UpdatePostRequest = {
   // Ignorado cuando edita el propio autor; obligatorio cuando edita un CURATOR+ el post de otra
   // persona (ver PostService.updatePost en menzoapi) — mismo criterio que el motivo de deletePost.
   reason?: string;
+  nsfw?: boolean;
 };
 
 export type CommentDto = {
@@ -707,6 +710,18 @@ export type CommunityMembershipDto = {
   communityBio: string | null;
   contributionCount: number;
   customTitle: string | null;
+};
+
+/** Fila del listado público de miembros de una comunidad (GET /api/communities/{id}/members) —
+ * distinto de CommunityMembershipDto (que describe "mi" relación con la comunidad): esto incluye
+ * la identidad de cada miembro (UserSummaryDto), no solo el rol. */
+export type CommunityMemberDto = {
+  user: UserSummaryDto;
+  communityRole: CommunityRole;
+  joinedAt: string;
+  customTitle: string | null;
+  contributionCount: number;
+  favorite: boolean;
 };
 
 export type MyCommunityDto = { community: CommunitySummaryDto; membership: CommunityMembershipDto };

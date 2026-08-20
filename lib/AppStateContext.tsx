@@ -59,6 +59,10 @@ type AppStateContextValue = {
       imageFile?: File;
       pollOptions?: string[];
       blocks?: import("@/lib/api/types").PostBlockDto[];
+      /** Override explícito — sin esto, el tipo se infiere del contenido (poll/image/text), ver
+       * implementación. Usado por el compositor de blogs para forzar "blog". */
+      postType?: import("@/lib/api/types").PostType;
+      nsfw?: boolean;
     }) => Promise<void>;
     updatePost: (postId: string, payload: { title?: string; blocks: import("@/lib/api/types").PostBlockDto[]; reason?: string }) => Promise<void>;
     deletePost: (postId: string, reason?: string) => Promise<void>;
@@ -385,15 +389,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       imageFile?: File;
       pollOptions?: string[];
       blocks?: import("@/lib/api/types").PostBlockDto[];
+      postType?: import("@/lib/api/types").PostType;
+      nsfw?: boolean;
     }) {
       if (!hasSession()) throw new Error("No hay sesión activa");
       const imageUri = await ensureUploaded(payload.imageUri, payload.imageFile);
       // Cada bloque de imagen/gif ya trae su propia URL https (se sube al agregarse en el editor,
       // ver BlockEditor) — acá solo se decide el `type` legacy que sigue pidiendo el backend para
-      // posts sin bloques (poll aparte, no usa nada de esto).
+      // posts sin bloques (poll aparte, no usa nada de esto). `postType` (p.ej. "blog") pisa esta
+      // inferencia cuando el compositor ya sabe exactamente qué tipo quiere.
       const hasMedia = payload.blocks?.some((b) => b.type === "image" || b.type === "gif") ?? false;
       const dto = await postsApi.create({
-        type: payload.pollOptions ? "poll" : hasMedia || imageUri ? "image" : "text",
+        type: payload.postType ?? (payload.pollOptions ? "poll" : hasMedia || imageUri ? "image" : "text"),
         title: payload.title,
         body: payload.body,
         imageUri,
@@ -401,6 +408,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         pollOptions: payload.pollOptions,
         blocks: payload.blocks,
         communityId: getItem<string>(StorageKeys.activeCommunityId) ?? undefined,
+        nsfw: payload.nsfw,
       });
       dispatch({ type: "CREATE_POST", payload: mapPost(dto, getMyRealId()) });
     }

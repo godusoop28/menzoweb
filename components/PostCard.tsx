@@ -21,6 +21,7 @@ const typeLabel: Record<Post["type"], string> = {
   poll: "Encuesta",
   question: "Pregunta",
   event: "Evento",
+  blog: "Blog",
 };
 
 export function PostCard({ post }: { post: Post }) {

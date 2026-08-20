@@ -11,7 +11,7 @@ import type { PostBlockDto } from "@/lib/api/types";
 import { GradientButton } from "./GradientButton";
 import { CloseIcon } from "./icons";
 
-type Mode = "text" | "image" | "poll";
+type Mode = "text" | "image" | "poll" | "blog";
 
 function hasRealContent(blocks: PostBlockDto[]) {
   return blocks.some(
@@ -27,6 +27,7 @@ export function CreatePostComposer() {
   const [blocks, setBlocks] = useState<PostBlockDto[]>([]);
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [nsfw, setNsfw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
@@ -37,6 +38,7 @@ export function CreatePostComposer() {
     setBlocks([]);
     setPollQuestion("");
     setPollOptions(["", ""]);
+    setNsfw(false);
     setMode("text");
   }
 
@@ -49,6 +51,8 @@ export function CreatePostComposer() {
         body: mode === "poll" ? pollQuestion.trim() : "",
         pollOptions: mode === "poll" ? filledOptions : undefined,
         blocks: mode === "poll" ? undefined : blocks,
+        postType: mode === "blog" ? "blog" : undefined,
+        nsfw: mode === "blog" ? nsfw : undefined,
       });
       reset();
     } catch (error) {
@@ -62,7 +66,7 @@ export function CreatePostComposer() {
   return (
     <div className="menzo-fade-in flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
       <div className="flex gap-2">
-        {(["text", "image", "poll"] as Mode[]).map((m) => (
+        {(["text", "image", "blog", "poll"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
@@ -70,7 +74,7 @@ export function CreatePostComposer() {
               mode === m ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]"
             }`}
           >
-            {m === "text" ? "Texto" : m === "image" ? "Imagen" : "Encuesta"}
+            {m === "text" ? "Texto" : m === "image" ? "Imagen" : m === "blog" ? "Blog" : "Encuesta"}
           </button>
         ))}
       </div>
@@ -121,10 +125,21 @@ export function CreatePostComposer() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-            placeholder="Título (opcional)"
+            placeholder={mode === "blog" ? "Título del blog" : "Título (opcional)"}
             className="w-full rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none placeholder:text-[var(--color-text-muted)]"
           />
           <BlockEditor blocks={blocks} onChange={setBlocks} />
+          {mode === "blog" && (
+            <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+              <input
+                type="checkbox"
+                checked={nsfw}
+                onChange={(e) => setNsfw(e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-[var(--color-coral)]"
+              />
+              Contenido para mayores de 18
+            </label>
+          )}
         </>
       )}
 

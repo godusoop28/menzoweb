@@ -1,63 +1,135 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Avatar } from "@/components/Avatar";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
-import { MemberCard } from "@/components/MemberCard";
-import { getMyRealId, mapDemoUser, usersApi } from "@/lib/api";
-import type { UserProfileDto } from "@/lib/api/types";
-import type { DemoUser } from "@/lib/types";
+import { communitiesApi } from "@/lib/api";
+import { toGradient } from "@/lib/api/mappers";
+import type { CommunityMemberDto } from "@/lib/api/types";
+import { useCommunity } from "@/lib/communities/CommunityContext";
 
 const PAGE_SIZE = 30;
 
+const ROLE_LABEL: Record<string, string> = {
+  COMMUNITY_OWNER: "Líder",
+  COMMUNITY_ADMIN: "Líder",
+  COMMUNITY_MODERATOR: "Moderador",
+  COMMUNITY_CURATOR: "Curador",
+  MEMBER: "Miembro",
+};
+
+const LEADER_ROLES = new Set(["COMMUNITY_OWNER", "COMMUNITY_ADMIN"]);
+const MOD_ROLES = new Set(["COMMUNITY_MODERATOR", "COMMUNITY_CURATOR"]);
+
+function MemberRow({ member }: { member: CommunityMemberDto }) {
+  return (
+    <Link
+      href={`/member/${member.user.id}`}
+      className="flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-secondary)]"
+    >
+      <Avatar
+        name={member.user.displayName}
+        avatarUri={member.user.avatarUri ?? undefined}
+        gradient={toGradient(member.user.avatarGradient)}
+        size={48}
+        showOnline
+        online={member.user.isOnline}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+          <span className="truncate">{member.customTitle || member.user.displayName}</span>
+          <span className="shrink-0 rounded-full bg-[var(--color-surface-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-cyan)]">
+            {ROLE_LABEL[member.communityRole] ?? member.communityRole}
+          </span>
+        </p>
+        <p className="truncate text-xs text-[var(--color-text-muted)]">@{member.user.username}</p>
+      </div>
+    </Link>
+  );
+}
+
+/** Miembros de la comunidad ACTIVA (con su rol real) — antes esta pantalla mostraba una búsqueda
+ * global de usuarios de toda la plataforma, sin relación con ninguna comunidad puntual. Usa
+ * GET /api/communities/{id}/members (ver CommunitiesService.listMembers en menzoapi), que no
+ * existía hasta esta fase. */
 export default function MembersPage() {
-  const [members, setMembers] = useState<DemoUser[]>([]);
+  const router = useRouter();
+  const { activeCommunity } = useCommunity();
+  const [members, setMembers] = useState<CommunityMemberDto[]>([]);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedFor, setLoadedFor] = useState<string | undefined>(undefined);
+  // "Ajustar estado durante el render" en vez de un setState síncrono al abrir el effect de abajo
+  // (mismo patrón que lib/chat/useChatAppearance.ts) — evita el render extra que dispararía un
+  // useEffect con un setState(true) como primera línea.
+  const loading = !!activeCommunity && activeCommunity.id !== loadedFor;
 
   useEffect(() => {
+    // Sin comunidad activa no hace falta resetear nada acá: el render de más abajo devuelve un
+    // estado vacío dedicado sin leer `members`/`loading` en absoluto.
+    if (!activeCommunity || activeCommunity.id === loadedFor) return;
     let cancelled = false;
-    usersApi
-      .search("", 0, PAGE_SIZE)
+    communitiesApi
+      .members(activeCommunity.id, 0, PAGE_SIZE)
       .then((res) => {
         if (cancelled) return;
-        const myRealId = getMyRealId();
-        setMembers(res.items.map((dto: UserProfileDto) => mapDemoUser(dto, myRealId)));
+        setMembers(res.items);
         setPage(0);
         setHasNext(res.hasNext);
+        setLoadedFor(activeCommunity.id);
       })
-      .catch((error) => console.warn("[menzo/web] load members failed", error))
-      .finally(() => !cancelled && setLoading(false));
+      .catch((error) => {
+        console.warn("[menzo/web] load community members failed", error);
+        if (!cancelled) setLoadedFor(activeCommunity.id);
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeCommunity, loadedFor]);
 
   async function loadMore() {
-    if (loadingMore || !hasNext) return;
+    if (loadingMore || !hasNext || !activeCommunity) return;
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const res = await usersApi.search("", nextPage, PAGE_SIZE);
-      const myRealId = getMyRealId();
+      const res = await communitiesApi.members(activeCommunity.id, nextPage, PAGE_SIZE);
       setMembers((current) => {
-        const map = new Map(current.map((u) => [u.id, u]));
-        for (const dto of res.items) map.set(dto.id, mapDemoUser(dto, myRealId));
+        const map = new Map(current.map((m) => [m.user.id, m]));
+        for (const m of res.items) map.set(m.user.id, m);
         return Array.from(map.values());
       });
       setPage(nextPage);
       setHasNext(res.hasNext);
     } catch (error) {
-      console.warn("[menzo/web] load more members failed", error);
+      console.warn("[menzo/web] load more community members failed", error);
     } finally {
       setLoadingMore(false);
     }
   }
 
-  const online = members.filter((u) => u.isOnline);
-  const offline = members.filter((u) => !u.isOnline);
+  const leaders = members.filter((m) => LEADER_ROLES.has(m.communityRole));
+  const mods = members.filter((m) => MOD_ROLES.has(m.communityRole));
+  const rest = members.filter((m) => !LEADER_ROLES.has(m.communityRole) && !MOD_ROLES.has(m.communityRole));
+  const online = members.filter((m) => m.user.isOnline).length;
+
+  if (!activeCommunity) {
+    return (
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8">
+        <MenziIllustrationState
+          image="/illustrations/menzi/menzi-friends.webp"
+          alt="Menzi rodeado de otras criaturas y corazones"
+          title="Elegí una comunidad"
+          description="Los miembros que ves acá pertenecen a tu comunidad activa — unite a una para verlos."
+          size="medium"
+          action={{ label: "Explorar comunidades", onClick: () => router.push("/communities") }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 md:px-8">
@@ -66,11 +138,10 @@ export default function MembersPage() {
         <img src="/banners/banner-connections.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[rgba(7,9,13,0.35)]" />
         <div className="relative flex flex-col gap-1.5 p-6 text-white">
-          <h1 className="font-display text-2xl font-bold">Ahora mismo</h1>
-          <p className="text-white/85">Estas personas mantienen encendida la comunidad.</p>
+          <h1 className="font-display text-2xl font-bold">Miembros de {activeCommunity.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[var(--color-online)]" />
-            <span className="text-sm font-medium">{online.length} conectados</span>
+            <span className="text-sm font-medium">{online} conectados</span>
           </div>
         </div>
       </div>
@@ -81,29 +152,40 @@ export default function MembersPage() {
         <MenziIllustrationState
           image="/illustrations/menzi/menzi-friends.webp"
           alt="Menzi rodeado de otras criaturas y corazones"
-          title="Conecta con tu comunidad"
-          description="Cuando dos personas se siguen mutuamente, aparecen como amigos."
+          title="Todavía no hay miembros"
+          description="Cuando alguien se una a esta comunidad, va a aparecer acá."
           size="medium"
         />
       ) : (
         <>
-          {online.length > 0 && (
+          {leaders.length > 0 && (
             <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Conectados</h2>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {online.map((user) => (
-                  <MemberCard key={user.id} user={user} variant="column" />
+              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Líderes</h2>
+              <div className="flex flex-col gap-2">
+                {leaders.map((m) => (
+                  <MemberRow key={m.user.id} member={m} />
                 ))}
               </div>
             </div>
           )}
 
-          {offline.length > 0 && (
+          {mods.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Moderadores</h2>
+              <div className="flex flex-col gap-2">
+                {mods.map((m) => (
+                  <MemberRow key={m.user.id} member={m} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {rest.length > 0 && (
             <div className="flex flex-col gap-3">
               <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Todos los miembros</h2>
               <div className="flex flex-col gap-2">
-                {offline.map((user) => (
-                  <MemberCard key={user.id} user={user} />
+                {rest.map((m) => (
+                  <MemberRow key={m.user.id} member={m} />
                 ))}
               </div>
             </div>
