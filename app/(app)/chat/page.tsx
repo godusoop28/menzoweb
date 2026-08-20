@@ -14,14 +14,29 @@ import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { communityFallbackGradient } from "@/lib/communities/backgroundStyle";
 import { useCommunity } from "@/lib/communities/CommunityContext";
+import { findUser } from "@/lib/store/selectors";
+import type { ChatRoom } from "@/lib/types";
 
 type ChatListTab = "directos" | "publicas";
 
+/** Actividad más reciente de una sala — último mensaje si ya hubo alguno, si no cuándo se creó
+ * (una sala recién unida/creada sin mensajes todavía debe listarse por su propia fecha, no
+ * quedar siempre al final). */
+function lastActivity(room: ChatRoom): number {
+  return new Date(room.lastMessage?.createdAt ?? room.createdAt).getTime();
+}
+
 // Favoritas primero dentro de cada pestaña — reemplaza la sección "Favoritos" separada de arriba
 // (ver referencia diseñoWeb/: dos pestañas, no tres bloques apilados); la estrella en
-// ChatRoomListItem sigue marcando cuáles son.
-function sortFavoritesFirst<T extends { favorite: boolean }>(rooms: T[]): T[] {
-  return [...rooms].sort((a, b) => Number(b.favorite) - Number(a.favorite));
+// ChatRoomListItem sigue marcando cuáles son. Dentro de cada grupo (favorita/no favorita), por
+// actividad más reciente primero — antes el orden era el que fuera que trajera el fetch inicial,
+// así que enviar un mensaje nunca subía esa conversación al tope de la lista.
+function sortByActivity(rooms: ChatRoom[]): ChatRoom[] {
+  return [...rooms].sort((a, b) => {
+    const favDiff = Number(b.favorite) - Number(a.favorite);
+    if (favDiff !== 0) return favDiff;
+    return lastActivity(b) - lastActivity(a);
+  });
 }
 
 export default function ChatListPage() {
@@ -38,8 +53,8 @@ export default function ChatListPage() {
 
   const allMyRooms = state.social.rooms.filter((r) => r.type === "direct" || r.joined);
   const myRooms = onlyFavorites ? allMyRooms.filter((r) => r.favorite) : allMyRooms;
-  const directRooms = sortFavoritesFirst(myRooms.filter((r) => r.type === "direct"));
-  const publicRooms = sortFavoritesFirst(myRooms.filter((r) => r.type === "public"));
+  const directRooms = sortByActivity(myRooms.filter((r) => r.type === "direct"));
+  const publicRooms = sortByActivity(myRooms.filter((r) => r.type === "public"));
   // Panel derecho (lg:+): contactos en línea entre mis conversaciones directas — dato real, no
   // existe un concepto de "amigos" separado de un chat directo ya iniciado.
   const onlineDirectRooms = allMyRooms.filter((r) => r.type === "direct" && r.peer?.isOnline).slice(0, 10);
@@ -141,7 +156,13 @@ export default function ChatListPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {publicRooms.map((room) => (
-            <ChatRoomListItem key={room.id} room={room} />
+            <ChatRoomListItem
+              key={room.id}
+              room={room}
+              lastMessageAuthorName={
+                room.lastMessage ? findUser(state.social, room.lastMessage.senderId)?.displayName : undefined
+              }
+            />
           ))}
         </div>
       )}

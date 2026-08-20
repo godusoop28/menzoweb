@@ -431,7 +431,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async function sendMessage(roomId: string, body: string, replyToMessageId?: string, stickerId?: string) {
       if (!hasSession()) return;
       const dto = await chatApi.sendMessage(roomId, { body: stickerId ? undefined : body, replyToMessageId, stickerId });
-      dispatch({ type: "SEND_MESSAGE", payload: mapMessage(dto, getMyRealId()) });
+      const message = mapMessage(dto, getMyRealId());
+      dispatch({ type: "SEND_MESSAGE", payload: message });
+      touchRoomLastMessage(roomId, message);
     }
 
     /** Sin patch optimista local — el propio backend reenvía el mensaje actualizado (deleted:
@@ -465,7 +467,30 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     function receiveRoomMessage(dto: import("@/lib/api").MessageDto) {
       const myRealId = getMyRealId();
       const users = dto.author ? [mapUserSummary(dto.author, myRealId)] : [];
-      dispatch({ type: "MERGE_SOCIAL", payload: { messages: [mapMessage(dto, myRealId)], users } });
+      const message = mapMessage(dto, myRealId);
+      dispatch({ type: "MERGE_SOCIAL", payload: { messages: [message], users } });
+      touchRoomLastMessage(message.roomId, message);
+    }
+
+    /** Mensajes eliminados no pisan la vista previa (dejan lo último realmente visible) — el
+     * propio reducer (ver TOUCH_ROOM_LAST_MESSAGE) descarta un mensaje más viejo que el que ya
+     * tenía la sala, para que un reenvío/reconexión fuera de orden nunca haga retroceder la
+     * fecha. Se lee del reducer, no de `state` cerrado acá arriba — `actions` está memoizado, así
+     * que un closure sobre `state` en este componente quedaría con el valor de cuando se creó. */
+    function touchRoomLastMessage(roomId: string, message: import("@/lib/types").Message) {
+      if (message.deleted) return;
+      dispatch({
+        type: "TOUCH_ROOM_LAST_MESSAGE",
+        payload: {
+          roomId,
+          lastMessage: {
+            body: message.body,
+            hasImage: !!message.imageUri,
+            senderId: message.authorId,
+            createdAt: message.createdAt,
+          },
+        },
+      });
     }
 
     async function createRoom(payload: {

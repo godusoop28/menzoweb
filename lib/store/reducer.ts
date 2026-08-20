@@ -1,4 +1,4 @@
-import type { Comment, Post, UserProfile, WallComment, WallMessage } from "@/lib/types";
+import type { ChatRoomLastMessage, Comment, Post, UserProfile, WallComment, WallMessage } from "@/lib/types";
 
 import { LOCAL_USER_ID } from "./localUser";
 import type { AppState, RecentlyViewedEntry, SocialState } from "./types";
@@ -52,6 +52,7 @@ export type Action =
   | { type: "REMOVE_WALL_COMMENT"; payload: { id: string; wallMessageId: string } }
   | { type: "TOGGLE_FOLLOW"; payload: { userId: string } }
   | { type: "SEND_MESSAGE"; payload: import("@/lib/types").Message }
+  | { type: "TOUCH_ROOM_LAST_MESSAGE"; payload: { roomId: string; lastMessage: ChatRoomLastMessage } }
   | { type: "TOGGLE_FAVORITE_ROOM"; payload: { roomId: string } }
   | { type: "MARK_NOTIFICATION_READ"; payload: { id: string } }
   | { type: "MARK_ALL_NOTIFICATIONS_READ" }
@@ -110,6 +111,31 @@ export function appReducer(state: AppState, action: Action): AppState {
           wallComments: p.wallComments ? mergeById(state.social.wallComments, p.wallComments) : state.social.wallComments,
           rooms: p.rooms ? mergeById(state.social.rooms, p.rooms) : state.social.rooms,
           notifications: p.notifications ? mergeById(state.social.notifications, p.notifications) : state.social.notifications,
+        },
+      };
+    }
+
+    // MERGE_SOCIAL/rooms reemplaza el objeto sala completo por id (ver mergeById) — no sirve para
+    // pisar solo `lastMessage` sin arrastrar un snapshot completo y potencialmente viejo del resto
+    // de los campos de la sala. Antes NADA actualizaba `room.lastMessage` cuando llegaba un mensaje
+    // nuevo (ni el propio al enviarlo, ni el de otros por WebSocket): la vista previa en Chats/
+    // Mensajes quedaba pegada a como sea que el fetch inicial la trajo, y sin fecha nueva tampoco
+    // había forma de reordenar la lista por actividad reciente.
+    case "TOUCH_ROOM_LAST_MESSAGE": {
+      const { roomId, lastMessage } = action.payload;
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          rooms: state.social.rooms.map((r) => {
+            if (r.id !== roomId) return r;
+            // Descarta un mensaje más viejo que el que la sala ya tenía — un reenvío por
+            // reconexión STOMP o un eco fuera de orden nunca debe hacer retroceder la fecha.
+            if (r.lastMessage && new Date(r.lastMessage.createdAt).getTime() >= new Date(lastMessage.createdAt).getTime()) {
+              return r;
+            }
+            return { ...r, lastMessage };
+          }),
         },
       };
     }

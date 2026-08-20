@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
+import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import type { ChatRoom } from "@/lib/types";
 
 import { Avatar } from "./Avatar";
@@ -11,22 +12,32 @@ export function ChatRoomListItem({
   room,
   onJoin,
   joining,
+  lastMessageAuthorName,
 }: {
   room: ChatRoom;
   /** Si se pasa, las salas públicas sin unirse muestran un botón "Unirse" en vez de navegar directo. */
   onJoin?: (roomId: string) => void;
   joining?: boolean;
+  /** Nombre del autor del último mensaje — solo hace falta para salas públicas (ver el llamador,
+   * que lo resuelve contra el store de usuarios), un DM ya sabe quién es la otra persona. */
+  lastMessageAuthorName?: string;
 }) {
   const title = room.peer?.displayName ?? room.name;
   const subtitle = room.type === "direct" ? (room.peer?.isOnline ? "En línea" : "Desconectado") : `${room.onlineCount} conectados`;
+  // Antes las salas públicas/grupales SIEMPRE mostraban description/topic acá, nunca el último
+  // mensaje real (a diferencia de los DM) — la referencia (Chats/Mensajes) muestra "Hikari: ¿Qué
+  // opinan del capítulo de hoy?" con el nombre del autor como prefijo, igual que Discord/Amino.
+  const lastMessageBody = room.lastMessage
+    ? room.lastMessage.hasImage && !room.lastMessage.body
+      ? "📷 Foto"
+      : room.lastMessage.body
+    : undefined;
   const lastMessagePreview =
     room.type === "direct"
-      ? room.lastMessage
-        ? room.lastMessage.hasImage && !room.lastMessage.body
-          ? "📷 Foto"
-          : room.lastMessage.body
-        : undefined
-      : room.description || room.topic;
+      ? lastMessageBody
+      : lastMessageBody
+        ? `${room.lastMessage!.senderId === LOCAL_USER_ID ? "Tú" : lastMessageAuthorName ?? "Alguien"}: ${lastMessageBody}`
+        : room.description || room.topic;
 
   // Cada fila tiene su propia "personalidad de color" (estilo comunidad de Amino) en vez de ser
   // todas el mismo gris plano — el wash es deliberadamente sutil (baja opacidad) para no pisar la
