@@ -89,7 +89,11 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--color-background)] to-transparent" aria-hidden />
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      {/* En desktop ancho (lg:+) se abre en dos zonas: columna central de ancho máximo (stage) +
+          rail lateral persistente de audiencia (ver <aside> más abajo) — en angosto se mantiene
+          exactamente el layout vertical de siempre, audiencia incluida como tira colapsable. */}
+      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-3 lg:px-3 lg:pb-3">
+      <div className="flex min-h-0 flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[720px]">
         {/* Cabecera fija — barra de vidrio en vez de flotar directo sobre el fondo, mismo
             lenguaje visual que la barra de controles de abajo. */}
         <div className="mx-3 mt-3 flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-black/35 px-3.5 py-2.5 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
@@ -178,9 +182,10 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
           )}
         </div>
 
-        {/* Audiencia */}
+        {/* Audiencia — tira colapsable, solo <lg. En lg:+ la misma lista vive en el rail lateral
+            persistente de abajo (<aside>), sin togglear. */}
         {isConnectedHere && (
-          <div className="shrink-0 px-4 pb-1">
+          <div className="shrink-0 px-4 pb-1 lg:hidden">
             <button
               onClick={() => setShowAudience((v) => !v)}
               className="mb-1.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] backdrop-blur-sm cursor-pointer transition-colors hover:bg-black/40"
@@ -189,16 +194,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
             </button>
             {showAudience && (
               <div className="flex max-h-28 flex-wrap gap-x-3 gap-y-2 overflow-y-auto">
-                {audience.map((p) => (
-                  <div key={p.user.id} className="flex flex-col items-center gap-1">
-                    {/* La audiencia (roles "audience"/"requested") no tiene acciones de mute/bajar
-                        del escenario — esas solo aplican a quien YA está hablando (host/co_host/
-                        speaker, ver `stage` más arriba). Aprobar/rechazar solicitudes para hablar
-                        vive en RoomSettingsPanel → SpeakingRequestsList, no acá. */}
-                    <LiveParticipantBubble participant={p} size={36} speakingLevel={0} />
-                  </div>
-                ))}
-                {audience.length === 0 && <p className="text-xs text-[var(--color-text-muted)]">Nadie más está escuchando todavía.</p>}
+                <AudienceGrid audience={audience} />
               </div>
             )}
           </div>
@@ -215,6 +211,25 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
         )}
       </div>
 
+      {/* Rail lateral persistente de audiencia — solo lg:+ (stage central + panel lateral
+          plegable de la spec de rediseño, sección 8/13). En <lg no se renderiza: la misma lista
+          vive en la tira colapsable de arriba. */}
+      {isConnectedHere && (
+        <aside className="hidden shrink-0 flex-col lg:flex lg:w-72">
+          <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
+            <div className="flex shrink-0 items-center gap-1.5 border-b border-white/10 px-3.5 py-2.5 text-xs font-semibold text-[var(--color-text-muted)]">
+              <UsersIcon size={13} /> Escuchando ({audience.length})
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <div className="flex flex-wrap gap-x-3 gap-y-2">
+                <AudienceGrid audience={audience} />
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+      </div>
+
       {showMusic && <MenziDjPanel room={room} onClose={() => setShowMusic(false)} />}
 
       {showSettings && <RoomSettingsPanel room={room} onClose={() => setShowSettings(false)} initialTab="live" />}
@@ -223,6 +238,28 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
 
       <ParticipantVolumeSheet target={volumeTarget} onClose={() => setVolumeTarget(null)} />
     </div>
+  );
+}
+
+/** Grilla de burbujas chicas de audiencia — compartida entre la tira colapsable (móvil/tablet) y
+ * el rail lateral persistente (desktop ancho, ver LiveRoomPanel) para no duplicar el JSX de cada
+ * burbuja en los dos lugares donde se muestra la misma lista. */
+function AudienceGrid({ audience }: { audience: LiveParticipant[] }) {
+  if (audience.length === 0) {
+    return <p className="text-xs text-[var(--color-text-muted)]">Nadie más está escuchando todavía.</p>;
+  }
+  return (
+    <>
+      {audience.map((p) => (
+        <div key={p.user.id} className="flex flex-col items-center gap-1">
+          {/* La audiencia (roles "audience"/"requested") no tiene acciones de mute/bajar del
+              escenario — esas solo aplican a quien YA está hablando (host/co_host/speaker, ver
+              `stage` en LiveRoomPanel). Aprobar/rechazar solicitudes para hablar vive en
+              RoomSettingsPanel → SpeakingRequestsList, no acá. */}
+          <LiveParticipantBubble participant={p} size={36} speakingLevel={0} />
+        </div>
+      ))}
+    </>
   );
 }
 
