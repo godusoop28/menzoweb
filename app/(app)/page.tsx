@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityContextNav } from "@/components/communities/CommunityContextNav";
 import { CommunityHero } from "@/components/CommunityHero";
+import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
 import { LiveIcon, UsersIcon } from "@/components/icons";
@@ -21,7 +22,7 @@ import type { CommunityMemberDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
-import { featuredPosts, onlineUsers, recentPosts } from "@/lib/store/selectors";
+import { featuredPosts, recentPosts } from "@/lib/store/selectors";
 import type { Post } from "@/lib/types";
 
 type HomeTab = "recientes" | "destacados" | "descubrir" | "blogs";
@@ -61,7 +62,6 @@ export default function FeedPage() {
 
   const posts = recentPosts(state.social);
   const featured = featuredPosts(state.social);
-  const onlineMembers = onlineUsers(state.social);
 
   useEffect(() => {
     if (!blogsFetchKey || blogsFetchKey === blogsLoadedFor) return;
@@ -156,7 +156,7 @@ export default function FeedPage() {
         <CommunityContextNav />
       </div>
 
-      <CommunityHero previewMembers={onlineMembers} />
+      <CommunityHero />
 
       <div className="menzo-fade-in flex items-center justify-between gap-3">
         <SegmentedTabs
@@ -341,14 +341,8 @@ export default function FeedPage() {
       )}
     </div>
 
-    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold">Líderes</h3>
-          <Link href="/members" className="text-xs font-semibold text-[var(--color-cyan)]">
-            Ver todos
-          </Link>
-        </div>
+    <ContextSidebar>
+      <ContextSidebarSection title="Líderes" action={{ label: "Ver todos", href: "/members" }}>
         {leaders.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">Sin líderes todavía.</p>
         ) : (
@@ -377,14 +371,14 @@ export default function FeedPage() {
             ))}
           </div>
         )}
-      </div>
+      </ContextSidebarSection>
 
       {liveRooms.length > 0 && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-          <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
-            <LiveIcon size={16} className="text-[var(--color-coral)]" />
-            Salas en vivo
-          </h3>
+        <ContextSidebarSection
+          title="Salas en vivo"
+          icon={<LiveIcon size={16} className="text-[var(--color-coral)]" />}
+          action={{ label: "Ver todas", href: "/chat/public" }}
+        >
           <div className="flex flex-col gap-2">
             {liveRooms.slice(0, 4).map((room) => (
               <Link
@@ -400,14 +394,10 @@ export default function FeedPage() {
               </Link>
             ))}
           </div>
-        </div>
+        </ContextSidebarSection>
       )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
-        <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
-          <UsersIcon size={16} />
-          En línea ahora
-        </h3>
+      <ContextSidebarSection title={`En línea ahora (${onlineMembersList.length})`} icon={<UsersIcon size={16} />}>
         {onlineMembersList.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">Nadie en línea todavía.</p>
         ) : (
@@ -426,8 +416,8 @@ export default function FeedPage() {
             ))}
           </div>
         )}
-      </div>
-    </aside>
+      </ContextSidebarSection>
+    </ContextSidebar>
     </div>
   );
 }

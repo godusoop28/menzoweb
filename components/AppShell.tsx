@@ -245,6 +245,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="mt-auto flex flex-col gap-2">
             <Link
+              href="/"
+              style={{ background: accent.color }}
+              className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition-opacity hover:opacity-90"
+            >
+              <PlusIcon size={16} />
+              Crear publicación
+            </Link>
+            <Link
               href="/settings"
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)]"
             >

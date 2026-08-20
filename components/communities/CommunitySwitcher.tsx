@@ -37,30 +37,32 @@ export function CommunitySwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full flex-col gap-2 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3 text-left transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+        aria-label="Cambiar de comunidad"
+        className="flex w-full flex-col gap-2.5 rounded-xl px-1 py-1 text-left transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start gap-3">
           <CommunityBadge
             name={activeCommunity?.name}
             iconUrl={activeCommunity?.iconUrl}
             color={activeCommunity?.primaryColor}
-            size={44}
+            size={52}
           />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-bold">
-              {loading ? "Cargando…" : (activeCommunity?.name ?? "Elegí una comunidad")}
+          <span className="min-w-0 flex-1 pt-0.5">
+            <span className="flex items-center gap-1">
+              <span className="truncate font-display text-base font-bold">
+                {loading ? "Cargando…" : (activeCommunity?.name ?? "Elegí una comunidad")}
+              </span>
+              <ChevronDownIcon size={14} className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
             </span>
-            <span className="block text-[11px] text-[var(--color-text-muted)]">
-              {memberships.length} comunidad{memberships.length === 1 ? "" : "es"}
-            </span>
+            {activeCommunity?.shortDescription && (
+              <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-[var(--color-text-secondary)]">
+                {activeCommunity.shortDescription}
+              </span>
+            )}
           </span>
-          <ChevronDownIcon className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
-        {activeCommunity?.shortDescription && (
-          <p className="line-clamp-2 text-xs text-[var(--color-text-secondary)]">{activeCommunity.shortDescription}</p>
-        )}
         {activeCommunity && (
-          <p className="text-[11px] text-[var(--color-text-muted)]">
+          <p className="pl-[calc(52px+0.75rem)] text-[11px] text-[var(--color-text-muted)]">
             {activeCommunity.memberCount.toLocaleString("es-ES")} miembros
             {activeCommunityDetail && ` · ${activeCommunityDetail.onlineMemberCount} en línea`}
           </p>
