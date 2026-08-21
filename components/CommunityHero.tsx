@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useToast } from "@/lib/ToastContext";
 
@@ -26,8 +24,7 @@ function formatCreatedAt(iso: string | undefined): string | null {
  * abajo), acciones (Compartir/Seguir) flotando arriba a la derecha en vez de apretadas al lado del
  * nombre, y los tags de la comunidad como fila de píldoras justo debajo del nombre. */
 export function CommunityHero() {
-  const { activeCommunityDetail: community, joinCommunity, leaveCommunity } = useCommunity();
-  const [membershipBusy, setMembershipBusy] = useState(false);
+  const { activeCommunityDetail: community } = useCommunity();
   const showToast = useToast();
 
   if (!community) return null;
@@ -36,19 +33,7 @@ export function CommunityHero() {
   const emblemImage = community.logoUrl || community.iconUrl;
   const primary = community.primaryColor || "#e74c3c";
   const secondary = community.secondaryColor || "#2c3e50";
-  const isMember = !!community.myMembership;
   const createdLabel = formatCreatedAt(community.createdAt);
-
-  async function handleToggleMembership() {
-    if (membershipBusy) return;
-    setMembershipBusy(true);
-    try {
-      if (isMember) await leaveCommunity(community!.id);
-      else await joinCommunity(community!.id);
-    } finally {
-      setMembershipBusy(false);
-    }
-  }
 
   async function handleShare() {
     const url = `${window.location.origin}/communities/${community!.slug}`;
@@ -69,13 +54,23 @@ export function CommunityHero() {
   }
 
   return (
-    <div className="relative flex min-h-[280px] flex-col justify-end overflow-hidden rounded-3xl shadow-xl">
+    <div className="relative flex min-h-[286px] flex-col justify-end overflow-hidden rounded-3xl shadow-xl">
       {heroImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(145deg, #22143e, ${secondary} 42%, ${primary} 72%, #111722)` }} />
       )}
+      {/* Textura de puntos + diagonales sutil (hero:before del blueprint) — sin esto el hero de
+          fondo sólido se sentía chato comparado con la referencia, que nunca usa un degradado
+          liso sin ningún grano encima. */}
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 25% 34%, rgba(220,108,255,0.7) 0 1px, transparent 2px), radial-gradient(circle at 76% 29%, rgba(255,155,110,0.7) 0 1px, transparent 2px), repeating-linear-gradient(120deg, transparent 0 95px, rgba(255,255,255,0.03) 96px 97px)",
+        }}
+      />
       <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,9,13,0.92)] via-[rgba(7,9,13,0.4)] to-[rgba(7,9,13,0.05)]" />
 
       <div className="absolute right-4 top-4 flex shrink-0 gap-2 md:right-6 md:top-6">
@@ -86,17 +81,6 @@ export function CommunityHero() {
           <ShareIcon size={14} />
           Compartir
         </button>
-        <button
-          onClick={handleToggleMembership}
-          disabled={membershipBusy}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60 ${
-            isMember
-              ? "border border-white/25 bg-white/10 text-white hover:bg-white/20"
-              : "bg-[var(--color-orange)] text-[var(--color-text-on-accent)] hover:brightness-110"
-          }`}
-        >
-          {isMember ? "Siguiendo" : "Seguir"}
-        </button>
       </div>
 
       <div className="relative flex flex-col gap-3 p-6 pt-16 text-white md:p-8 md:pt-16">
@@ -106,13 +90,19 @@ export function CommunityHero() {
             <img
               src={emblemImage}
               alt=""
-              className="h-20 w-20 shrink-0 rounded-full object-cover shadow-[0_0_0_3px_rgba(255,255,255,0.15),0_0_24px_-2px_rgba(0,0,0,0.6)]"
-              style={{ boxShadow: `0 0 0 3px rgba(255,255,255,0.15), 0 0 28px 2px ${primary}55` }}
+              className="h-28 w-28 shrink-0 rounded-full border-2 object-cover shadow-[0_0_0_3px_rgba(255,255,255,0.15)]"
+              style={{ borderColor: `${primary}99`, boxShadow: `0 0 0 3px rgba(255,255,255,0.15), 0 0 28px 4px ${primary}40` }}
             />
           ) : (
+            // Orb del blueprint (.hero-logo) — degradado radial violeta/magenta con anillo del
+            // color de la comunidad, en vez del círculo de degradado lineal plano de antes.
             <div
-              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
+              className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-2 text-3xl font-black text-white"
+              style={{
+                borderColor: `${primary}99`,
+                background: `radial-gradient(circle, #321849 0 29%, #0b1020 30% 57%, ${primary} 58% 62%, ${secondary} 63% 66%, #070a10 67%)`,
+                boxShadow: `0 0 28px 2px ${primary}40`,
+              }}
             >
               {community.name.trim().charAt(0).toUpperCase()}
             </div>

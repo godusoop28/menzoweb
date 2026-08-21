@@ -116,6 +116,11 @@ export function CommunitySwitcher() {
   );
 }
 
+/** El "orb" psicodélico del blueprint (community-orb/hero-logo en web/styles.css) — un
+ * degradado radial violeta→magenta con un anillo de color de la comunidad, en vez de un
+ * círculo plano de un solo color. Se usa en todos lados donde aparece una comunidad sin ícono
+ * propio (sidebar, hero de Inicio, cards de Miembros) — un solo cambio acá sube la fidelidad
+ * visual contra la referencia en varias pantallas a la vez. */
 export function CommunityBadge({
   name,
   iconUrl,
@@ -128,10 +133,19 @@ export function CommunityBadge({
   size?: number;
 }) {
   const initial = name?.trim().charAt(0).toUpperCase() || "?";
+  const ringColor = color || "#7b4dff";
   return (
     <span
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white"
-      style={{ width: size, height: size, background: color || "var(--color-surface-secondary)" }}
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(10, size * 0.34),
+        background: iconUrl
+          ? "var(--color-surface-secondary)"
+          : `radial-gradient(circle, #341b50 0 28%, #0a1020 29% 58%, ${ringColor} 59% 65%, #070a10 66%)`,
+        boxShadow: iconUrl ? undefined : `0 0 ${Math.max(6, size * 0.25)}px ${ringColor}40`,
+      }}
     >
       {iconUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
