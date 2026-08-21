@@ -205,10 +205,19 @@ export function ChatBubble({
   // TODOS los que reciben sus mensajes. El override LOCAL del viewer (incomingBg, ver
   // ChatAppearanceSheet) sigue ganando si está configurado — la personalización del autor es
   // el nuevo "default", no un reemplazo forzado de lo que el viewer ya eligió para sí mismo.
-  const authorBubbleColor = !isOwn && !incomingBg ? author?.bubbleColor : undefined;
-  const authorBubbleBorderColor = !isOwn && !incomingBg ? author?.bubbleBorderColor : undefined;
+  // El color elegido en el perfil (User.bubbleColor) es el fallback tanto para cómo el propio
+  // usuario ve sus mensajes enviados como para cómo los ven los demás — antes solo se aplicaba
+  // del lado receptor, así que quien lo configuraba nunca veía el cambio en su propio chat. El
+  // override LOCAL del viewer (outgoingBg/incomingBg, ver ChatAppearanceSheet) sigue ganando en
+  // ambos casos si está configurado.
+  const authorBubbleColor = (isOwn ? !outgoingBg : !incomingBg) ? author?.bubbleColor : undefined;
+  const authorBubbleBorderColor = (isOwn ? !outgoingBg : !incomingBg) ? author?.bubbleBorderColor : undefined;
 
-  const bubbleBackground = isOwn ? outgoingBg ?? accent.color : incomingBg ?? authorBubbleColor ?? undefined;
+  const bubbleBackground = isOwn ? outgoingBg ?? authorBubbleColor ?? accent.color : incomingBg ?? authorBubbleColor ?? undefined;
+  // El texto "on-accent" es casi negro, pensado para el naranja del accent — sobre un color propio
+  // elegido a mano (a menudo oscuro, como el navy del preset default) queda ilegible. Con fondo
+  // propio no-default usamos el mismo texto claro que ya usan los mensajes ajenos.
+  const usesCustomOwnBackground = isOwn && bubbleBackground !== accent.color;
 
   return (
     <div
@@ -227,7 +236,7 @@ export function ChatBubble({
       <div
         className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] ${compact ? "px-3 py-1.5" : "px-4 py-2"} shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
           isOwn
-            ? "rounded-tr-lg text-[var(--color-text-on-accent)]"
+            ? `rounded-tr-lg ${usesCustomOwnBackground ? "" : "text-[var(--color-text-on-accent)]"}`
             : `rounded-tl-lg ${incomingBg || authorBubbleColor ? "" : "border-l-[3px]"} ${authorBubbleColor ? "" : "bg-[var(--color-surface-secondary)]/90"}`
         }`}
         style={{
@@ -284,7 +293,7 @@ export function ChatBubble({
           </div>
         )}
         {message.deleted ? (
-          <p className={`text-sm italic ${isOwn ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>Mensaje eliminado</p>
+          <p className={`text-sm italic ${isOwn && !usesCustomOwnBackground ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>Mensaje eliminado</p>
         ) : (
           <>
             {!!message.imageUri && (
@@ -293,12 +302,12 @@ export function ChatBubble({
             )}
             {!!message.body && (
               <p className="whitespace-pre-wrap text-sm" style={textScale !== 1 ? { fontSize: `${14 * textScale}px` } : undefined}>
-                {renderWithMentions(message.body, isOwn ? "var(--color-text-on-accent)" : accent.color)}
+                {renderWithMentions(message.body, isOwn && !usesCustomOwnBackground ? "var(--color-text-on-accent)" : accent.color)}
               </p>
             )}
           </>
         )}
-        <span className={`self-end text-[10px] ${isOwn ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>
+        <span className={`self-end text-[10px] ${isOwn && !usesCustomOwnBackground ? "text-black/60" : "text-[var(--color-text-muted)]"}`}>
           {relativeTime(message.createdAt)}
         </span>
       </div>
