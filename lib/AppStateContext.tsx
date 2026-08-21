@@ -354,6 +354,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         bio: payload.bio,
         statusText: payload.statusText,
         interests: payload.interests,
+        socialLinks: payload.socialLinks,
       });
       const profile = mapUserProfile(dto, getMyRealId());
       dispatch({ type: "SET_SESSION", payload: { profile, onboardingCompleted: true } });

@@ -30,6 +30,7 @@ import {
   LiveIcon,
   LogoutIcon,
   MenuIcon,
+  PawIcon,
   PlusIcon,
   ProfileIcon,
   SearchIcon,
@@ -69,6 +70,7 @@ const MY_STUFF_ITEMS = [
   { href: "/profile", label: "Mi perfil", icon: ProfileIcon },
   { href: "/profile?tab=wall", label: "Mi muro", icon: ChatIcon },
   { href: "/profile?tab=saved", label: "Guardados", icon: BookmarkIcon },
+  { href: "/pets", label: "Mi mascota", icon: PawIcon },
   { href: "/communities", label: "Comunidades", icon: CompassIcon },
 ];
 

@@ -663,3 +663,15 @@ export function SmileIcon({ size = 18, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function PawIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <ellipse cx="12" cy="16.5" rx="5" ry="4" stroke="currentColor" strokeWidth="1.8" />
+      <ellipse cx="6" cy="10.5" rx="2" ry="2.6" stroke="currentColor" strokeWidth="1.8" />
+      <ellipse cx="18" cy="10.5" rx="2" ry="2.6" stroke="currentColor" strokeWidth="1.8" />
+      <ellipse cx="9.3" cy="6" rx="1.8" ry="2.3" stroke="currentColor" strokeWidth="1.8" />
+      <ellipse cx="14.7" cy="6" rx="1.8" ry="2.3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}

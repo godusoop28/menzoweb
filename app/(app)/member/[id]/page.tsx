@@ -11,6 +11,7 @@ import { BackIcon, LiveIcon, UsersIcon } from "@/components/icons";
 import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { ProfileHero } from "@/components/ProfileHero";
+import { ProfilePetChip } from "@/components/pets/ProfilePetChip";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { WallComposer } from "@/components/WallComposer";
@@ -138,6 +139,7 @@ export default function MemberProfilePage() {
         canManageTitles={canManageTitles}
         onAddTitle={(text, color) => actions.addUserTitle(user.id, text, color)}
         onRemoveTitle={(title) => actions.removeUserTitle(user.id, title.id)}
+        petChip={<ProfilePetChip userId={user.id} isSelf={isSelf} />}
         nameBadge={
           isFriend ? (
             <span className="rounded-full bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-cyan)]">Amigos</span>

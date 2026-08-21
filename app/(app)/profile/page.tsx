@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { PostCard } from "@/components/PostCard";
 import { ProfileHero } from "@/components/ProfileHero";
+import { ProfilePetChip } from "@/components/pets/ProfilePetChip";
 import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { WallComposer } from "@/components/WallComposer";
@@ -78,6 +79,7 @@ export default function ProfilePage() {
         canManageTitles={canManageTitles}
         onAddTitle={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
         onRemoveTitle={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
+        petChip={myRealId ? <ProfilePetChip userId={myRealId} isSelf /> : null}
         actions={
           <>
             <button

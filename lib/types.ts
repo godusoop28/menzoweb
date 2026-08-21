@@ -33,6 +33,8 @@ export type UserProfile = {
   bio: string;
   statusText: string;
   interests: InterestId[];
+  /** Clave = SocialPlatform ("XBOX", "PLAYSTATION", ...) — ver SOCIAL_PLATFORMS en lib/social.ts. */
+  socialLinks: Record<string, string>;
   joinedAt: string;
   level: number;
   levelName?: string;

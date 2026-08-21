@@ -3,6 +3,7 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { UserBadges } from "@/components/UserBadges";
 import { UserTitles } from "@/components/UserTitles";
 import { useAccent } from "@/lib/AccentContext";
+import { SOCIAL_PLATFORMS } from "@/lib/social";
 import { gradientCss } from "@/lib/theme";
 import type { UserTitle } from "@/lib/types";
 import type { GradientId } from "@/lib/theme";
@@ -23,6 +24,7 @@ type ProfileHeroUser = {
   statusText?: string;
   titles: UserTitle[];
   badges: string[];
+  socialLinks?: Record<string, string>;
 };
 
 /** Hero de perfil compartido entre /profile (propio) y /member/[id] (ajeno) — antes duplicado
@@ -38,6 +40,10 @@ export function ProfileHero({
   canManageTitles,
   onAddTitle,
   onRemoveTitle,
+  /** <ProfilePetChip userId={...} isSelf={...} /> — quien llama resuelve el id real, ver ese
+   * componente. Ausente = no se muestra nada (mismo criterio que el resto de secciones
+   * opcionales de este hero). */
+  petChip,
 }: {
   user: ProfileHeroUser;
   actions?: React.ReactNode;
@@ -45,6 +51,7 @@ export function ProfileHero({
   canManageTitles?: boolean;
   onAddTitle?: (text: string, color: string) => void;
   onRemoveTitle?: (title: UserTitle) => void;
+  petChip?: React.ReactNode;
 }) {
   const accent = useAccent();
 
@@ -87,6 +94,22 @@ export function ProfileHero({
                 <UserBadges badgeIds={user.badges} />
               </div>
             )}
+
+            {!!user.socialLinks && Object.keys(user.socialLinks).length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {SOCIAL_PLATFORMS.filter((p) => user.socialLinks?.[p.id]).map((p) => (
+                  <span
+                    key={p.id}
+                    className="rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]"
+                  >
+                    <span className="font-semibold text-[var(--color-text-primary)]">{p.label}</span>{" "}
+                    {user.socialLinks![p.id]}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {petChip}
           </div>
 
           {actions && <div className="flex shrink-0 flex-wrap gap-2 sm:self-end">{actions}</div>}

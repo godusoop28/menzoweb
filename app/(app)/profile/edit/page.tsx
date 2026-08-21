@@ -9,6 +9,7 @@ import { GradientButton } from "@/components/GradientButton";
 import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { SOCIAL_PLATFORMS } from "@/lib/social";
 import { Colors, gradientCss } from "@/lib/theme";
 import { useUsernameAvailability } from "@/lib/useUsernameAvailability";
 import { collapseSpaces, isValidDisplayName, isValidUsernameShape, NAME_MAX, USERNAME_MAX } from "@/lib/validation";
@@ -43,6 +44,7 @@ export default function EditProfilePage() {
   const [bubbleColor, setBubbleColor] = useState(profile.bubbleColor ?? "#1E2A38");
   const [bubbleBorderColor, setBubbleBorderColor] = useState(profile.bubbleBorderColor ?? "#FF7A1A");
   const [bubbleCustomized, setBubbleCustomized] = useState(!!profile.bubbleColor);
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>(profile.socialLinks ?? {});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +101,12 @@ export default function EditProfilePage() {
       // y lo quitó (si nunca hubo nada, no hace falta mandar el PATCH de ese campo).
       const finalBackgroundUri = backgroundUri ?? (profile.backgroundUri ? "" : undefined);
       const finalBackgroundColor = backgroundColor ?? (profile.backgroundColor ? "" : undefined);
+      // Manda el estado de cada plataforma tocada — "" borra el link en el backend, un handle
+      // no vacío lo crea/actualiza (ver UserService.updateProfile en menzoapi).
+      const socialLinksPayload: Record<string, string> = {};
+      for (const key of new Set([...Object.keys(profile.socialLinks ?? {}), ...Object.keys(socialLinks)])) {
+        socialLinksPayload[key] = socialLinks[key]?.trim() ?? "";
+      }
       await actions.updateProfile(
         {
           displayName: collapseSpaces(displayName).trim(),
@@ -111,6 +119,7 @@ export default function EditProfilePage() {
           backgroundColor: finalBackgroundColor,
           bubbleColor: bubbleCustomized ? bubbleColor : "",
           bubbleBorderColor: bubbleCustomized ? bubbleBorderColor : "",
+          socialLinks: socialLinksPayload,
         },
         { avatar: avatarFile, cover: coverFile, background: backgroundFile }
       );
@@ -222,6 +231,27 @@ export default function EditProfilePage() {
           />
         </Field>
 
+        <Field label="Tus plataformas">
+          <p className="mb-2 text-xs text-[var(--color-text-muted)]">
+            Mostrá tu usuario en otros juegos y redes — es público, se ve en tu perfil.
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {SOCIAL_PLATFORMS.map((platform) => (
+              <label key={platform.id} className="flex flex-col gap-1 text-xs">
+                <span className="text-[var(--color-text-muted)]">{platform.label}</span>
+                <input
+                  value={socialLinks[platform.id] ?? ""}
+                  onChange={(e) =>
+                    setSocialLinks((prev) => ({ ...prev, [platform.id]: e.target.value.slice(0, 60) }))
+                  }
+                  placeholder={platform.placeholder}
+                  className="w-full rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--color-orange)]"
+                />
+              </label>
+            ))}
+          </div>
+        </Field>
+
         <Field label="Tu burbuja de chat">
           <p className="mb-2 text-xs text-[var(--color-text-muted)]">
             Así van a ver tus mensajes los demás — el color de fondo y el brillo del borde son tuyos, en cualquier sala.
@@ -331,9 +361,9 @@ export default function EditProfilePage() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm">
+    <div className="flex flex-col gap-1.5 text-sm">
       <span className="text-[var(--color-text-muted)]">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }

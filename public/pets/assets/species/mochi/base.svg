@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- tiny ears -->
+    <path d="M356 312 Q298 204 390 250Z" fill="#FF7A1A" stroke="#17111E" stroke-width="26"/>
+    <path d="M668 312 Q726 204 634 250Z" fill="#FF7A1A" stroke="#17111E" stroke-width="26"/>
+    <!-- blob body/head unified -->
+    <path d="M274 512 C250 278 374 184 512 208 C650 184 774 278 750 512 C830 666 748 860 512 862 C276 860 194 666 274 512Z"
+      fill="#FF7A1A" stroke="#17111E" stroke-width="32"/>
+    <ellipse cx="512" cy="712" rx="154" ry="112" fill="#FFE7CF"/>
+    <!-- cheek spots -->
+    <circle cx="336" cy="554" r="32" fill="#FFB53A" opacity=".72"/>
+    <circle cx="688" cy="554" r="32" fill="#FFB53A" opacity=".72"/>
+    <path d="M512 286 Q548 322 512 354 Q476 322 512 286Z" fill="#FFB53A"/>
+    
+    <ellipse cx="406" cy="450" rx="58" ry="72" fill="#FFFFFF" stroke="#17111E" stroke-width="24"/>
+    <ellipse cx="406" cy="455" rx="40" ry="55" fill="#7B4DFF"/>
+    <ellipse cx="406" cy="464" rx="25" ry="41" fill="#17111E"/>
+    <ellipse cx="389" cy="427" rx="14" ry="24" fill="#FFFFFF"/>
+    <circle cx="419" cy="485" r="8" fill="#FFFFFF" opacity=".55"/>
+     
+    <ellipse cx="618" cy="450" rx="58" ry="72" fill="#FFFFFF" stroke="#17111E" stroke-width="24"/>
+    <ellipse cx="618" cy="455" rx="40" ry="55" fill="#7B4DFF"/>
+    <ellipse cx="618" cy="464" rx="25" ry="41" fill="#17111E"/>
+    <ellipse cx="601" cy="427" rx="14" ry="24" fill="#FFFFFF"/>
+    <circle cx="631" cy="485" r="8" fill="#FFFFFF" opacity=".55"/>
+    
+    <path d="M486 568 Q512 548 538 568 Q534 596 512 602 Q490 596 486 568Z" fill="#17111E"/>
+    <path d="M512 602 Q512 638 480 640 M512 602 Q512 638 544 640" fill="none" stroke="#17111E" stroke-width="16"/>
+    <ellipse cx="374" cy="812" rx="90" ry="50" fill="#FFE7CF" stroke="#17111E" stroke-width="22"/>
+    <ellipse cx="650" cy="812" rx="90" ry="50" fill="#FFE7CF" stroke="#17111E" stroke-width="22"/>
+
+  </g>
+</svg>

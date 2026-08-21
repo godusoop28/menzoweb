@@ -1,0 +1,233 @@
+{
+  "pack": "menzo-pets-starter",
+  "version": "1.0.0",
+  "canvas": {
+    "width": 1024,
+    "height": 1024,
+    "viewBox": "0 0 1024 1024"
+  },
+  "colorTokens": {
+    "#FF7A1A": "accessoryAccent",
+    "#FFE7CF": "secondary",
+    "#FFB53A": "markings",
+    "#7B4DFF": "eyes",
+    "#17111E": "outline",
+    "#2B2234": "hair",
+    "#17131F": "accessoryPrimary",
+    "#3B285C": "accessorySecondary",
+    "#8A55FF": "effect"
+  },
+  "species": [
+    {
+      "id": "kitsu",
+      "name": "Kitsu",
+      "base": "assets/species/kitsu/base.svg",
+      "defaultColors": {
+        "primary": "#FF7A1A",
+        "secondary": "#FFE7CF",
+        "markings": "#FFB53A",
+        "eyes": "#7B4DFF",
+        "hair": "#2B2234"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    },
+    {
+      "id": "neko",
+      "name": "Neko",
+      "base": "assets/species/neko/base.svg",
+      "defaultColors": {
+        "primary": "#252231",
+        "secondary": "#4E405F",
+        "markings": "#8A55FF",
+        "eyes": "#B47CFF",
+        "hair": "#131119"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    },
+    {
+      "id": "lumi",
+      "name": "Lumi",
+      "base": "assets/species/lumi/base.svg",
+      "defaultColors": {
+        "primary": "#F6EBDD",
+        "secondary": "#EACBFF",
+        "markings": "#C98AFF",
+        "eyes": "#7B4DFF",
+        "hair": "#C39BE8"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    },
+    {
+      "id": "axo",
+      "name": "Axo",
+      "base": "assets/species/axo/base.svg",
+      "defaultColors": {
+        "primary": "#F08A91",
+        "secondary": "#79E6EF",
+        "markings": "#4DD9E6",
+        "eyes": "#4AA8FF",
+        "hair": "#704ACB"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    },
+    {
+      "id": "draki",
+      "name": "Draki",
+      "base": "assets/species/draki/base.svg",
+      "defaultColors": {
+        "primary": "#29242C",
+        "secondary": "#4E3131",
+        "markings": "#FF6A1A",
+        "eyes": "#FF8C2A",
+        "hair": "#19151E"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    },
+    {
+      "id": "mochi",
+      "name": "Mochi",
+      "base": "assets/species/mochi/base.svg",
+      "defaultColors": {
+        "primary": "#6FD8D1",
+        "secondary": "#D8FFF9",
+        "markings": "#FF8DB8",
+        "eyes": "#7B4DFF",
+        "hair": "#5D3F7F"
+      },
+      "supportedSlots": [
+        "hair",
+        "body",
+        "neck",
+        "head",
+        "face",
+        "audio",
+        "effect"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "hair_tuft",
+      "slot": "hair",
+      "file": "assets/shared/hair/tuft.svg",
+      "name": "Mechón"
+    },
+    {
+      "id": "hair_bangs",
+      "slot": "hair",
+      "file": "assets/shared/hair/bangs.svg",
+      "name": "Flequillo"
+    },
+    {
+      "id": "hair_mohawk",
+      "slot": "hair",
+      "file": "assets/shared/hair/mohawk.svg",
+      "name": "Cresta"
+    },
+    {
+      "id": "hoodie_menzo",
+      "slot": "body",
+      "file": "assets/shared/body/hoodie.svg",
+      "name": "Hoodie Menzo"
+    },
+    {
+      "id": "scarf",
+      "slot": "neck",
+      "file": "assets/shared/neck/scarf.svg",
+      "name": "Bufanda"
+    },
+    {
+      "id": "collar_menzo",
+      "slot": "neck",
+      "file": "assets/shared/neck/collar.svg",
+      "name": "Collar Menzo"
+    },
+    {
+      "id": "cap_menzo",
+      "slot": "head",
+      "file": "assets/shared/head/cap.svg",
+      "name": "Gorra Menzo"
+    },
+    {
+      "id": "glasses_round",
+      "slot": "face",
+      "file": "assets/shared/face/glasses_round.svg",
+      "name": "Gafas redondas"
+    },
+    {
+      "id": "headphones",
+      "slot": "audio",
+      "file": "assets/shared/audio/headphones.svg",
+      "name": "Audífonos"
+    },
+    {
+      "id": "aura_violet",
+      "slot": "effect",
+      "file": "assets/shared/effects/aura.svg",
+      "name": "Aura"
+    }
+  ],
+  "slotRules": {
+    "hair": {
+      "maxEquipped": 1
+    },
+    "body": {
+      "maxEquipped": 1
+    },
+    "neck": {
+      "maxEquipped": 1
+    },
+    "head": {
+      "maxEquipped": 1
+    },
+    "face": {
+      "maxEquipped": 1
+    },
+    "audio": {
+      "maxEquipped": 1
+    },
+    "effect": {
+      "maxEquipped": 1
+    }
+  }
+}

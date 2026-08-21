@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type {
   AddQueueItemRequest,
   AddUserTitleRequest,
+  AdoptPetRequest,
   AuthResponseDto,
   BadgeDto,
   BanDto,
@@ -17,6 +18,7 @@ import type {
   CommunityMembershipDto,
   CommunitySummaryDto,
   CreateStickerPackRequest,
+  EquipItemRequest,
   GifSearchResponseDto,
   InterestDto,
   LiveParticipantDto,
@@ -39,9 +41,13 @@ import type {
   NotificationDto,
   OnboardingRequest,
   PageResponse,
+  PetCatalogDto,
+  PetDto,
+  PetInteractionRequest,
   PostDto,
   QueueItemDto,
   ReasonRequest,
+  RenamePetRequest,
   RecentlyViewedDto,
   RefreshRequest,
   RegisterRequest,
@@ -60,6 +66,7 @@ import type {
   UpdateCommunityNavigationRequest,
   UpdateCommunityThemeRequest,
   UpdateLiveRequest,
+  UpdatePetColorsRequest,
   UpdateProfileRequest,
   UpdatePostRequest,
   UpdateRoomRequest,
@@ -433,4 +440,17 @@ export const gamesApi = {
   act: (id: string, body: MatchActionRequest) =>
     apiFetch<MatchResponseDto>(`/api/games/matches/${id}/actions`, { method: "POST", body }),
   forfeit: (id: string) => apiFetch<void>(`/api/games/matches/${id}/forfeit`, { method: "POST" }),
+};
+
+/** Ver PetController en menzoapi — una mascota por usuario, todo el catálogo desbloqueado desde
+ * el día uno (sin tienda/moneda). `catalog` y `ofUser` son públicos, el resto requiere sesión. */
+export const petsApi = {
+  catalog: () => apiFetch<PetCatalogDto>("/api/pets/catalog"),
+  mine: () => apiFetch<PetDto>("/api/pets/me"),
+  adopt: (body: AdoptPetRequest) => apiFetch<PetDto>("/api/pets/me", { method: "POST", body }),
+  rename: (body: RenamePetRequest) => apiFetch<PetDto>("/api/pets/me", { method: "PATCH", body }),
+  updateColors: (body: UpdatePetColorsRequest) => apiFetch<PetDto>("/api/pets/me/colors", { method: "PATCH", body }),
+  equip: (body: EquipItemRequest) => apiFetch<PetDto>("/api/pets/me/equipment", { method: "PATCH", body }),
+  interact: (body: PetInteractionRequest) => apiFetch<PetDto>("/api/pets/me/interact", { method: "POST", body }),
+  ofUser: (userId: string) => apiFetch<PetDto>(`/api/pets/users/${userId}`),
 };

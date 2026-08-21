@@ -59,6 +59,8 @@ export type UserProfileDto = {
   bio: string | null;
   statusText: string | null;
   interests: string[];
+  /** Clave = SocialPlatform ("XBOX", "PLAYSTATION", ...), valor = usuario/handle. Ver SOCIAL_PLATFORMS. */
+  socialLinks: Record<string, string>;
   joinedAt: string;
   level: number;
   levelName: string | null;
@@ -120,6 +122,8 @@ export type UpdateProfileRequest = {
   bio?: string;
   statusText?: string;
   interests?: string[];
+  /** Un valor vacío "" borra ese link; omitir la clave la deja sin cambios. */
+  socialLinks?: Record<string, string>;
 };
 
 export type PollOptionDto = { id: string; label: string; voteCount: number; votedByMe: boolean };
@@ -873,3 +877,35 @@ export type GameEventDto = {
 // TicTacToeEngine (ver TicTacToeState/TicTacToeAction en menzoapi).
 export type TicTacToeStateDto = { players: string[]; board: (string | null)[]; currentPlayerIndex: number };
 export type TicTacToeActionDto = { cell: number };
+
+// Contrato 1:1 con PetController/PetResponse/PetCatalogResponse en menzoapi.
+export type PetXpSource = "FEED" | "PLAY" | "PET_INTERACTION";
+
+export type PetDto = {
+  id: string;
+  speciesId: string;
+  speciesName: string;
+  name: string;
+  level: number;
+  xp: number;
+  xpForCurrentLevel: number;
+  xpForNextLevel: number;
+  colors: Record<string, string>;
+  equipped: Record<string, string>;
+  /** Clave = PetXpSource, valor = interacciones que quedan hoy. Solo viene en "mi" mascota. */
+  interactionsRemainingToday: Record<string, number> | null;
+  ownerId: string;
+  ownerDisplayName: string;
+  ownerUsername: string;
+  createdAt: string;
+};
+
+export type PetSpeciesDto = { id: string; name: string; defaultColors: Record<string, string> };
+export type PetItemDto = { id: string; slot: string; name: string };
+export type PetCatalogDto = { species: PetSpeciesDto[]; items: PetItemDto[] };
+
+export type AdoptPetRequest = { speciesId: string; name: string };
+export type RenamePetRequest = { name: string };
+export type UpdatePetColorsRequest = { colors: Record<string, string> };
+export type EquipItemRequest = { slot: string; itemId: string | null };
+export type PetInteractionRequest = { source: PetXpSource; idempotencyKey: string };
