@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { API_BASE_URL, getCachedSession, getMyRealId, mapChatRoom } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
-import type { ChatRoomDto, LiveEventDto, RoomModerationEvent } from "@/lib/api/types";
+import type { ChatRoomDto, LiveEventDto, MessageDto, RoomModerationEvent } from "@/lib/api/types";
+import { playMessageReceivedSound } from "@/lib/chat/chatSoundEffects";
 
 const TYPING_EXPIRY_MS = 3000;
 const TYPING_PUBLISH_THROTTLE_MS = 2000;
@@ -53,7 +54,9 @@ export function useRoomSocket(roomId: string | undefined) {
         hasConnectedBefore = true;
 
         client.subscribe(`/topic/rooms/${roomId}/messages`, (frame) => {
-          actions.receiveRoomMessage(JSON.parse(frame.body));
+          const dto = JSON.parse(frame.body) as MessageDto;
+          actions.receiveRoomMessage(dto);
+          if (dto.authorId !== session.userId) playMessageReceivedSound();
         });
         client.subscribe(`/topic/rooms/${roomId}/typing`, (frame) => {
           const event = JSON.parse(frame.body) as { userId: string; displayName: string; typing: boolean };
