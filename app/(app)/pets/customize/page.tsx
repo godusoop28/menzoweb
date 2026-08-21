@@ -33,14 +33,29 @@ const SLOT_LABELS: Record<string, string> = {
 };
 const SLOT_ORDER = ["hair", "body", "neck", "head", "face", "audio", "effect"];
 
+function sameRecord(a: Record<string, string>, b: Record<string, string>) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if ((a[key] ?? null) !== (b[key] ?? null)) return false;
+  }
+  return true;
+}
+
 export default function CustomizePetPage() {
   const router = useRouter();
   const [pet, setPet] = useState<PetDto | null | undefined>(undefined);
   const [catalog, setCatalog] = useState<PetCatalogDto | null>(null);
-  const [colors, setColors] = useState<Record<string, string>>({});
+
+  // draftColors/draftEquipped son el estado en edición (solo local, sin persistir).
+  // pet.colors/pet.equipped son la última apariencia guardada — nunca se tocan hasta Guardar.
+  const [draftColors, setDraftColors] = useState<Record<string, string>>({});
+  const [draftEquipped, setDraftEquipped] = useState<Record<string, string>>({});
+  const [comparing, setComparing] = useState(false);
+
   const [name, setName] = useState("");
   const [expandedColor, setExpandedColor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,36 +63,86 @@ export default function CustomizePetPage() {
       .mine()
       .then((p) => {
         setPet(p);
-        setColors(p.colors);
+        setDraftColors(p.colors);
+        setDraftEquipped(p.equipped);
         setName(p.name);
       })
       .catch(() => setPet(null));
     petsApi.catalog().then(setCatalog);
   }, []);
 
-  async function saveColor(key: string, value: string) {
-    const next = { ...colors, [key]: value };
-    setColors(next);
-    try {
-      const updated = await petsApi.updateColors({ colors: { [key]: value } });
-      setPet(updated);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "No pudimos guardar el color.");
-    }
+  const hasChanges =
+    !!pet && (!sameRecord(draftColors, pet.colors) || !sameRecord(draftEquipped, pet.equipped));
+
+  function setColor(key: string, value: string) {
+    setDraftColors((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function equip(slot: string, itemId: string | null) {
+  function setEquip(slot: string, itemId: string | null) {
+    setDraftEquipped((prev) => {
+      const next = { ...prev };
+      if (itemId) next[slot] = itemId;
+      else delete next[slot];
+      return next;
+    });
+  }
+
+  function resetToSaved() {
+    if (!pet) return;
+    setDraftColors(pet.colors);
+    setDraftEquipped(pet.equipped);
+  }
+
+  function resetSpeciesColors() {
+    const species = catalog?.species.find((s) => s.id === pet?.speciesId);
+    if (!species) return;
+    setDraftColors(species.defaultColors);
+  }
+
+  function cancel() {
+    resetToSaved();
+    router.push("/pets");
+  }
+
+  async function save() {
+    if (!pet || !hasChanges) return;
+    setSaving(true);
+    setError(null);
     try {
-      const updated = await petsApi.equip({ slot, itemId });
+      let updated = pet;
+
+      const colorDiff: Record<string, string> = {};
+      for (const { key } of COLOR_FIELDS) {
+        if ((draftColors[key] ?? null) !== (pet.colors[key] ?? null)) {
+          colorDiff[key] = draftColors[key];
+        }
+      }
+      if (Object.keys(colorDiff).length > 0) {
+        updated = await petsApi.updateColors({ colors: colorDiff });
+      }
+
+      const slots = new Set([...Object.keys(pet.equipped), ...Object.keys(draftEquipped)]);
+      for (const slot of slots) {
+        const savedVal = pet.equipped[slot] ?? null;
+        const draftVal = draftEquipped[slot] ?? null;
+        if (savedVal !== draftVal) {
+          updated = await petsApi.equip({ slot, itemId: draftVal });
+        }
+      }
+
       setPet(updated);
+      setDraftColors(updated.colors);
+      setDraftEquipped(updated.equipped);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "No pudimos equipar ese ítem.");
+      setError(e instanceof ApiError ? e.message : "No pudimos guardar los cambios.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function saveName() {
     if (!pet || name.trim().length < 2 || name.trim() === pet.name) return;
-    setSaving(true);
+    setSavingName(true);
     setError(null);
     try {
       const updated = await petsApi.rename({ name: name.trim() });
@@ -85,7 +150,7 @@ export default function CustomizePetPage() {
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "No pudimos cambiar el nombre.");
     } finally {
-      setSaving(false);
+      setSavingName(false);
     }
   }
 
@@ -96,13 +161,28 @@ export default function CustomizePetPage() {
   }
 
   const itemsBySlot = (slot: string) => (catalog?.items ?? []).filter((i) => i.slot === slot);
+  const previewColors = comparing ? pet.colors : draftColors;
+  const previewEquipped = comparing ? pet.equipped : draftEquipped;
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-6 md:px-8">
       <h1 className="font-display text-xl font-bold">Personalizar a {pet.name}</h1>
 
-      <div className="flex justify-center">
-        <MenzoPet species={pet.speciesId} colors={petColorsToProps(colors)} equipment={pet.equipped} size={200} />
+      <div className="flex flex-col items-center gap-2">
+        <MenzoPet species={pet.speciesId} colors={petColorsToProps(previewColors)} equipment={previewEquipped} size={200} />
+        {hasChanges && (
+          <button
+            type="button"
+            onMouseDown={() => setComparing(true)}
+            onMouseUp={() => setComparing(false)}
+            onMouseLeave={() => setComparing(false)}
+            onTouchStart={() => setComparing(true)}
+            onTouchEnd={() => setComparing(false)}
+            className="cursor-pointer select-none rounded-full border border-[var(--color-border-soft)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
+          >
+            Mantené pulsado para ver el original
+          </button>
+        )}
       </div>
 
       {!!error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
@@ -117,7 +197,7 @@ export default function CustomizePetPage() {
           />
           <button
             onClick={saveName}
-            disabled={saving || name.trim().length < 2 || name.trim() === pet.name}
+            disabled={savingName || name.trim().length < 2 || name.trim() === pet.name}
             className="rounded-xl border border-[var(--color-border-soft)] px-4 py-2.5 text-sm font-semibold disabled:opacity-40 enabled:cursor-pointer enabled:hover:border-[var(--color-orange)]"
           >
             Guardar
@@ -126,7 +206,16 @@ export default function CustomizePetPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Colores</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Colores</h2>
+          <button
+            type="button"
+            onClick={resetSpeciesColors}
+            className="cursor-pointer text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+          >
+            Restablecer colores de especie
+          </button>
+        </div>
         {COLOR_FIELDS.map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-3 rounded-xl border border-[var(--color-border-soft)] p-3">
             <button
@@ -136,13 +225,13 @@ export default function CustomizePetPage() {
             >
               <span
                 className="h-8 w-8 shrink-0 rounded-lg border border-[var(--color-border-soft)]"
-                style={{ background: colors[key] || "#888888" }}
+                style={{ background: draftColors[key] || "#888888" }}
               />
               <p className="flex-1 text-left text-sm font-medium">{label}</p>
-              <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">{draftColors[key] || "—"}</span>
             </button>
             {expandedColor === key && (
-              <ColorWheelPicker value={colors[key] || "#888888"} onChange={(hex) => saveColor(key, hex)} size={148} />
+              <ColorWheelPicker value={draftColors[key] || "#888888"} onChange={(hex) => setColor(key, hex)} size={148} />
             )}
           </div>
         ))}
@@ -155,9 +244,9 @@ export default function CustomizePetPage() {
             <span className="text-sm text-[var(--color-text-muted)]">{SLOT_LABELS[slot]}</span>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => equip(slot, null)}
+                onClick={() => setEquip(slot, null)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${
-                  !pet.equipped[slot]
+                  !draftEquipped[slot]
                     ? "border-[var(--color-orange)] text-[var(--color-orange)]"
                     : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                 }`}
@@ -167,9 +256,9 @@ export default function CustomizePetPage() {
               {itemsBySlot(slot).map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => equip(slot, item.id)}
+                  onClick={() => setEquip(slot, item.id)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${
-                    pet.equipped[slot] === item.id
+                    draftEquipped[slot] === item.id
                       ? "border-[var(--color-orange)] text-[var(--color-orange)]"
                       : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                   }`}
@@ -182,7 +271,24 @@ export default function CustomizePetPage() {
         ))}
       </div>
 
-      <GradientButton label="Listo" onClick={() => router.push("/pets")} />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={resetToSaved}
+          disabled={!hasChanges}
+          className="flex-1 rounded-xl border border-[var(--color-border-soft)] px-4 py-3 text-sm font-semibold disabled:opacity-40 enabled:cursor-pointer enabled:hover:border-[var(--color-border-strong)]"
+        >
+          Restablecer
+        </button>
+        <button
+          type="button"
+          onClick={cancel}
+          className="flex-1 cursor-pointer rounded-xl border border-[var(--color-border-soft)] px-4 py-3 text-sm font-semibold hover:border-[var(--color-border-strong)]"
+        >
+          Cancelar
+        </button>
+      </div>
+      <GradientButton label={saving ? "Guardando..." : "Guardar"} onClick={save} disabled={saving || !hasChanges} />
     </div>
   );
 }
