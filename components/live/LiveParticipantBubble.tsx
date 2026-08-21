@@ -4,11 +4,14 @@ import { Avatar } from "@/components/Avatar";
 import { MicOffIcon, VolumeIcon, VolumeMuteIcon } from "@/components/icons";
 import type { LiveParticipant, LiveParticipantRole } from "@/lib/types";
 
+// "requested" (pedir para hablar) se sacó de la experiencia (ver sección de eliminación de
+// "Levantar la mano") — el valor de rol sigue existiendo en el tipo (viene del backend, no se
+// tocan contratos), pero acá se trata igual que "audience": sin aro ni badge propio.
 const ROLE_RING: Record<LiveParticipantRole, string | null> = {
   host: "var(--color-orange)",
   co_host: "var(--color-purple)",
   speaker: "var(--color-cyan)",
-  requested: "var(--color-yellow)",
+  requested: null,
   audience: null,
 };
 
@@ -16,7 +19,7 @@ const ROLE_BADGE: Record<LiveParticipantRole, string | null> = {
   host: "Anfitrión",
   co_host: "Coanfitrión",
   speaker: "Hablante",
-  requested: "Solicita hablar",
+  requested: null,
   audience: null,
 };
 

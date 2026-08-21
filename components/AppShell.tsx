@@ -20,6 +20,7 @@ import {
   BellIcon,
   BookmarkIcon,
   ChatIcon,
+  ChevronDownIcon,
   CompassIcon,
   CrownIcon,
   GameIcon,
@@ -87,6 +88,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const unread = state.social.notifications.filter((n) => !n.read).length;
   const isStaff = !!state.profile && state.profile.globalRole !== "USER";
   const [searchQuery, setSearchQuery] = useState("");
+  // Sección 13 del rediseño — antes el avatar de la topbar de escritorio era un `<Link>` liso a
+  // /profile, sin ningún dropdown real (nivel/configuración/cerrar sesión solo estaban
+  // disponibles desde la card del sidebar en mobile). Popover controlado, mismo patrón que el
+  // selector de reacciones de LiveRoomPanel (capa invisible atrás para cerrar al tocar afuera).
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   useAppHeight();
   // El detalle de una sala (/chat/[id], no /chat, /chat/public ni /chat/[id]/members) es dueño de
   // su propio layout de una sola región con scroll (ver app/(app)/chat/[id]/page.tsx) — el <main>
@@ -366,21 +372,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <ChatIcon size={19} />
               </Link>
               {state.profile && (
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-[var(--color-surface-secondary)]"
-                >
-                  <Avatar
-                    name={state.profile.displayName}
-                    avatarUri={state.profile.avatarUri}
-                    gradient={state.profile.avatarGradient}
-                    size={30}
-                  />
-                  <span className="flex flex-col leading-tight">
-                    <span className="text-xs font-semibold">{state.profile.displayName}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Nivel {state.profile.level}</span>
-                  </span>
-                </Link>
+                <div className="relative">
+                  <button
+                    onClick={() => setAccountMenuOpen((v) => !v)}
+                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-[var(--color-surface-secondary)]"
+                  >
+                    <Avatar
+                      name={state.profile.displayName}
+                      avatarUri={state.profile.avatarUri}
+                      gradient={state.profile.avatarGradient}
+                      size={30}
+                    />
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="text-xs font-semibold">{state.profile.displayName}</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Nivel {state.profile.level}</span>
+                    </span>
+                    <ChevronDownIcon size={14} className="ml-0.5 text-[var(--color-text-muted)]" />
+                  </button>
+                  {accountMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setAccountMenuOpen(false)} />
+                      <div className="absolute right-0 top-full z-20 mt-2 w-52 overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-xl">
+                        <Link
+                          href="/profile"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-secondary)]"
+                        >
+                          <ProfileIcon size={16} /> Mi perfil
+                        </Link>
+                        <Link
+                          href="/settings"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-secondary)]"
+                        >
+                          <SettingsIcon size={16} /> Configuración
+                        </Link>
+                        <div className="border-t border-[var(--color-border-soft)]" />
+                        <button
+                          onClick={() => {
+                            setAccountMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-[var(--color-coral)] transition-colors hover:bg-[var(--color-surface-secondary)]"
+                        >
+                          <LogoutIcon size={16} /> Cerrar sesión
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>

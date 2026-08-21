@@ -6,7 +6,6 @@ import type { IRemoteVideoTrack } from "agora-rtc-sdk-ng";
 import { Avatar } from "@/components/Avatar";
 import {
   ChatIcon,
-  HandRaiseIcon,
   HeadsetIcon,
   HeadsetOffIcon,
   MicIcon,
@@ -32,6 +31,7 @@ import { DjMenziOrb } from "@/components/music/DjMenziOrb";
 import { useMenziDjContext } from "@/lib/music/MenziDjContext";
 import { useRoomSocket } from "@/lib/realtime/useRoomSocket";
 import { findUser, messagesForRoom } from "@/lib/store/selectors";
+import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 import { useToast } from "@/lib/ToastContext";
 import type { ChatRoom, LiveParticipant, LiveParticipantRole, Message } from "@/lib/types";
 
@@ -167,7 +167,11 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
       : room.liveSummary?.participantCount ?? 0;
   const canModerate = room.role === "owner" || room.role === "co_host";
 
-  const backgroundImage = room.coverUri || room.backgroundUri;
+  // Sección 10 del rediseño — orden: fondo propio de la sala primero; si no tiene ninguno, cae
+  // al fondo de la comunidad (mismo criterio que el resto de la app); si tampoco hay eso, el
+  // degradado fijo de más abajo. Antes esto ignoraba el tema de comunidad por completo.
+  const communityTheme = useCommunityTheme();
+  const backgroundImage = room.coverUri || room.backgroundUri || communityTheme.feed.imageUrl;
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col overflow-hidden" style={{ background: "var(--color-background-deep, #030509)" }}>
@@ -702,14 +706,6 @@ function LiveControls({
     if (live.lastMicrophoneError) showToast(live.lastMicrophoneError);
   }, [live.lastMicrophoneError, showToast]);
 
-  async function handleRequestToSpeak() {
-    try {
-      await live.requestToSpeak();
-    } catch {
-      showToast("No pudimos enviar tu solicitud.");
-    }
-  }
-
   /** "Salir" es personal: me desconecto y cierro el panel, pero el LIVE sigue para los demás. */
   async function handleExit() {
     await live.leave();
@@ -761,22 +757,6 @@ function LiveControls({
         >
           {live.deafened ? <HeadsetOffIcon size={18} /> : <HeadsetIcon size={18} />}
         </ControlButton>
-        {live.myRole === "audience" && (
-          <button
-            onClick={handleRequestToSpeak}
-            className="flex h-12 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-white cursor-pointer hover:bg-white/20"
-          >
-            <HandRaiseIcon size={16} /> Solicitar hablar
-          </button>
-        )}
-        {live.myRole === "requested" && (
-          <button
-            onClick={() => live.cancelSpeakRequest()}
-            className="flex h-12 items-center gap-2 rounded-full bg-[var(--color-yellow)]/20 px-4 text-sm font-semibold text-[var(--color-yellow)] cursor-pointer"
-          >
-            <HandRaiseIcon size={16} /> Solicitud enviada · Cancelar
-          </button>
-        )}
         <div className="relative">
           {showReactions && (
             <>

@@ -808,53 +808,7 @@ function LiveSettingsSection({ room, canModerate }: { room: ChatRoom; canModerat
               {saving ? "Guardando…" : "Guardar"}
             </button>
           </div>
-          <SpeakingRequestsList roomId={room.id} />
         </>
-      )}
-    </div>
-  );
-}
-
-function SpeakingRequestsList({ roomId }: { roomId: string }) {
-  const live = useLiveRoomContext();
-  const connectedHere = live.activeRoomId === roomId;
-  const requests = connectedHere ? live.speakingRequests : [];
-
-  if (!connectedHere) {
-    return (
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Entrá al LIVE para ver y administrar las solicitudes para hablar en tiempo real.
-      </p>
-    );
-  }
-
-  return (
-    <div>
-      <p className="mb-2 text-xs font-semibold text-[var(--color-text-muted)]">Solicitudes para hablar ({requests.length})</p>
-      {requests.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)]">No hay solicitudes pendientes.</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {requests.map((r) => (
-            <div key={r.user.id} className="flex items-center gap-2.5 rounded-xl bg-[var(--color-surface-secondary)] p-2.5">
-              <Avatar name={r.user.displayName} avatarUri={r.user.avatarUri} gradient={r.user.avatarGradient} size={32} />
-              <p className="min-w-0 flex-1 truncate text-sm">{r.user.displayName}</p>
-              <button
-                onClick={() => live.approveSpeaking(r.user.id)}
-                style={{ background: "var(--color-green)" }}
-                className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-black cursor-pointer"
-              >
-                Aceptar
-              </button>
-              <button
-                onClick={() => live.rejectSpeaking(r.user.id)}
-                className="rounded-full bg-[var(--color-surface-elevated)] px-2.5 py-1 text-[11px] font-semibold cursor-pointer"
-              >
-                Rechazar
-              </button>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
