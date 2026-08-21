@@ -2,10 +2,9 @@ import { Avatar } from "@/components/Avatar";
 import { LevelBadge } from "@/components/LevelBadge";
 import { UserBadges } from "@/components/UserBadges";
 import { UserTitles } from "@/components/UserTitles";
-import { auraById } from "@/data/auras";
 import { useAccent } from "@/lib/AccentContext";
 import { gradientCss } from "@/lib/theme";
-import type { AuraId, UserTitle } from "@/lib/types";
+import type { UserTitle } from "@/lib/types";
 import type { GradientId } from "@/lib/theme";
 
 type ProfileHeroUser = {
@@ -14,7 +13,6 @@ type ProfileHeroUser = {
   avatarUri?: string;
   avatarGradient: GradientId;
   coverUri?: string;
-  aura: AuraId;
   isOnline: boolean;
   level: number;
   levelName?: string;
@@ -57,7 +55,7 @@ export function ProfileHero({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.coverUri} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="absolute inset-0" style={{ background: gradientCss(auraById(user.aura).gradient) }} />
+          <div className="absolute inset-0" style={{ background: gradientCss(user.avatarGradient) }} />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-[var(--color-surface)]/10 to-transparent" />
 

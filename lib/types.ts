@@ -1,7 +1,5 @@
 import type { GradientId } from "@/lib/theme";
 
-export type AuraId = "fuego" | "tormenta" | "eclipse" | "renacer" | "prisma";
-
 export type InterestId =
   | "anime"
   | "manga"
@@ -13,7 +11,6 @@ export type InterestId =
   | "nostalgia";
 
 export type Interest = { id: InterestId; label: string; icon: string; gradient: GradientId };
-export type Aura = { id: AuraId; name: string; description: string; gradient: GradientId };
 export type Badge = { id: string; name: string; description: string; icon: string; gradient: GradientId };
 
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
@@ -31,7 +28,8 @@ export type UserProfile = {
   coverUri?: string;
   backgroundUri?: string;
   backgroundColor?: string;
-  aura: AuraId;
+  bubbleColor?: string;
+  bubbleBorderColor?: string;
   bio: string;
   statusText: string;
   interests: InterestId[];

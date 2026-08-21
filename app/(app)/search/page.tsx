@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { communitiesApi } from "@/lib/api/endpoints";
+import { communitiesApi, usersApi, mapDemoUser, getMyRealId } from "@/lib/api";
 import type { CommunitySummaryDto } from "@/lib/api/types";
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
 import { CommunityBadge } from "@/components/communities/CommunitySwitcher";
@@ -11,6 +11,7 @@ import { PostCard } from "@/components/PostCard";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { matchesQuery } from "@/lib/search";
+import type { DemoUser } from "@/lib/types";
 
 // Comunidades no viven en AppStateContext (a diferencia de miembros/posts/salas, que ya están en
 // memoria) — se buscan contra /api/communities/discover con debounce, mismo criterio que
@@ -48,16 +49,55 @@ function useCommunitySearch(query: string) {
   return { results, loading };
 }
 
+// Búsqueda real contra /api/users/search (ya matchea displayName Y username server-side, ver
+// UserRepository.search en menzoapi) — antes esto filtraba solo state.social.users (la caché en
+// memoria de gente ya vista esta sesión), así que alguien fuera de esa caché nunca aparecía por
+// más que su nickname matcheara exacto. Mismo patrón debounced que useCommunitySearch, acá arriba.
+function useMemberSearch(query: string) {
+  const [results, setResults] = useState<DemoUser[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia resultados de una búsqueda anterior al borrar el query, mismo criterio que useCommunitySearch.
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const myRealId = getMyRealId();
+    const timer = setTimeout(() => {
+      usersApi
+        .search(trimmed)
+        .then((page) => {
+          if (!cancelled) setResults(page.items.map((dto) => mapDemoUser(dto, myRealId)));
+        })
+        .catch((error) => console.warn("[menzo/web] member search failed", error))
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  return { results, loading };
+}
+
 export default function SearchPage() {
   const { state, actions } = useAppState();
   const { memberships, joinCommunity, switchCommunity } = useCommunity();
   const [query, setQuery] = useState("");
   const { results: communityResults } = useCommunitySearch(query);
+  const { results: memberResults } = useMemberSearch(query);
   const [pendingCommunityId, setPendingCommunityId] = useState<string | null>(null);
 
   const results = useMemo(() => {
     if (!query.trim()) return null;
-    const members = state.social.users.filter((u) => matchesQuery(u.displayName, query) || matchesQuery(u.username, query));
+    const members = memberResults;
     const posts = state.social.posts.filter(
       (p) => matchesQuery(p.body, query) || (p.title && matchesQuery(p.title, query)) || p.tags.some((t) => matchesQuery(t, query))
     );
@@ -65,7 +105,7 @@ export default function SearchPage() {
       (r) => matchesQuery(r.name, query) || matchesQuery(r.topic, query) || matchesQuery(r.description ?? "", query)
     );
     return { members, posts, rooms };
-  }, [query, state.social]);
+  }, [query, state.social, memberResults]);
 
   const joinedIds = new Set(memberships.map((m) => m.community.id));
 

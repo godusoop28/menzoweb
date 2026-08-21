@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useMemo } from "react";
 
-import { auraById } from "@/data/auras";
-import { useAppState } from "@/lib/AppStateContext";
 import { Gradients, type GradientId } from "@/lib/theme";
 
 type AccentContextValue = {
@@ -12,19 +10,18 @@ type AccentContextValue = {
   gradientId: GradientId;
 };
 
+// Antes esto se derivaba de profile.aura (el "aura" que la persona elegía en onboarding) — ver
+// sección "eliminar aura" del pedido: ya no existe ninguna selección personal acá, así que el
+// acento queda fijo en el degradado de marca por defecto para todos.
 const DEFAULT_GRADIENT_ID: GradientId = "fire";
 
 const AccentContext = createContext<AccentContextValue | null>(null);
 
 export function AccentProvider({ children }: { children: React.ReactNode }) {
-  const { state } = useAppState();
-  const auraId = state.profile?.aura;
-
   const value = useMemo<AccentContextValue>(() => {
-    const gradientId = auraId ? (auraById(auraId).gradient as GradientId) : DEFAULT_GRADIENT_ID;
-    const gradient = Gradients[gradientId];
-    return { color: gradient[0], gradient, gradientId };
-  }, [auraId]);
+    const gradient = Gradients[DEFAULT_GRADIENT_ID];
+    return { color: gradient[0], gradient, gradientId: DEFAULT_GRADIENT_ID };
+  }, []);
 
   return <AccentContext.Provider value={value}>{children}</AccentContext.Provider>;
 }

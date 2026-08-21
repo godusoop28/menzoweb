@@ -46,6 +46,7 @@ export type Action =
   | { type: "TOGGLE_BOOKMARK"; payload: { postId: string } }
   | { type: "CREATE_POST"; payload: Post }
   | { type: "REMOVE_POST"; payload: { postId: string } }
+  | { type: "REMOVE_ROOM"; payload: { roomId: string } }
   | { type: "ADD_COMMENT"; payload: Comment }
   | { type: "ADD_WALL_MESSAGE"; payload: WallMessage }
   | { type: "ADD_WALL_COMMENT"; payload: WallComment }
@@ -216,6 +217,19 @@ export function appReducer(state: AppState, action: Action): AppState {
         social: {
           ...state.social,
           posts: state.social.posts.filter((p) => p.id !== action.payload.postId),
+        },
+      };
+    }
+
+    // Sale de la lista de inmediato — sea porque se abandonó (DM/sala ajena) o se eliminó de
+    // verdad (sala propia, ver RoomSettingsPanel.handleDelete/ChatRoomListItem), mismo criterio
+    // que REMOVE_POST arriba: la llamada a la API ya se hizo antes de despachar esto.
+    case "REMOVE_ROOM": {
+      return {
+        ...state,
+        social: {
+          ...state.social,
+          rooms: state.social.rooms.filter((r) => r.id !== action.payload.roomId),
         },
       };
     }

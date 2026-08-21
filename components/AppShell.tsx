@@ -10,7 +10,9 @@ import { useAppHeight } from "@/lib/useAppHeight";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
-import type { CommunityNavigationSectionKey } from "@/lib/api/types";
+import type { CommunityNavigationSectionConfig, CommunityNavigationSectionKey } from "@/lib/api/types";
+import type { ResolvedCommunityTheme } from "@/lib/theme/communityTheme";
+import type { UserProfile } from "@/lib/types";
 
 import { CommunitySwitcher } from "./communities/CommunitySwitcher";
 import { MenziDjAutoplayBar } from "./music/MenziDjAutoplayBar";
@@ -21,12 +23,13 @@ import {
   BookmarkIcon,
   ChatIcon,
   ChevronDownIcon,
+  CloseIcon,
   CompassIcon,
   CrownIcon,
-  GameIcon,
   HomeIcon,
   LiveIcon,
   LogoutIcon,
+  MenuIcon,
   PlusIcon,
   ProfileIcon,
   SearchIcon,
@@ -66,7 +69,6 @@ const MY_STUFF_ITEMS = [
   { href: "/profile", label: "Mi perfil", icon: ProfileIcon },
   { href: "/profile?tab=wall", label: "Mi muro", icon: ChatIcon },
   { href: "/profile?tab=saved", label: "Guardados", icon: BookmarkIcon },
-  { href: "/games", label: "Juegos", icon: GameIcon },
   { href: "/communities", label: "Comunidades", icon: CompassIcon },
 ];
 
@@ -90,6 +92,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // disponibles desde la card del sidebar en mobile). Popover controlado, mismo patrón que el
   // selector de reacciones de LiveRoomPanel (capa invisible atrás para cerrar al tocar afuera).
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  // Drawer hamburguesa — solo mobile (ver sección "nav responsive" del pedido): antes el
+  // <aside> de abajo era md:flex, invisible por completo en mobile, así que Miembros/Explorar/
+  // Salas en vivo (y todo lo que arma communityNavSections) directamente no existían ahí.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   useAppHeight();
   // El detalle de una sala (/chat/[id], no /chat, /chat/public ni /chat/[id]/members) es dueño de
   // su propio layout de una sola región con scroll (ver app/(app)/chat/[id]/page.tsx) — el <main>
@@ -233,7 +239,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex min-h-0 w-full flex-1 overflow-hidden">
-      {/* Sidebar — solo escritorio */}
+      {/* Sidebar — solo escritorio. El mismo contenido (SidebarNavContent) se reusa en el drawer
+          mobile de abajo — antes esas secciones (Miembros, Explorar, Salas en vivo con badge,
+          etc.) vivían ÚNICAMENTE acá (md:flex, invisible por completo en mobile), así que en
+          viewport chico faltaban de verdad, no era solo un tema de estilo. */}
       <aside
         // Sombra en vez de un borde sólido: un borde de 1px se veía como una costura fea cuando
         // la comunidad tiene fondo de nav (recorta la imagen de forma abrupta contra el panel
@@ -242,158 +251,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="relative hidden md:flex md:h-full md:w-64 md:shrink-0 md:flex-col md:gap-1 md:overflow-y-auto md:px-3.5 md:py-4 md:shadow-[2px_0_16px_rgba(0,0,0,0.45)]"
         style={navStyle}
       >
-        {/* "Luces" de los colores de la comunidad — dos glows difuminados y fijos (no siguen el
-            scroll) detrás del contenido, con los colores reales del tema de esa comunidad en vez
-            de un violeta fijo. Puramente decorativo (pointer-events-none), nunca compite con la
-            legibilidad del texto por la opacidad baja + blur grande. */}
-        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div
-            className="absolute -left-16 -top-20 h-64 w-64 rounded-full opacity-25 blur-[70px]"
-            style={{ background: communityTheme.primaryColor }}
-          />
-          <div
-            className="absolute -right-20 top-1/2 h-56 w-56 rounded-full opacity-[0.16] blur-[70px]"
-            style={{ background: communityTheme.secondaryColor }}
-          />
-        </div>
-        <div className="relative flex h-full flex-col gap-1">
-          {/* community-mini del blueprint — orb + nombre + miembros/en línea, en una card propia
-              con degradado sutil (antes era un botón suelto sin el marco de card). */}
-          <div
-            className="mb-3 rounded-2xl border p-3"
-            style={{
-              borderColor: `${communityTheme.primaryColor}2a`,
-              background: `linear-gradient(180deg, ${communityTheme.primaryColor}14, rgba(255,255,255,0.015))`,
-            }}
-          >
-            <CommunitySwitcher />
-          </div>
-
-          {/* Filas de 44px con estado activo en pill (fondo degradado + borde), no la barrita
-              lateral de antes — mismo tratamiento que .nav a.active en web/styles.css. Badge de
-              conteo solo donde hay un dato real (salas en vivo); no se inventa un contador de
-              mensajes no leídos por sala, ese dato no existe en el backend todavía. */}
-          <nav className="flex flex-col gap-1">
-            {(communityNavSections.length > 0
-              ? communityNavSections.map((section) => ({
-                  key: section.key,
-                  href: COMMUNITY_NAV_ROUTES[section.key]!,
-                  label: section.label,
-                  Icon: COMMUNITY_NAV_ICONS[section.key] ?? HomeIcon,
-                  badge: section.key === "live" ? liveRoomCount : undefined,
-                }))
-              : FALLBACK_NAV_ITEMS.map((item) => ({ key: item.href, href: item.href, label: item.label, Icon: item.icon, badge: undefined }))
-            ).map(({ key, href, label, Icon, badge }) => {
-              const active = isActive(href);
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  style={
-                    active
-                      ? { background: `linear-gradient(90deg, ${accent.color}3a, ${accent.color}12)`, borderColor: `${accent.color}2a` }
-                      : undefined
-                  }
-                  className={`flex h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-sm font-medium transition-all ${
-                    active
-                      ? "text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-muted)] hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
-                  }`}
-                >
-                  <span className="w-5 text-center" style={active ? { color: accent.color } : undefined}>
-                    <Icon size={20} />
-                  </span>
-                  <span className="flex-1">{label}</span>
-                  {!!badge && (
-                    <span className="rounded-full bg-[var(--color-coral)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--color-coral)]">
-                      {badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-            <Link
-              href="/?tab=descubrir"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-all hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
-            >
-              <span className="w-5 text-center">
-                <CompassIcon size={20} />
-              </span>
-              Explorar
-            </Link>
-          </nav>
-
-          <div className="mt-3 flex flex-col gap-1">
-            <p className="px-3 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--color-text-faint,#6f7b8c)]">Mis cosas</p>
-            {MY_STUFF_ITEMS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
-                >
-                  <span className="w-5 text-center">
-                    <Icon size={18} />
-                  </span>
-                  {item.label}
-                </Link>
-              );
-            })}
-            {isStaff && (
-              <Link
-                href="/admin"
-                className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
-              >
-                <span className="w-5 text-center">
-                  <CrownIcon size={18} />
-                </span>
-                Admin
-              </Link>
-            )}
-          </div>
-
-          {/* Sin "Crear publicación" acá abajo — ese CTA ya vive una sola vez en el "+ Crear" de
-              la topbar (sección de arriba), el blueprint tampoco lo duplica en la sidebar. */}
-          <div className="mt-auto flex flex-col gap-2 border-t border-[var(--color-border-soft)] pt-3.5">
-            <Link
-              href="/settings"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
-            >
-              <span className="w-5 text-center">
-                <SettingsIcon size={18} />
-              </span>
-              Configuración
-            </Link>
-            {state.profile && (
-              <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-white/[0.025] py-2.5 pl-2.5 pr-1.5">
-                <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <Avatar
-                    name={state.profile.displayName}
-                    avatarUri={state.profile.avatarUri}
-                    gradient={state.profile.avatarGradient}
-                    size={34}
-                    showOnline
-                    online
-                    level={state.profile.level}
-                  />
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="truncate text-xs font-semibold">{state.profile.displayName}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Nivel {state.profile.level}</span>
-                  </span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  aria-label="Cerrar sesión"
-                  title="Cerrar sesión"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.06] hover:text-[var(--color-coral)] cursor-pointer"
-                >
-                  <LogoutIcon size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <SidebarNavContent
+          communityTheme={communityTheme}
+          communityNavSections={communityNavSections}
+          liveRoomCount={liveRoomCount}
+          isStaff={isStaff}
+          profile={state.profile}
+          accent={accent}
+          isActive={isActive}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Columna derecha: barra superior de escritorio + contenido — única región con scroll,
@@ -403,16 +270,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Barra superior — solo móvil, oculta dentro del detalle de una sala (ya tiene su propio
             header con botón de volver, y en móvil no hay espacio para dos cabeceras). */}
         {!isChatRoom && (
-          <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 rounded-lg" />
-              <span className="font-display text-base font-bold">MENZO</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/communities" aria-label="Comunidades" className="text-[var(--color-text-secondary)]">
-                <CompassIcon />
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Abrir menú"
+                title="Menú"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+              >
+                <MenuIcon size={20} />
+              </button>
+              <Link href="/" className="flex min-w-0 items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 shrink-0 rounded-lg" />
+                <span className="font-display truncate text-base font-bold">MENZO</span>
               </Link>
+            </div>
+            <div className="flex shrink-0 items-center gap-4">
               <Link href="/search" aria-label="Buscar" className="text-[var(--color-text-secondary)]">
                 <SearchIcon />
               </Link>
@@ -420,12 +294,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <BellIcon />
                 {unread > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />}
               </Link>
-              <Link href="/settings" aria-label="Configuración" className="text-[var(--color-text-secondary)]">
-                <SettingsIcon />
-              </Link>
-              {isStaff && (
-                <Link href="/admin" aria-label="Admin" className="text-[var(--color-text-secondary)]">
-                  <CrownIcon />
+              {state.profile && (
+                <Link href="/profile" aria-label="Mi perfil" className="shrink-0">
+                  <Avatar name={state.profile.displayName} avatarUri={state.profile.avatarUri} gradient={state.profile.avatarGradient} size={26} />
                 </Link>
               )}
             </div>
@@ -464,7 +335,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {active && (
                   <span className="absolute top-0 h-0.5 w-8 rounded-full" style={{ background: accent.color }} />
                 )}
-                <Icon size={22} />
+                <span className="relative">
+                  <Icon size={22} />
+                  {/* Mismo dato real que el badge de "Salas en vivo" del sidebar (liveRoomCount) —
+                      acá no hay un tab de "Salas en vivo" propio en mobile, así que el aviso vive
+                      en Chats (ahí es donde efectivamente se puede entrar a una). */}
+                  {item.href === "/chat" && liveRoomCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />
+                  )}
+                </span>
                 {item.label}
               </Link>
             );
@@ -472,9 +351,229 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       )}
 
+      {/* Drawer hamburguesa — solo mobile, mismo SidebarNavContent que el <aside> de escritorio
+          (ver comentario ahí arriba). Desliza desde la izquierda, no desde abajo como Sheet —
+          visualmente es "el sidebar", no un modal de acción puntual. */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menú">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} aria-hidden />
+          <div
+            className="menzo-fade-in relative flex h-full w-[84%] max-w-72 flex-col gap-1 overflow-y-auto px-3.5 py-4 shadow-[8px_0_32px_rgba(0,0,0,0.55)]"
+            style={navStyle}
+          >
+            <button
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Cerrar menú"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white cursor-pointer"
+            >
+              <CloseIcon size={16} />
+            </button>
+            <SidebarNavContent
+              communityTheme={communityTheme}
+              communityNavSections={communityNavSections}
+              liveRoomCount={liveRoomCount}
+              isStaff={isStaff}
+              profile={state.profile}
+              accent={accent}
+              isActive={isActive}
+              onLogout={handleLogout}
+              onNavigate={() => setMobileNavOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
       <PersistentVoiceBubble />
       <MenziDjPlayerHost />
       <MenziDjAutoplayBar />
     </div>
+  );
+}
+
+/** Contenido real del nav lateral — extraído para que el `<aside>` de escritorio y el drawer
+ * hamburguesa de mobile (ver MobileNavDrawer más abajo) rendericen exactamente lo mismo, en vez
+ * de mantener dos copias del mismo JSX. `onNavigate` es el único agregado real para el caso
+ * mobile: cierra el drawer al tocar un link (en escritorio no hace falta, no hay nada que cerrar). */
+function SidebarNavContent({
+  communityTheme,
+  communityNavSections,
+  liveRoomCount,
+  isStaff,
+  profile,
+  accent,
+  isActive,
+  onLogout,
+  onNavigate,
+}: {
+  communityTheme: ResolvedCommunityTheme;
+  communityNavSections: ({ key: CommunityNavigationSectionKey } & CommunityNavigationSectionConfig)[];
+  liveRoomCount: number;
+  isStaff: boolean;
+  profile: UserProfile | null;
+  accent: ReturnType<typeof useAccent>;
+  isActive: (href: string) => boolean;
+  onLogout: () => void;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {/* "Luces" de los colores de la comunidad — dos glows difuminados y fijos (no siguen el
+          scroll) detrás del contenido, con los colores reales del tema de esa comunidad en vez
+          de un violeta fijo. Puramente decorativo (pointer-events-none), nunca compite con la
+          legibilidad del texto por la opacidad baja + blur grande. */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div
+          className="absolute -left-16 -top-20 h-64 w-64 rounded-full opacity-25 blur-[70px]"
+          style={{ background: communityTheme.primaryColor }}
+        />
+        <div
+          className="absolute -right-20 top-1/2 h-56 w-56 rounded-full opacity-[0.16] blur-[70px]"
+          style={{ background: communityTheme.secondaryColor }}
+        />
+      </div>
+      <div className="relative flex h-full flex-col gap-1">
+        {/* community-mini del blueprint — orb + nombre + miembros/en línea, en una card propia
+            con degradado sutil (antes era un botón suelto sin el marco de card). */}
+        <div
+          className="mb-3 rounded-2xl border p-3"
+          style={{
+            borderColor: `${communityTheme.primaryColor}2a`,
+            background: `linear-gradient(180deg, ${communityTheme.primaryColor}14, rgba(255,255,255,0.015))`,
+          }}
+        >
+          <CommunitySwitcher />
+        </div>
+
+        {/* Filas de 44px con estado activo en pill (fondo degradado + borde), no la barrita
+            lateral de antes — mismo tratamiento que .nav a.active en web/styles.css. Badge de
+            conteo solo donde hay un dato real (salas en vivo); no se inventa un contador de
+            mensajes no leídos por sala, ese dato no existe en el backend todavía. */}
+        <nav className="flex flex-col gap-1">
+          {(communityNavSections.length > 0
+            ? communityNavSections.map((section) => ({
+                key: section.key,
+                href: COMMUNITY_NAV_ROUTES[section.key]!,
+                label: section.label,
+                Icon: COMMUNITY_NAV_ICONS[section.key] ?? HomeIcon,
+                badge: section.key === "live" ? liveRoomCount : undefined,
+              }))
+            : FALLBACK_NAV_ITEMS.map((item) => ({ key: item.href, href: item.href, label: item.label, Icon: item.icon, badge: undefined }))
+          ).map(({ key, href, label, Icon, badge }) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={key}
+                href={href}
+                onClick={onNavigate}
+                style={
+                  active
+                    ? { background: `linear-gradient(90deg, ${accent.color}3a, ${accent.color}12)`, borderColor: `${accent.color}2a` }
+                    : undefined
+                }
+                className={`flex h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-sm font-medium transition-all ${
+                  active
+                    ? "text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-muted)] hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+                }`}
+              >
+                <span className="w-5 text-center" style={active ? { color: accent.color } : undefined}>
+                  <Icon size={20} />
+                </span>
+                <span className="flex-1">{label}</span>
+                {!!badge && (
+                  <span className="rounded-full bg-[var(--color-coral)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--color-coral)]">
+                    {badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+          <Link
+            href="/?tab=descubrir"
+            onClick={onNavigate}
+            className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-all hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+          >
+            <span className="w-5 text-center">
+              <CompassIcon size={20} />
+            </span>
+            Explorar
+          </Link>
+        </nav>
+
+        <div className="mt-3 flex flex-col gap-1">
+          <p className="px-3 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--color-text-faint,#6f7b8c)]">Mis cosas</p>
+          {MY_STUFF_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onNavigate}
+                className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+              >
+                <span className="w-5 text-center">
+                  <Icon size={18} />
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
+          {isStaff && (
+            <Link
+              href="/admin"
+              onClick={onNavigate}
+              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+            >
+              <span className="w-5 text-center">
+                <CrownIcon size={18} />
+              </span>
+              Admin
+            </Link>
+          )}
+        </div>
+
+        {/* Sin "Crear publicación" acá abajo — ese CTA ya vive una sola vez en el "+ Crear" de
+            la topbar (sección de arriba), el blueprint tampoco lo duplica en la sidebar. */}
+        <div className="mt-auto flex flex-col gap-2 border-t border-[var(--color-border-soft)] pt-3.5">
+          <Link
+            href="/settings"
+            onClick={onNavigate}
+            className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+          >
+            <span className="w-5 text-center">
+              <SettingsIcon size={18} />
+            </span>
+            Configuración
+          </Link>
+          {profile && (
+            <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-white/[0.025] py-2.5 pl-2.5 pr-1.5">
+              <Link href="/profile" onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-2.5">
+                <Avatar
+                  name={profile.displayName}
+                  avatarUri={profile.avatarUri}
+                  gradient={profile.avatarGradient}
+                  size={34}
+                  showOnline
+                  online
+                  level={profile.level}
+                />
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="truncate text-xs font-semibold">{profile.displayName}</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Nivel {profile.level}</span>
+                </span>
+              </Link>
+              <button
+                onClick={onLogout}
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.06] hover:text-[var(--color-coral)] cursor-pointer"
+              >
+                <LogoutIcon size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

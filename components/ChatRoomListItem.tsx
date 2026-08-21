@@ -1,18 +1,25 @@
 import Link from "next/link";
+import { useState } from "react";
 
 import { relativeTime } from "@/lib/time";
-import { gradientCss } from "@/lib/theme";
+import { Gradients, gradientCss } from "@/lib/theme";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import { useAppState } from "@/lib/AppStateContext";
 import type { ChatRoom } from "@/lib/types";
 
 import { Avatar } from "./Avatar";
-import { ChatIcon, StarIcon } from "./icons";
+import { ChatIcon, CloseIcon, StarIcon } from "./icons";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 export function ChatRoomListItem({
   room,
   onJoin,
   joining,
   lastMessageAuthorName,
+  /** false en Descubrir/Búsqueda (salas que quizás ni son mías todavía) — true en la lista real
+   * de "mis chats" (ver app/(app)/chat/page.tsx), que es donde tiene sentido poder sacarla de
+   * encima con un solo click. */
+  allowRemove = false,
 }: {
   room: ChatRoom;
   /** Si se pasa, las salas públicas sin unirse muestran un botón "Unirse" en vez de navegar directo. */
@@ -21,7 +28,12 @@ export function ChatRoomListItem({
   /** Nombre del autor del último mensaje — solo hace falta para salas públicas (ver el llamador,
    * que lo resuelve contra el store de usuarios), un DM ya sabe quién es la otra persona. */
   lastMessageAuthorName?: string;
+  allowRemove?: boolean;
 }) {
+  const { actions } = useAppState();
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const isOwner = room.role === "owner";
   const title = room.peer?.displayName ?? room.name;
   const subtitle = room.type === "direct" ? (room.peer?.isOnline ? "En línea" : "Desconectado") : `${room.onlineCount} conectados`;
   // Antes las salas públicas/grupales SIEMPRE mostraban description/topic acá, nunca el último
@@ -49,10 +61,11 @@ export function ChatRoomListItem({
     <Link
       href={`/chat/${room.id}`}
       className="menzo-panel group relative flex items-center gap-4 overflow-hidden p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)]"
+      style={tintGradient ? { borderColor: `color-mix(in srgb, ${Gradients[tintGradient][0]} 35%, var(--color-border-soft))` } : undefined}
     >
       {tintCss && (
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.13] transition-opacity duration-200 group-hover:opacity-[0.22]"
+          className="pointer-events-none absolute inset-0 opacity-[0.22] transition-opacity duration-200 group-hover:opacity-[0.32]"
           style={{ background: tintCss }}
           aria-hidden
         />
@@ -109,6 +122,44 @@ export function ChatRoomListItem({
           {joining ? "…" : "Unirse"}
         </button>
       )}
+      {allowRemove && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setConfirmRemove(true);
+          }}
+          aria-label={isOwner ? "Eliminar sala" : "Salir de la conversación"}
+          title={isOwner ? "Eliminar sala" : "Salir de la conversación"}
+          className="relative shrink-0 flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-[var(--color-coral)]/15 hover:text-[var(--color-coral)] group-hover:opacity-100 cursor-pointer"
+        >
+          <CloseIcon size={14} />
+        </button>
+      )}
+      <ConfirmDialog
+        open={confirmRemove}
+        title={isOwner ? "Eliminar esta sala" : room.type === "direct" ? "Eliminar esta conversación" : "Salir de esta sala"}
+        description={
+          isOwner
+            ? "Se elimina para todos los que están en ella — no se puede deshacer."
+            : "Solo desaparece de tu lista, no te vuelve a llegar acá hasta que alguien te escriba de nuevo."
+        }
+        confirmLabel={isOwner ? "Eliminar para siempre" : "Salir"}
+        danger={isOwner}
+        busy={removing}
+        onConfirm={async () => {
+          setRemoving(true);
+          try {
+            await actions.leaveOrDeleteRoom(room.id, isOwner);
+          } catch (error) {
+            console.warn("[menzo/web] leaveOrDeleteRoom failed", error);
+          } finally {
+            setRemoving(false);
+            setConfirmRemove(false);
+          }
+        }}
+        onCancel={() => setConfirmRemove(false)}
+      />
     </Link>
   );
 }

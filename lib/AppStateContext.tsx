@@ -66,6 +66,7 @@ type AppStateContextValue = {
     }) => Promise<void>;
     updatePost: (postId: string, payload: { title?: string; blocks: import("@/lib/api/types").PostBlockDto[]; reason?: string }) => Promise<void>;
     deletePost: (postId: string, reason?: string) => Promise<void>;
+    leaveOrDeleteRoom: (roomId: string, isOwner: boolean) => Promise<void>;
     sendMessage: (roomId: string, body: string, replyToMessageId?: string, stickerId?: string) => Promise<void>;
     deleteMessage: (roomId: string, messageId: string, reason?: string) => Promise<void>;
     toggleReaction: (roomId: string, messageId: string, emoji: string) => Promise<void>;
@@ -296,7 +297,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const avatarUri = await ensureUploaded(payload.avatarUri, payload.avatarFile);
       const dto = await usersApi.onboarding({
         displayName: payload.displayName,
-        aura: payload.aura,
+        username: payload.username,
         avatarUri: avatarUri ?? null,
         avatarGradient: payload.avatarGradient,
         interests: payload.interests,
@@ -342,12 +343,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           : undefined;
       const dto = await usersApi.updateMe({
         displayName: payload.displayName,
+        username: payload.username,
         avatarUri,
         avatarGradient: payload.avatarGradient,
         coverUri,
         backgroundUri,
         backgroundColor: payload.backgroundColor,
-        aura: payload.aura,
+        bubbleColor: payload.bubbleColor,
+        bubbleBorderColor: payload.bubbleBorderColor,
         bio: payload.bio,
         statusText: payload.statusText,
         interests: payload.interests,
@@ -426,6 +429,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (!hasSession()) throw new Error("No hay sesión activa");
       await postsApi.remove(postId, reason ? { reason } : undefined);
       dispatch({ type: "REMOVE_POST", payload: { postId } });
+    }
+
+    /** Acción rápida desde la lista de chats (ver ChatRoomTile) — no es lo mismo que
+     * RoomSettingsPanel.handleDelete (esa exige tipear el nombre exacto, para el caso "estoy
+     * administrando la sala"; acá es un swipe/click sobre la fila, así que solo tiene sentido
+     * cuando la sala YA está saliendo de la lista, sea porque la abandono o porque de verdad la
+     * borro). `isOwner` decide cuál de las dos llamadas hacer — un no-dueño nunca puede pegarle a
+     * deleteRoom (el backend lo rechazaría igual, pero ni vale la pena intentarlo). */
+    async function leaveOrDeleteRoom(roomId: string, isOwner: boolean) {
+      if (!hasSession()) return;
+      if (isOwner) await chatApi.deleteRoom(roomId);
+      else await chatApi.leave(roomId);
+      dispatch({ type: "REMOVE_ROOM", payload: { roomId } });
     }
 
     async function sendMessage(roomId: string, body: string, replyToMessageId?: string, stickerId?: string) {
@@ -891,6 +907,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       createPost,
       updatePost,
       deletePost,
+      leaveOrDeleteRoom,
       sendMessage,
       deleteMessage,
       toggleReaction,

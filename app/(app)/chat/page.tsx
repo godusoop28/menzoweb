@@ -147,7 +147,7 @@ export default function ChatListPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {directRooms.map((room) => (
-              <ChatRoomListItem key={room.id} room={room} />
+              <ChatRoomListItem key={room.id} room={room} allowRemove />
             ))}
           </div>
         )
@@ -159,6 +159,7 @@ export default function ChatListPage() {
             <ChatRoomListItem
               key={room.id}
               room={room}
+              allowRemove
               lastMessageAuthorName={
                 room.lastMessage ? findUser(state.social, room.lastMessage.senderId)?.displayName : undefined
               }

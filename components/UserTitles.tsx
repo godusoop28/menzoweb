@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import type { UserTitle } from "@/lib/types";
 
 function hsvToHex(h: number, s: number, v: number): string {
@@ -121,14 +122,7 @@ function AddTitleDialog({
 }) {
   const [text, setText] = useState("");
   const [color, setColor] = useState(TITLE_COLOR_PALETTE[0]);
-  const [hexInput, setHexInput] = useState(TITLE_COLOR_PALETTE[0].slice(1));
-  const canConfirm = text.trim().length > 0 && HEX_RE.test(hexInput);
-
-  function applyHex(value: string) {
-    const cleaned = value.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
-    setHexInput(cleaned);
-    if (HEX_RE.test(cleaned)) setColor(`#${cleaned.toUpperCase()}`);
-  }
+  const canConfirm = text.trim().length > 0 && HEX_RE.test(color.replace(/^#/, ""));
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Nuevo título">
@@ -145,40 +139,11 @@ function AddTitleDialog({
         />
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Color</p>
-          {/* input type="color" abre el selector nativo del sistema operativo/navegador — en
-              Chrome/Edge de escritorio eso incluye un gotero real para tomar cualquier color de
-              la pantalla, no solo de esta paleta. El campo de texto hex al lado cubre el otro
-              camino pedido: escribir/pegar un código directo. */}
-          <div className="mb-3 flex items-center gap-3">
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => {
-                setColor(e.target.value.toUpperCase());
-                setHexInput(e.target.value.slice(1).toUpperCase());
-              }}
-              aria-label="Elegir cualquier color"
-              className="h-10 w-10 shrink-0 cursor-pointer rounded-full border border-[var(--color-border-soft)] bg-transparent p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
-            />
-            <div className="flex flex-1 items-center gap-1.5 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2">
-              <span className="text-sm text-[var(--color-text-muted)]">#</span>
-              <input
-                value={hexInput}
-                onChange={(e) => applyHex(e.target.value)}
-                placeholder="RRGGBB"
-                maxLength={6}
-                className="w-full bg-transparent font-mono text-sm uppercase outline-none"
-              />
-            </div>
-          </div>
-          <div className="grid max-h-40 grid-cols-7 gap-2 overflow-y-auto pr-1">
-            {TITLE_COLOR_PALETTE.map((hex) => (
+          <div className="mb-3 grid grid-cols-7 gap-2">
+            {TITLE_COLOR_PALETTE.slice(0, 14).map((hex) => (
               <button
                 key={hex}
-                onClick={() => {
-                  setColor(hex);
-                  setHexInput(hex.slice(1));
-                }}
+                onClick={() => setColor(hex)}
                 aria-label={`Elegir color ${hex}`}
                 className="aspect-square w-full shrink-0 rounded-full transition-transform cursor-pointer hover:scale-110"
                 style={{
@@ -189,6 +154,7 @@ function AddTitleDialog({
               />
             ))}
           </div>
+          <ColorWheelPicker value={color} onChange={setColor} size={148} />
         </div>
         <div className="flex gap-2">
           <button

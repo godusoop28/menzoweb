@@ -1,6 +1,6 @@
 import type { GradientId } from "@/lib/theme";
 
-/** Catálogo de insignias — mismo criterio que interests.ts/auras.ts: espejo estático del seed
+/** Catálogo de insignias — mismo criterio que interests.ts: espejo estático del seed
  * real del backend (ver V2__seed_reference_data.sql en menzoapi, tabla `badges`), no un fetch a
  * /api/lookups/badges (que existe en lookupsApi pero, siguiendo el patrón ya establecido acá,
  * nunca se usa en runtime). `profile.badges` solo trae ids — esto resuelve nombre/descripción/

@@ -4,14 +4,14 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { CameraIcon } from "@/components/icons";
+import { CameraIcon, CheckIcon, CloseIcon } from "@/components/icons";
 import { GradientButton } from "@/components/GradientButton";
-import { auras } from "@/data/auras";
+import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
 import { Colors, gradientCss } from "@/lib/theme";
-import type { AuraId } from "@/lib/types";
-import { collapseSpaces, isValidDisplayName, NAME_MAX } from "@/lib/validation";
+import { useUsernameAvailability } from "@/lib/useUsernameAvailability";
+import { collapseSpaces, isValidDisplayName, isValidUsernameShape, NAME_MAX, USERNAME_MAX } from "@/lib/validation";
 
 const BACKGROUND_COLORS: string[] = [
   Colors.orange,
@@ -29,9 +29,9 @@ export default function EditProfilePage() {
   const profile = state.profile!;
 
   const [displayName, setDisplayName] = useState(profile.displayName);
+  const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio);
   const [statusText, setStatusText] = useState(profile.statusText);
-  const [aura, setAura] = useState<AuraId>(profile.aura);
   const [avatarUri, setAvatarUri] = useState(profile.avatarUri);
   const [avatarFile, setAvatarFile] = useState<File | undefined>();
   const [coverUri, setCoverUri] = useState(profile.coverUri);
@@ -39,14 +39,22 @@ export default function EditProfilePage() {
   const [backgroundUri, setBackgroundUri] = useState(profile.backgroundUri);
   const [backgroundFile, setBackgroundFile] = useState<File | undefined>();
   const [backgroundColor, setBackgroundColor] = useState(profile.backgroundColor);
+  const [showCustomBackground, setShowCustomBackground] = useState(false);
+  const [bubbleColor, setBubbleColor] = useState(profile.bubbleColor ?? "#1E2A38");
+  const [bubbleBorderColor, setBubbleBorderColor] = useState(profile.bubbleBorderColor ?? "#FF7A1A");
+  const [bubbleCustomized, setBubbleCustomized] = useState(!!profile.bubbleColor);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const usernameShapeValid = isValidUsernameShape(username);
+  const usernameStatus = useUsernameAvailability(usernameShapeValid ? username : "", profile.username);
+  const usernameOk = username === profile.username || (usernameShapeValid && usernameStatus === "available");
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
-  const valid = isValidDisplayName(displayName);
+  const valid = isValidDisplayName(displayName) && usernameShapeValid && usernameOk;
 
   function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -94,14 +102,15 @@ export default function EditProfilePage() {
       await actions.updateProfile(
         {
           displayName: collapseSpaces(displayName).trim(),
+          username: username !== profile.username ? username : undefined,
           bio,
           statusText,
-          aura,
-          avatarGradient: auras.find((a) => a.id === aura)!.gradient,
           avatarUri,
           coverUri,
           backgroundUri: finalBackgroundUri,
           backgroundColor: finalBackgroundColor,
+          bubbleColor: bubbleCustomized ? bubbleColor : "",
+          bubbleBorderColor: bubbleCustomized ? bubbleBorderColor : "",
         },
         { avatar: avatarFile, cover: coverFile, background: backgroundFile }
       );
@@ -130,7 +139,7 @@ export default function EditProfilePage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={coverUri} alt="" className="h-40 w-full rounded-2xl object-cover shadow-lg" />
             ) : (
-              <div className="h-40 w-full rounded-2xl shadow-lg" style={{ background: gradientCss(auras.find((a) => a.id === aura)!.gradient) }} />
+              <div className="h-40 w-full rounded-2xl shadow-lg" style={{ background: gradientCss(profile.avatarGradient) }} />
             )}
             <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} className="hidden" />
             <button
@@ -145,7 +154,7 @@ export default function EditProfilePage() {
 
           <div className="-mt-12 flex justify-center">
             <div className="relative rounded-full shadow-xl ring-4 ring-[var(--color-background)]">
-              <Avatar name={displayName} avatarUri={avatarUri} gradient={auras.find((a) => a.id === aura)!.gradient} size={92} />
+              <Avatar name={displayName} avatarUri={avatarUri} gradient={profile.avatarGradient} size={92} />
               <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFile} className="hidden" />
               <button
                 onClick={() => avatarInputRef.current?.click()}
@@ -167,6 +176,34 @@ export default function EditProfilePage() {
           />
         </Field>
 
+        <Field label="Nickname">
+          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-4 py-3 transition-colors focus-within:border-[var(--color-orange)]">
+            <span className="text-[var(--color-text-muted)]">@</span>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().slice(0, USERNAME_MAX))}
+              className="flex-1 bg-transparent outline-none"
+            />
+            {username !== profile.username && usernameShapeValid && usernameStatus === "checking" && (
+              <span className="text-xs text-[var(--color-text-muted)]">Buscando…</span>
+            )}
+            {username !== profile.username && usernameShapeValid && usernameStatus === "available" && (
+              <CheckIcon size={16} className="text-[var(--color-green)]" />
+            )}
+            {username !== profile.username && usernameShapeValid && (usernameStatus === "taken" || usernameStatus === "error") && (
+              <CloseIcon size={14} className="text-[var(--color-coral)]" />
+            )}
+          </div>
+          {username.length > 0 && !usernameShapeValid && (
+            <p className="mt-1 text-xs text-[var(--color-coral)]">
+              Entre 3 y {USERNAME_MAX} caracteres — solo minúsculas, números, puntos o guiones bajos.
+            </p>
+          )}
+          {username !== profile.username && usernameShapeValid && usernameStatus === "taken" && (
+            <p className="mt-1 text-xs text-[var(--color-coral)]">Ese nickname ya está en uso.</p>
+          )}
+        </Field>
+
         <Field label="Estado">
           <input
             value={statusText}
@@ -185,21 +222,43 @@ export default function EditProfilePage() {
           />
         </Field>
 
-        <Field label="Aura">
-          <div className="flex flex-wrap gap-2">
-            {auras.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setAura(a.id)}
-                className={`h-10 w-10 rounded-full border-2 shadow-md transition-transform cursor-pointer hover:scale-110 ${
-                  aura === a.id ? "border-[var(--color-text-primary)] scale-110" : "border-transparent"
-                }`}
-                style={{ background: gradientCss(a.gradient) }}
-                aria-label={a.name}
-                title={a.name}
-              />
-            ))}
-          </div>
+        <Field label="Tu burbuja de chat">
+          <p className="mb-2 text-xs text-[var(--color-text-muted)]">
+            Así van a ver tus mensajes los demás — el color de fondo y el brillo del borde son tuyos, en cualquier sala.
+          </p>
+          <label className="mb-3 flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+            <input
+              type="checkbox"
+              checked={bubbleCustomized}
+              onChange={(e) => setBubbleCustomized(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-orange)]"
+            />
+            Personalizar mi burbuja
+          </label>
+          {bubbleCustomized && (
+            <div className="flex flex-col gap-4">
+              <div
+                className="w-fit max-w-[80%] self-end rounded-[20px] rounded-tr-lg px-4 py-2 text-sm text-white"
+                style={{
+                  background: bubbleColor,
+                  border: `1.5px solid ${bubbleBorderColor}`,
+                  boxShadow: `0 0 14px -2px ${bubbleBorderColor}`,
+                }}
+              >
+                Así se ve tu burbuja
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-medium text-[var(--color-text-muted)]">Fondo</span>
+                  <ColorWheelPicker value={bubbleColor} onChange={setBubbleColor} size={148} />
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-medium text-[var(--color-text-muted)]">Borde (brillo)</span>
+                  <ColorWheelPicker value={bubbleBorderColor} onChange={setBubbleBorderColor} size={148} />
+                </div>
+              </div>
+            </div>
+          )}
         </Field>
 
         <Field label="Fondo del perfil">
@@ -226,24 +285,20 @@ export default function EditProfilePage() {
                   aria-label={`Fondo color ${color}`}
                 />
               ))}
-              <label
+              <button
+                type="button"
+                onClick={() => setShowCustomBackground((v) => !v)}
                 className="relative h-8 w-8 shrink-0 cursor-pointer rounded-full border-2 border-dashed border-[var(--color-border-strong)]"
                 style={
                   backgroundColor && !BACKGROUND_COLORS.includes(backgroundColor) ? { background: backgroundColor, borderStyle: "solid" } : undefined
                 }
                 title="Elegir cualquier color"
+                aria-label="Elegir cualquier color de fondo"
               >
                 <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
                   {backgroundColor && !BACKGROUND_COLORS.includes(backgroundColor) ? "" : "+"}
                 </span>
-                <input
-                  type="color"
-                  value={backgroundColor || "#111111"}
-                  onChange={(e) => handlePickBackgroundColor(e.target.value)}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  aria-label="Elegir cualquier color de fondo"
-                />
-              </label>
+              </button>
               <input ref={backgroundInputRef} type="file" accept="image/*" onChange={handleBackgroundFile} className="hidden" />
               <button
                 onClick={() => backgroundInputRef.current?.click()}
@@ -260,6 +315,9 @@ export default function EditProfilePage() {
                 </button>
               )}
             </div>
+            {showCustomBackground && (
+              <ColorWheelPicker value={backgroundColor || "#111111"} onChange={handlePickBackgroundColor} size={148} />
+            )}
           </div>
         </Field>
 

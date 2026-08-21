@@ -199,7 +199,16 @@ export function ChatBubble({
   // wash muy sutil de fondo más una franja sólida al costado, nunca opaco encima del texto.
   const authorTint = !isOwn && author ? gradientCss(author.avatarGradient) : undefined;
 
-  const bubbleBackground = isOwn ? outgoingBg ?? accent.color : incomingBg;
+  // Personalización real de burbuja (sección "como te ven los demás" del pedido) — a diferencia
+  // del wash sutil de authorTint (derivado del avatar, decorativo), esto es un color que la
+  // persona eligió a propósito en su perfil (ver User.bubbleColor en menzoapi) y se ve igual para
+  // TODOS los que reciben sus mensajes. El override LOCAL del viewer (incomingBg, ver
+  // ChatAppearanceSheet) sigue ganando si está configurado — la personalización del autor es
+  // el nuevo "default", no un reemplazo forzado de lo que el viewer ya eligió para sí mismo.
+  const authorBubbleColor = !isOwn && !incomingBg ? author?.bubbleColor : undefined;
+  const authorBubbleBorderColor = !isOwn && !incomingBg ? author?.bubbleBorderColor : undefined;
+
+  const bubbleBackground = isOwn ? outgoingBg ?? accent.color : incomingBg ?? authorBubbleColor ?? undefined;
 
   return (
     <div
@@ -219,15 +228,18 @@ export function ChatBubble({
         className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] ${compact ? "px-3 py-1.5" : "px-4 py-2"} shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
           isOwn
             ? "rounded-tr-lg text-[var(--color-text-on-accent)]"
-            : `rounded-tl-lg ${incomingBg ? "" : "border-l-[3px]"} bg-[var(--color-surface-secondary)]/90`
+            : `rounded-tl-lg ${incomingBg || authorBubbleColor ? "" : "border-l-[3px]"} ${authorBubbleColor ? "" : "bg-[var(--color-surface-secondary)]/90"}`
         }`}
         style={{
           background: bubbleBackground,
           opacity: bubbleOpacity,
-          ...(!isOwn && !incomingBg && authorTint ? { borderLeftColor: authorTint } : {}),
+          ...(!isOwn && !incomingBg && !authorBubbleColor && authorTint ? { borderLeftColor: authorTint } : {}),
+          ...(authorBubbleBorderColor
+            ? { border: `1.5px solid ${authorBubbleBorderColor}`, boxShadow: `0 0 14px -3px ${authorBubbleBorderColor}` }
+            : {}),
         }}
       >
-        {authorTint && !isOwn && !incomingBg && (
+        {authorTint && !isOwn && !incomingBg && !authorBubbleColor && (
           <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.09]" style={{ background: authorTint }} aria-hidden />
         )}
         {!isOwn && !grouped && (

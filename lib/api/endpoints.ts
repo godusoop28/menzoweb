@@ -2,7 +2,6 @@ import { apiFetch } from "./client";
 import type {
   AddQueueItemRequest,
   AddUserTitleRequest,
-  AuraDto,
   AuthResponseDto,
   BadgeDto,
   BanDto,
@@ -102,6 +101,8 @@ export const usersApi = {
     apiFetch<SettingsDto>("/api/users/me/settings", { method: "PATCH", body }),
   search: (query: string, page = 0, size = 20) =>
     apiFetch<PageResponse<UserProfileDto>>(`/api/users/search${qs({ query, page, size })}`),
+  usernameAvailable: (username: string) =>
+    apiFetch<{ available: boolean }>(`/api/users/username-available${qs({ username })}`),
   getById: (id: string) => apiFetch<UserProfileDto>(`/api/users/${id}`),
   follow: (id: string) => apiFetch<void>(`/api/users/${id}/follow`, { method: "PUT" }),
   unfollow: (id: string) => apiFetch<void>(`/api/users/${id}/follow`, { method: "DELETE" }),
@@ -124,7 +125,6 @@ export const usersApi = {
 };
 
 export const lookupsApi = {
-  auras: () => apiFetch<AuraDto[]>("/api/lookups/auras"),
   interests: () => apiFetch<InterestDto[]>("/api/lookups/interests"),
   badges: () => apiFetch<BadgeDto[]>("/api/lookups/badges"),
 };

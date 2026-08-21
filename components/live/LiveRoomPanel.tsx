@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import {
   ChatIcon,
   CheckIcon,
+  ChevronDownIcon,
   CloseIcon,
   HeadsetIcon,
   HeadsetOffIcon,
@@ -691,6 +692,11 @@ function LiveControls({
   const [showSpeakingRequests, setShowSpeakingRequests] = useState(false);
   const [speakRequestBusy, setSpeakRequestBusy] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  // Ocultar/mostrar la barra entera (sección "no debe tapar la pantalla" del pedido) — un LIVE en
+  // un celular tiene escenario + audiencia + esta barra compitiendo por poco alto disponible;
+  // esto es un colapso PARCIAL (solo la barra de controles), distinto del minimizado completo del
+  // panel entero que ya existía (ver MinimizeIcon en el header más arriba).
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
   const canModerate = room.role === "owner" || room.role === "co_host";
   const myId = getMyRealId();
   const someoneElseSharing = live.participants.some((p) => p.screenSharing && p.user.id !== myId);
@@ -754,12 +760,39 @@ function LiveControls({
     }
   }
 
+  if (controlsCollapsed) {
+    return (
+      <div
+        className="mx-3 mb-3 flex shrink-0 justify-center"
+        style={{ marginBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
+        <button
+          onClick={() => setControlsCollapsed(false)}
+          aria-label="Mostrar controles"
+          title="Mostrar controles"
+          className="flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-4 text-xs font-semibold text-white shadow-[0_8px_24px_-10px_rgba(0,0,0,0.7)] backdrop-blur-md cursor-pointer"
+        >
+          <ChevronDownIcon size={12} className="-rotate-90" />
+          Controles
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
-        className="mx-3 mb-3 flex shrink-0 flex-wrap items-center justify-center gap-3 rounded-3xl border border-white/10 bg-black/35 px-4 py-3.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md"
+        className="relative mx-3 mb-3 flex shrink-0 flex-wrap items-center justify-center gap-3 rounded-3xl border border-white/10 bg-black/35 px-4 py-3.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md"
         style={{ marginBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
+        <button
+          onClick={() => setControlsCollapsed(true)}
+          aria-label="Ocultar controles"
+          title="Ocultar controles"
+          className="absolute -top-3 left-1/2 flex h-6 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white cursor-pointer"
+        >
+          <ChevronDownIcon size={12} />
+        </button>
         {live.canSpeak && (
           <ControlButton
             onClick={live.toggleMute}

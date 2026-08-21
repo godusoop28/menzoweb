@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { GradientButton } from "@/components/GradientButton";
-import { auraById } from "@/data/auras";
 import { interestById } from "@/data/interests";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
@@ -18,7 +17,6 @@ export default function OnboardingConfirmPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const aura = auraById(draft.aura);
 
   async function handleEnter() {
     if (submitting) return;
@@ -27,7 +25,7 @@ export default function OnboardingConfirmPage() {
     try {
       await actions.completeOnboarding({
         displayName: draft.displayName,
-        aura: draft.aura,
+        username: draft.username,
         avatarUri: draft.avatarUri,
         avatarFile: draft.avatarFile,
         avatarGradient: draft.avatarGradient,
@@ -49,11 +47,11 @@ export default function OnboardingConfirmPage() {
           <p className="text-[var(--color-text-secondary)]">Bienvenido a Menzo, {draft.displayName}.</p>
         </div>
 
-        <div className="menzo-fade-in rounded-3xl p-0.5 shadow-2xl" style={{ background: gradientCss(aura.gradient) }}>
+        <div className="menzo-fade-in rounded-3xl p-0.5 shadow-2xl" style={{ background: gradientCss("fire") }}>
           <div className="flex flex-col items-center gap-1 rounded-[calc(1.5rem-2px)] bg-black/40 px-8 py-10 backdrop-blur-sm">
             <Avatar name={draft.displayName} avatarUri={draft.avatarUri} gradient={draft.avatarGradient} size={96} showOnline online />
             <p className="mt-3 text-xl font-semibold text-white">{draft.displayName}</p>
-            <p className="text-sm text-white/75">Nuevo en Menzo · Aura {aura.name}</p>
+            <p className="text-sm text-white/75">@{draft.username} · Nuevo en Menzo</p>
           </div>
         </div>
 

@@ -37,6 +37,8 @@ export type UserSummaryDto = {
   avatarUri: string | null;
   avatarGradient: string | null;
   isOnline: boolean;
+  bubbleColor: string | null;
+  bubbleBorderColor: string | null;
 };
 
 /** Etiqueta de texto libre con color propio (p.ej. "Friendly") que un LEADER+ le otorgó a este
@@ -52,7 +54,8 @@ export type UserProfileDto = {
   coverUri: string | null;
   backgroundUri: string | null;
   backgroundColor: string | null;
-  aura: string;
+  bubbleColor: string | null;
+  bubbleBorderColor: string | null;
   bio: string | null;
   statusText: string | null;
   interests: string[];
@@ -96,7 +99,7 @@ export type RefreshRequest = { refreshToken: string };
 
 export type OnboardingRequest = {
   displayName: string;
-  aura: string;
+  username: string;
   avatarUri: string | null;
   avatarGradient: string;
   interests: string[];
@@ -105,13 +108,15 @@ export type OnboardingRequest = {
 
 export type UpdateProfileRequest = {
   displayName?: string;
+  username?: string;
   avatarUri?: string;
   avatarGradient?: string;
   coverUri?: string;
   /** Cadena vacía "" limpia el campo; omitirlo lo deja sin cambios. */
   backgroundUri?: string;
   backgroundColor?: string;
-  aura?: string;
+  bubbleColor?: string;
+  bubbleBorderColor?: string;
   bio?: string;
   statusText?: string;
   interests?: string[];
@@ -459,7 +464,6 @@ export type NotificationDto = {
   relatedMatchId: string | null;
 };
 
-export type AuraDto = { id: string; name: string; description: string; gradient: string };
 export type InterestDto = { id: string; label: string; icon: string; gradient: string };
 export type BadgeDto = { id: string; name: string; description: string; icon: string; gradient: string };
 

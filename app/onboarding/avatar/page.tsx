@@ -25,7 +25,7 @@ export default function OnboardingAvatarPage() {
         <div className="w-full flex flex-col gap-2">
           <h1 className="font-display text-3xl font-bold">Elige tu avatar</h1>
           <p className="text-[var(--color-text-secondary)]">
-            Puedes usar una imagen o quedarte con tu inicial y tu aura. Ambas se ven bien.
+            Puedes usar una imagen o quedarte con tu inicial. Ambas se ven bien.
           </p>
         </div>
 

@@ -15,6 +15,7 @@ import { useCommunity } from "@/lib/communities/CommunityContext";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
 import { BackIcon, CheckIcon, CloseIcon, HomeIcon, ChatIcon, UsersIcon } from "@/components/icons";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
+import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 
 const IMAGE_FIELDS: { key: keyof Pick<CommunityDetailDto, "iconUrl" | "logoUrl" | "coverUrl" | "backgroundUrl" | "bannerUrl">; label: string }[] = [
   { key: "iconUrl", label: "Icono" },
@@ -74,6 +75,7 @@ export default function CommunityAppearancePage() {
   const [community, setCommunity] = useState<CommunityDetailDto | null>(null);
   const [images, setImages] = useState<Record<string, string>>({});
   const [colors, setColors] = useState<Record<string, string>>({});
+  const [expandedColorKey, setExpandedColorKey] = useState<string | null>(null);
   const [theme, setTheme] = useState<CommunityThemeConfig>({});
   const [nav, setNav] = useState<CommunityNavigationConfig>({});
   const [newDecorationUrl, setNewDecorationUrl] = useState("");
@@ -383,15 +385,26 @@ export default function CommunityAppearancePage() {
         <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Colores principales</h2>
         <p className="text-xs text-[var(--color-text-muted)]">Define la paleta de colores que se aplicará en toda tu comunidad.</p>
         {COLOR_FIELDS.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <input
-              type="color"
-              value={colors[key] || "#888888"}
-              onChange={(e) => setColors((prev) => ({ ...prev, [key]: e.target.value }))}
-              className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-[var(--color-border-soft)] bg-transparent"
-            />
-            <p className="flex-1 text-sm font-medium">{label}</p>
-            <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
+          <div key={key} className="flex flex-col gap-3 rounded-xl border border-[var(--color-border-soft)] p-3">
+            <button
+              type="button"
+              onClick={() => setExpandedColorKey((prev) => (prev === key ? null : key))}
+              className="flex w-full cursor-pointer items-center gap-3"
+            >
+              <span
+                className="h-10 w-10 shrink-0 rounded-lg border border-[var(--color-border-soft)]"
+                style={{ background: colors[key] || "#888888" }}
+              />
+              <p className="flex-1 text-left text-sm font-medium">{label}</p>
+              <span className="text-xs text-[var(--color-text-muted)]">{colors[key] || "—"}</span>
+            </button>
+            {expandedColorKey === key && (
+              <ColorWheelPicker
+                value={colors[key] || "#888888"}
+                onChange={(hex) => setColors((prev) => ({ ...prev, [key]: hex }))}
+                size={160}
+              />
+            )}
           </div>
         ))}
         </>

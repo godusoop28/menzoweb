@@ -33,9 +33,12 @@ export function MemberCard({ user, variant = "row" }: { user: DemoUser; variant?
             </span>
           )}
         </p>
-        <p className="truncate text-xs text-[var(--color-text-muted)]">
-          {user.isOnline ? user.activityStatus || "En línea" : "Desconectado"}
-        </p>
+        <p className="truncate text-xs text-[var(--color-text-muted)]">@{user.username}</p>
+        {!isColumn && (
+          <p className="truncate text-xs text-[var(--color-text-muted)]">
+            {user.isOnline ? user.activityStatus || "En línea" : "Desconectado"}
+          </p>
+        )}
       </div>
     </Link>
   );

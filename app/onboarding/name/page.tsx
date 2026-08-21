@@ -19,7 +19,7 @@ export default function OnboardingNamePage() {
   function handleContinue() {
     if (!valid) return;
     setDisplayName(trimmed);
-    router.push("/onboarding/avatar");
+    router.push("/onboarding/username");
   }
 
   return (

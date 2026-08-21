@@ -18,7 +18,6 @@ const categories: { value: Category; label: string }[] = [
   { value: "mensajes", label: "Mensajes" },
   { value: "eventos", label: "Eventos" },
   { value: "seguimientos", label: "Seguimientos" },
-  { value: "juegos", label: "Juegos" },
 ];
 
 const categoryIcon: Record<NotificationCategory, typeof HeartIcon> = {

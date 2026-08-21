@@ -35,7 +35,7 @@ export type AppState = {
 
 export type OnboardingPayload = {
   displayName: string;
-  aura: UserProfile["aura"];
+  username: string;
   avatarUri?: string;
   avatarFile?: File;
   avatarGradient: UserProfile["avatarGradient"];

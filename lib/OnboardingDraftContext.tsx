@@ -2,13 +2,12 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 
-import { auraById } from "@/data/auras";
 import type { GradientId } from "@/lib/theme";
-import type { AuraId, InterestId } from "@/lib/types";
+import type { InterestId } from "@/lib/types";
 
 type OnboardingDraft = {
   displayName: string;
-  aura: AuraId;
+  username: string;
   avatarUri?: string;
   avatarFile?: File;
   avatarGradient: GradientId;
@@ -21,7 +20,7 @@ type OnboardingDraft = {
 type OnboardingDraftContextValue = {
   draft: OnboardingDraft;
   setDisplayName: (value: string) => void;
-  setAura: (id: AuraId) => void;
+  setUsername: (value: string) => void;
   setAvatar: (uri: string | undefined, file: File | undefined) => void;
   toggleInterest: (id: InterestId) => void;
   toggleCommunity: (id: string) => void;
@@ -29,7 +28,7 @@ type OnboardingDraftContextValue = {
 
 const initialDraft: OnboardingDraft = {
   displayName: "",
-  aura: "fuego",
+  username: "",
   avatarUri: undefined,
   avatarFile: undefined,
   avatarGradient: "fire",
@@ -46,7 +45,7 @@ export function OnboardingDraftProvider({ children }: { children: React.ReactNod
     () => ({
       draft,
       setDisplayName: (value) => setDraft((d) => ({ ...d, displayName: value })),
-      setAura: (id) => setDraft((d) => ({ ...d, aura: id, avatarGradient: auraById(id).gradient })),
+      setUsername: (value) => setDraft((d) => ({ ...d, username: value })),
       setAvatar: (uri, file) => setDraft((d) => ({ ...d, avatarUri: uri, avatarFile: file })),
       toggleInterest: (id) =>
         setDraft((d) => {
