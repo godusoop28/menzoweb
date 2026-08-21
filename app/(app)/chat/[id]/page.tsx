@@ -417,7 +417,13 @@ export default function ChatRoomPage() {
           los mensajes + composer) y el composer "sticky" quedaba fijo a un <main> cuya altura no
           se enteraba del teclado en Android — el resultado visual era el composer atrapado a mitad
           de camino, con mensajes visibles arriba y abajo suyo. */}
-      <div ref={messagesScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-8">
+      <div
+        ref={messagesScrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-8"
+        // Glow violeta sutil del blueprint (.chat-messages) — antes este fondo era liso, sin
+        // ningún tratamiento propio distinto del resto de la app.
+        style={{ backgroundImage: "radial-gradient(circle at 72% 15%, rgba(124,77,255,0.08), transparent 30%)" }}
+      >
         <div className="relative flex flex-col gap-2.5 rounded-b-2xl py-4">
           {messages.length === 0 ? (
             <MenziIllustrationState
@@ -571,7 +577,7 @@ export default function ChatRoomPage() {
       <ConfirmDialog
         open={confirmStartLive}
         title="Iniciar LIVE"
-        description="Vas a encender una llamada en vivo en esta sala. Los miembros van a poder escuchar y pedir para hablar."
+        description="Vas a encender una llamada en vivo en esta sala. Los miembros van a poder escuchar y hablar según sus permisos."
         confirmLabel="Iniciar"
         busy={startingLive}
         image="/illustrations/menzi/menzi-live-voice.webp"
