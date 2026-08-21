@@ -14,7 +14,15 @@ import type {
 import { API_BASE_URL, getCachedSession, getMyRealId, liveApi, mapLiveParticipant, mapLiveSession } from "@/lib/api";
 import type { LiveEventDto, LiveParticipantDto } from "@/lib/api/types";
 import type { LiveParticipant, LiveParticipantRole, LiveSessionSummary } from "@/lib/types";
-import { playJoinSound, playLeaveSound, playLiveStartSound } from "./liveSoundEffects";
+import {
+  playJoinSound,
+  playLeaveSound,
+  playLiveStartSound,
+  playMicOffSound,
+  playMicOnSound,
+  playScreenShareStartSound,
+  playScreenShareStopSound,
+} from "./liveSoundEffects";
 
 /** Nivel de Agora (0-100) normalizado a 0-1 para que la UI no tenga que conocer la escala del SDK. */
 function normalizeLevel(level: number): number {
@@ -349,6 +357,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       audioTrack?.close();
       screenTrackRef.current = null;
       screenAudioTrackRef.current = null;
+      playScreenShareStopSound();
     }
     setScreenSharing(false);
   }, []);
@@ -394,6 +403,7 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       await client.publish(screenAudioTrack ? [screenVideoTrack, screenAudioTrack] : [screenVideoTrack]);
       await liveApi.setScreenSharing(roomId, true);
       setScreenSharing(true);
+      playScreenShareStartSound();
     } catch (error) {
       console.warn("[menzo/live] startScreenShare failed", error);
       await client
@@ -723,6 +733,8 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       // sobre ese mismo track, nunca un nuevo publish ni setEnabled (ver publishMicTrack).
       await micTrackRef.current.setMuted(next);
       setMuted(next);
+      if (next) playMicOffSound();
+      else playMicOnSound();
       liveApi.setMicrophone(roomId, !next).catch(() => {});
     } catch (error) {
       console.warn("[menzo/live] toggleMute failed", error);
