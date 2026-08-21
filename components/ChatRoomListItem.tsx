@@ -6,7 +6,7 @@ import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import type { ChatRoom } from "@/lib/types";
 
 import { Avatar } from "./Avatar";
-import { ChatIcon } from "./icons";
+import { ChatIcon, StarIcon } from "./icons";
 
 export function ChatRoomListItem({
   room,
@@ -29,7 +29,7 @@ export function ChatRoomListItem({
   // opinan del capítulo de hoy?" con el nombre del autor como prefijo, igual que Discord/Amino.
   const lastMessageBody = room.lastMessage
     ? room.lastMessage.hasImage && !room.lastMessage.body
-      ? "📷 Foto"
+      ? "Foto"
       : room.lastMessage.body
     : undefined;
   const lastMessagePreview =
@@ -93,7 +93,7 @@ export function ChatRoomListItem({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="block min-w-0 flex-1 truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
-          {room.favorite && <span className="shrink-0 text-xs font-semibold text-[var(--color-yellow)]">★</span>}
+          {room.favorite && <StarIcon size={12} className="shrink-0 text-[var(--color-yellow)]" />}
         </span>
       </span>
       {onJoin && room.type === "public" && !room.joined && (

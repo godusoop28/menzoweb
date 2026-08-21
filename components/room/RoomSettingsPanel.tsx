@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { CheckIcon, ChevronDownIcon, MenuIcon, SearchIcon } from "@/components/icons";
+import { CheckIcon, ChevronDownIcon, CrownIcon, MenuIcon, SearchIcon, StarIcon } from "@/components/icons";
 import { Sheet } from "@/components/ui/Sheet";
 import { ApiError, chatApi, getMyRealId, mapBan, mapDemoUser, mapRoomMember, usersApi } from "@/lib/api";
 import type { BanDto, RoomMemberDto } from "@/lib/api/types";
@@ -453,7 +453,12 @@ function PermissionsSection({ room, canEdit }: { room: ChatRoom; canEdit: boolea
   );
 }
 
-const ROLE_LABEL: Record<ChatRoomRole, string> = { owner: "👑 Anfitrión", co_host: "⭐ Coanfitrión", member: "Miembro" };
+const ROLE_LABEL: Record<ChatRoomRole, string> = { owner: "Anfitrión", co_host: "Coanfitrión", member: "Miembro" };
+// Ícono de la librería en vez de emoji (👑/⭐) — mismo criterio que ChatBubble.tsx.
+const ROLE_ICON: Partial<Record<ChatRoomRole, React.ReactNode>> = {
+  owner: <CrownIcon size={12} />,
+  co_host: <StarIcon size={12} />,
+};
 
 function useMembers(roomId: string) {
   const [members, setMembers] = useState<{ user: DemoUser; role: ChatRoomRole; joinedAt: string }[] | null>(null);
@@ -521,7 +526,14 @@ function MembersSection({ room, canModerate, isOwner }: { room: ChatRoom; canMod
               <Avatar name={member.user.displayName} avatarUri={member.user.avatarUri} gradient={member.user.avatarGradient} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{member.user.displayName}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">{ROLE_LABEL[member.role]}</p>
+                <p className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                  {ROLE_ICON[member.role] && (
+                    <span className="text-[var(--color-yellow)]" aria-hidden>
+                      {ROLE_ICON[member.role]}
+                    </span>
+                  )}
+                  {ROLE_LABEL[member.role]}
+                </p>
               </div>
               {canAct && (
                 <div className="flex shrink-0 gap-1.5">

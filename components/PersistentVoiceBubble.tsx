@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 
+import { CloseIcon, MicIcon, MicOffIcon } from "@/components/icons";
 import { useLiveRoomContext } from "@/lib/live/LiveRoomContext";
 
 /** Burbuja flotante estilo "chat head" de Messenger — visible en cualquier pantalla mientras haya
@@ -51,7 +52,7 @@ export function PersistentVoiceBubble() {
             transform: `scale(${voiceActive ? 1 + level * 0.16 : 1})`,
           }}
         >
-          <span className="relative text-lg">🎙️</span>
+          <MicIcon size={18} className="relative" />
           <span
             className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 text-[8px]"
             style={{
@@ -60,7 +61,7 @@ export function PersistentVoiceBubble() {
             }}
             aria-hidden
           >
-            {micLooksOff ? "🔇" : "●"}
+            {micLooksOff ? <MicOffIcon size={9} /> : "●"}
           </span>
         </button>
         <button
@@ -86,7 +87,7 @@ export function PersistentVoiceBubble() {
               muted || !localAudioPublished ? "bg-[var(--color-coral)]/20 text-[var(--color-coral)]" : "bg-white/10"
             }`}
           >
-            {muted || !localAudioPublished ? "🔇" : "🎤"}
+            {muted || !localAudioPublished ? <MicOffIcon size={15} /> : <MicIcon size={15} />}
           </button>
         )}
         <button
@@ -98,7 +99,7 @@ export function PersistentVoiceBubble() {
           title="Salir del live"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm cursor-pointer"
         >
-          ✕
+          <CloseIcon size={14} />
         </button>
       </div>
     </div>

@@ -60,7 +60,10 @@ export function RoomInfoModal({ room, onClose }: { room: ChatRoom; onClose: () =
         {room.description && <p className="text-sm text-[var(--color-text-secondary)]">{room.description}</p>}
         {room.live && room.liveSummary && (
           <div className="rounded-xl bg-[var(--color-coral)]/10 p-3 text-sm text-[var(--color-coral)]">
-            🔴 LIVE ahora · {room.liveSummary.participantCount} personas
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden />
+              LIVE ahora · {room.liveSummary.participantCount} personas
+            </span>
             {room.liveSummary.announcement && <p className="mt-1 text-xs">{room.liveSummary.announcement}</p>}
           </div>
         )}

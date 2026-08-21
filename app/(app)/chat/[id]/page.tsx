@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, CloseIcon, PaletteIcon, SendIcon, SettingsIcon } from "@/components/icons";
+import { BackIcon, CloseIcon, PaletteIcon, SendIcon, SettingsIcon, StickerIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ChatAppearanceSheet } from "@/components/chat/ChatAppearanceSheet";
 import { StickerPickerSheet } from "@/components/chat/StickerPickerSheet";
@@ -528,9 +528,9 @@ export default function ChatRoomPage() {
           onClick={() => setShowStickerPicker(true)}
           aria-label="Enviar sticker"
           title="Enviar sticker"
-          className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full text-lg text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+          className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
         >
-          🏷️
+          <StickerIcon size={18} />
         </button>
         <textarea
           value={draft}

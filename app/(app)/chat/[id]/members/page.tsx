@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, SearchIcon } from "@/components/icons";
+import { BackIcon, CrownIcon, SearchIcon, StarIcon } from "@/components/icons";
 import { ApiError, chatApi, getMyRealId, mapDemoUser, mapUserSummary, usersApi } from "@/lib/api";
 import type { BanDto, RoomMemberDto } from "@/lib/api/types";
 import { useAppState } from "@/lib/AppStateContext";
@@ -15,7 +15,12 @@ import type { ChatRoomRole, DemoUser } from "@/lib/types";
 type MemberRow = { user: DemoUser; role: ChatRoomRole; joinedAt: string };
 type BanRow = { user: DemoUser; reason: string | null; createdAt: string };
 
-const ROLE_LABEL: Record<ChatRoomRole, string> = { owner: "👑 Anfitrión", co_host: "⭐ Coanfitrión", member: "Miembro" };
+const ROLE_LABEL: Record<ChatRoomRole, string> = { owner: "Anfitrión", co_host: "Coanfitrión", member: "Miembro" };
+// Ícono de la librería en vez de emoji (👑/⭐) — mismo criterio que ChatBubble.tsx.
+const ROLE_ICON: Partial<Record<ChatRoomRole, React.ReactNode>> = {
+  owner: <CrownIcon size={12} />,
+  co_host: <StarIcon size={12} />,
+};
 
 export default function RoomMembersPage() {
   const { id } = useParams<{ id: string }>();
@@ -189,7 +194,14 @@ export default function RoomMembersPage() {
                 <Avatar name={member.user.displayName} avatarUri={member.user.avatarUri} gradient={member.user.avatarGradient} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{member.user.displayName}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{ROLE_LABEL[member.role]}</p>
+                  <p className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                    {ROLE_ICON[member.role] && (
+                      <span className="text-[var(--color-yellow)]" aria-hidden>
+                        {ROLE_ICON[member.role]}
+                      </span>
+                    )}
+                    {ROLE_LABEL[member.role]}
+                  </p>
                 </div>
                 {(canPromoteOrDemote || canAct) && (
                   <div className="flex shrink-0 flex-wrap justify-end gap-1.5">

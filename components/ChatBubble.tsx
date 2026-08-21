@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Avatar } from "./Avatar";
-import { ReplyIcon, TrashIcon } from "./icons";
+import { CrownIcon, ReplyIcon, SmileIcon, StarIcon, TrashIcon } from "./icons";
 import { renderWithMentions } from "./Mentions";
 import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
@@ -12,7 +12,15 @@ import type { BubbleStyle, ChatAppearancePrefs } from "@/lib/chat/chatAppearance
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
 
-const ROLE_BADGE: Partial<Record<RoomRole, string>> = { OWNER: "👑", CO_HOST: "⭐" };
+// Ícono de la librería en vez de emoji (👑/⭐) para el rol dentro de ESTA sala — ver sección de
+// "quitar emojis de la UI". Rol GLOBAL de la cuenta (Curador/Líder/Staff) es un badge de texto
+// aparte, mismo criterio de "no inventar datos" que PostCard.tsx: solo se pinta si el store ya
+// tiene el perfil completo de este autor (UserSummary liviano no trae globalRole).
+const ROOM_ROLE_ICON: Partial<Record<RoomRole, React.ReactNode>> = {
+  OWNER: <CrownIcon size={11} />,
+  CO_HOST: <StarIcon size={11} />,
+};
+const GLOBAL_ROLE_LABEL: Record<string, string> = { CURATOR: "Curador", LEADER: "Líder", MASTER: "Staff" };
 
 /** `mode: "default"` devuelve `undefined` para que el llamador conserve exactamente el cálculo
  * de color que ya tenía (accent de comunidad / tinte de autor) — la apariencia personal solo
@@ -155,9 +163,9 @@ export function ChatBubble({
               onClick={() => setShowReactionPicker((v) => !v)}
               aria-label="Reaccionar"
               title="Reaccionar"
-              className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-sm opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+              className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
             >
-              🙂
+              <SmileIcon size={14} />
             </button>
             {showReactionPicker && (
               <ReactionPicker
@@ -184,7 +192,8 @@ export function ChatBubble({
     );
   }
 
-  const badge = role ? ROLE_BADGE[role] : undefined;
+  const roomRoleIcon = role ? ROOM_ROLE_ICON[role] : undefined;
+  const globalRoleLabel = author ? GLOBAL_ROLE_LABEL[author.globalRole] : undefined;
   // Cada persona tiene su propio color de burbuja (estilo Amino/Discord: la sala se siente viva,
   // no todo el mismo gris) — se deriva del mismo `avatarGradient` que ya pinta su avatar, como un
   // wash muy sutil de fondo más una franja sólida al costado, nunca opaco encima del texto.
@@ -233,7 +242,16 @@ export function ChatBubble({
             ) : (
               "Miembro"
             )}
-            {badge && <span aria-hidden>{badge}</span>}
+            {roomRoleIcon && (
+              <span className="text-[var(--color-yellow)]" aria-hidden>
+                {roomRoleIcon}
+              </span>
+            )}
+            {globalRoleLabel && (
+              <span className="rounded-full bg-[var(--color-surface-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-orange)]">
+                {globalRoleLabel}
+              </span>
+            )}
           </span>
         )}
         {message.replyTo && (
@@ -290,9 +308,9 @@ export function ChatBubble({
             onClick={() => setShowReactionPicker((v) => !v)}
             aria-label="Reaccionar"
             title="Reaccionar"
-            className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-sm opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+            className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
           >
-            🙂
+            <SmileIcon size={14} />
           </button>
           {showReactionPicker && (
             <ReactionPicker

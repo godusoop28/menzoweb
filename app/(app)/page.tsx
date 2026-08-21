@@ -11,7 +11,7 @@ import { CommunityHero } from "@/components/CommunityHero";
 import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSidebar";
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
-import { LiveIcon, UsersIcon } from "@/components/icons";
+import { FlameIcon, LiveIcon, UsersIcon } from "@/components/icons";
 import { LiveRoomsGrid } from "@/components/LiveRoomsGrid";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
@@ -187,7 +187,9 @@ export default function FeedPage() {
           {featured.length > 0 && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">🔥 Destacado por líderes</h2>
+                <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">
+                  <FlameIcon size={18} className="text-[var(--color-orange)]" /> Destacado por líderes
+                </h2>
                 <button onClick={() => setTab("destacados")} className="text-sm font-semibold text-[var(--color-orange)] cursor-pointer">
                   Ver todo
                 </button>

@@ -6,15 +6,21 @@ import type { IRemoteVideoTrack } from "agora-rtc-sdk-ng";
 import { Avatar } from "@/components/Avatar";
 import {
   ChatIcon,
+  CheckIcon,
+  CloseIcon,
   HeadsetIcon,
   HeadsetOffIcon,
+  MegaphoneIcon,
   MicIcon,
   MicOffIcon,
   MinimizeIcon,
   MusicNoteIcon,
+  PowerIcon,
   ScreenShareIcon,
   SendIcon,
   SettingsIcon,
+  SmileIcon,
+  TuneIcon,
   TrashIcon,
   UsersIcon,
   VolumeIcon,
@@ -227,7 +233,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
 
         {announcement && (
           <div className="mx-3 mb-2 mt-2 flex shrink-0 items-start gap-2 rounded-2xl border border-white/10 bg-black/35 px-3.5 py-2.5 text-xs shadow-[0_8px_24px_-10px_rgba(0,0,0,0.6)] backdrop-blur-md">
-            <span aria-hidden>📣</span>
+            <MegaphoneIcon size={14} className="mt-0.5 shrink-0 text-[var(--color-orange)]" />
             <p className="line-clamp-2">{announcement}</p>
           </div>
         )}
@@ -274,7 +280,7 @@ export function LiveRoomPanel({ room, onMinimize }: { room: ChatRoom; onMinimize
                 ))}
                 {stage.length === 0 && (
                   <div className="col-span-full flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-black/20 py-8 backdrop-blur-sm">
-                    <span className="text-2xl" aria-hidden>🎙️</span>
+                    <MicIcon size={26} className="text-[var(--color-text-muted)]" />
                     <p className="text-sm text-[var(--color-text-muted)]">Nadie está hablando todavía.</p>
                   </div>
                 )}
@@ -682,6 +688,9 @@ function LiveControls({
   const [endingForAll, setEndingForAll] = useState(false);
   const [screenShareBusy, setScreenShareBusy] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showSpeakingRequests, setShowSpeakingRequests] = useState(false);
+  const [speakRequestBusy, setSpeakRequestBusy] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
   const canModerate = room.role === "owner" || room.role === "co_host";
   const myId = getMyRealId();
   const someoneElseSharing = live.participants.some((p) => p.screenSharing && p.user.id !== myId);
@@ -705,6 +714,23 @@ function LiveControls({
   useEffect(() => {
     if (live.lastMicrophoneError) showToast(live.lastMicrophoneError);
   }, [live.lastMicrophoneError, showToast]);
+
+  /** Único camino para que alguien de la audiencia pase a hablar, ahora que se eliminó "levantar
+   * la mano" como patrón visual (sección de rediseño) — la CAPACIDAD (pedir/aprobar/rechazar)
+   * nunca se tocó en LiveRoomContext/backend, solo faltaba este botón. Sin él, un oyente común
+   * quedaba sin ninguna forma de unirse al escenario. */
+  async function handleToggleSpeakRequest() {
+    if (speakRequestBusy) return;
+    setSpeakRequestBusy(true);
+    try {
+      if (live.myRole === "requested") await live.cancelSpeakRequest();
+      else await live.requestToSpeak();
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos enviar tu solicitud para hablar.");
+    } finally {
+      setSpeakRequestBusy(false);
+    }
+  }
 
   /** "Salir" es personal: me desconecto y cierro el panel, pero el LIVE sigue para los demás. */
   async function handleExit() {
@@ -750,12 +776,25 @@ function LiveControls({
             {live.muted || !live.localAudioPublished ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
           </ControlButton>
         )}
+        {!live.canSpeak && (
+          <ControlButton
+            onClick={handleToggleSpeakRequest}
+            disabled={speakRequestBusy}
+            label={live.myRole === "requested" ? "Cancelar solicitud para hablar" : "Pedir para hablar"}
+            variant={live.myRole === "requested" ? "on" : "neutral"}
+          >
+            <MegaphoneIcon size={18} />
+          </ControlButton>
+        )}
         <ControlButton
           onClick={live.toggleDeafen}
           label={live.deafened ? "Reactivar audio" : "Auriculares"}
           variant={live.deafened ? "danger" : "neutral"}
         >
           {live.deafened ? <HeadsetOffIcon size={18} /> : <HeadsetIcon size={18} />}
+        </ControlButton>
+        <ControlButton onClick={() => setShowAudioSettings(true)} label="Configuración de audio">
+          <TuneIcon size={18} />
         </ControlButton>
         <div className="relative">
           {showReactions && (
@@ -780,9 +819,7 @@ function LiveControls({
             </>
           )}
           <ControlButton onClick={() => setShowReactions((v) => !v)} label="Reacciones" variant={showReactions ? "on" : "neutral"}>
-            <span aria-hidden className="text-base leading-none">
-              ☺
-            </span>
+            <SmileIcon size={18} />
           </ControlButton>
         </div>
         <ControlButton onClick={onOpenChat} label="Mensajes" badge={unreadChat}>
@@ -808,7 +845,21 @@ function LiveControls({
           </ControlButton>
         )}
         {canModerate && (
-          <ControlButton onClick={onOpenSettings} label="Solicitudes y moderación">
+          <ControlButton
+            onClick={() => setShowSpeakingRequests(true)}
+            label={
+              live.speakingRequests.length > 0
+                ? `Solicitudes para hablar · ${live.speakingRequests.length}`
+                : "Solicitudes para hablar"
+            }
+            badge={live.speakingRequests.length}
+            variant={live.speakingRequests.length > 0 ? "on" : "neutral"}
+          >
+            <MegaphoneIcon size={18} />
+          </ControlButton>
+        )}
+        {canModerate && (
+          <ControlButton onClick={onOpenSettings} label="Configuración de la sala">
             <UsersIcon size={18} />
           </ControlButton>
         )}
@@ -817,7 +868,7 @@ function LiveControls({
             onClick={() => setConfirmEndForAll(true)}
             className="flex h-12 items-center gap-2 rounded-full bg-[var(--color-coral)] px-4 text-sm font-bold text-white cursor-pointer hover:brightness-110"
           >
-            📞 Finalizar LIVE
+            <PowerIcon size={16} /> Finalizar LIVE
           </button>
         )}
         <button
@@ -838,6 +889,184 @@ function LiveControls({
         onConfirm={handleEndForAll}
         onCancel={() => setConfirmEndForAll(false)}
       />
+      {canModerate && (
+        <SpeakingRequestsSheet
+          open={showSpeakingRequests}
+          requests={live.speakingRequests}
+          onApprove={live.approveSpeaking}
+          onReject={live.rejectSpeaking}
+          onClose={() => setShowSpeakingRequests(false)}
+        />
+      )}
+      <AudioSettingsSheet open={showAudioSettings} onClose={() => setShowAudioSettings(false)} />
     </>
+  );
+}
+
+/** Selección de micrófono/salida + supresión de ruido — "como en Discord" del pedido. Solo tiene
+ * sentido en web/desktop (ver comentario en LiveRoomContext sobre por qué mobile no tiene un
+ * equivalente de lista de dispositivos). La enumeración se pide recién al abrir esta hoja, nunca
+ * al montar el LIVE, para no disparar el permiso de micrófono del navegador de arriba. */
+function AudioSettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const live = useLiveRoomContext();
+  const showToast = useToast();
+  const [mics, setMics] = useState<{ deviceId: string; label: string }[]>([]);
+  const [speakers, setSpeakers] = useState<{ deviceId: string; label: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    // El primer `.then` (o `.catch`) siempre corre en un microtask aparte, nunca en el mismo tick
+    // síncrono del efecto — evita el warning de "setState síncrono dentro de un efecto" sin
+    // necesitar un setTimeout/queueMicrotask a mano.
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) setLoading(true);
+      })
+      .then(() => Promise.all([live.listMicrophones(), live.listSpeakers()]))
+      .then(([micList, speakerList]) => {
+        if (cancelled) return;
+        setMics(micList);
+        setSpeakers(speakerList);
+      })
+      .catch(() => {
+        if (!cancelled) showToast("No pudimos leer tus dispositivos de audio.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Configuración de audio" subtitle="Micrófono, salida y supresión de ruido" widthClassName="max-w-sm">
+      <div className="flex flex-col gap-4">
+        {loading && mics.length === 0 && speakers.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)]">Buscando dispositivos…</p>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-muted)]">Micrófono</span>
+              <select
+                value={live.selectedMicId ?? ""}
+                onChange={(e) => live.setMicrophoneDevice(e.target.value)}
+                className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-sm"
+              >
+                <option value="" disabled>
+                  {mics.length === 0 ? "Sin dispositivos detectados" : "Elegir micrófono"}
+                </option>
+                {mics.map((m) => (
+                  <option key={m.deviceId} value={m.deviceId}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-muted)]">Salida de audio</span>
+              <select
+                value={live.selectedSpeakerId ?? ""}
+                onChange={(e) => live.setSpeakerDevice(e.target.value)}
+                className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-3 py-2 text-sm"
+              >
+                <option value="" disabled>
+                  {speakers.length === 0 ? "Sin dispositivos detectados" : "Elegir salida"}
+                </option>
+                {speakers.map((s) => (
+                  <option key={s.deviceId} value={s.deviceId}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+        <label className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-3.5 py-3">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Supresión de ruido</span>
+            <span className="text-xs text-[var(--color-text-muted)]">Reduce ruido de fondo en tu micrófono.</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={live.noiseSuppression}
+            onChange={(e) => live.setNoiseSuppression(e.target.checked)}
+            disabled={live.microphoneChanging}
+            className="h-5 w-5 accent-[var(--color-orange)]"
+          />
+        </label>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Cola de "quiere hablar" para host/co-host — reemplaza al viejo panel dentro de
+ * RoomSettingsPanel → SpeakingRequestsList (eliminado junto con la UI de "levantar la mano"),
+ * ahora vive acá mismo, junto al resto de controles del LIVE, sin ícono de mano ni ese lenguaje:
+ * solo aprobar/rechazar sobre la lista ya mantenida en tiempo real por LiveRoomContext. */
+function SpeakingRequestsSheet({
+  open,
+  requests,
+  onApprove,
+  onReject,
+  onClose,
+}: {
+  open: boolean;
+  requests: LiveParticipant[];
+  onApprove: (userId: string) => Promise<void>;
+  onReject: (userId: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const showToast = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function run(userId: string, action: "approve" | "reject") {
+    setBusyId(userId);
+    try {
+      if (action === "approve") await onApprove(userId);
+      else await onReject(userId);
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : "No pudimos completar esa acción.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Solicitudes para hablar" subtitle="Quién quiere sumarse al escenario" widthClassName="max-w-sm">
+      {requests.length === 0 ? (
+        <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">Nadie pidió hablar todavía.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {requests.map((request) => (
+            <div key={request.user.id} className="flex items-center gap-3 rounded-xl bg-[var(--color-surface-secondary)] px-3 py-2.5">
+              <Avatar name={request.user.displayName} avatarUri={request.user.avatarUri} gradient={request.user.avatarGradient} size={36} />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{request.user.displayName}</span>
+              <button
+                onClick={() => run(request.user.id, "reject")}
+                disabled={busyId === request.user.id}
+                aria-label="Rechazar"
+                title="Rechazar"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-50 cursor-pointer"
+              >
+                <CloseIcon size={14} />
+              </button>
+              <button
+                onClick={() => run(request.user.id, "approve")}
+                disabled={busyId === request.user.id}
+                aria-label="Aprobar"
+                title="Aprobar"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-green)]/20 text-[var(--color-green)] hover:bg-[var(--color-green)]/30 disabled:opacity-50 cursor-pointer"
+              >
+                <CheckIcon size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Sheet>
   );
 }

@@ -613,3 +613,53 @@ export function PaletteIcon({ size = 18, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function FlameIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M12 2c1 3-3 4.5-3 8a3 3 0 0 0 6 0c1.5 1 2 2.8 2 4.2A5.2 5.2 0 0 1 6.8 14.2C6.8 9 12 7 12 2Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function StickerIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M4 6a2 2 0 0 1 2-2h8l6 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M14 4v4a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="9.5" cy="14" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function TuneIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="14" cy="7" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="8" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function SmileIcon({ size = 18, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 13.5c.9 1.4 2.2 2.1 4 2.1s3.1-.7 4-2.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="9" cy="9.5" r="1.1" fill="currentColor" />
+      <circle cx="15" cy="9.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}

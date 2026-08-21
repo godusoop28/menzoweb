@@ -14,6 +14,7 @@ import type {
 import { API_BASE_URL, getCachedSession, getMyRealId, liveApi, mapLiveParticipant, mapLiveSession } from "@/lib/api";
 import type { LiveEventDto, LiveParticipantDto } from "@/lib/api/types";
 import type { LiveParticipant, LiveParticipantRole, LiveSessionSummary } from "@/lib/types";
+import { playJoinSound, playLeaveSound, playLiveStartSound } from "./liveSoundEffects";
 
 /** Nivel de Agora (0-100) normalizado a 0-1 para que la UI no tenga que conocer la escala del SDK. */
 function normalizeLevel(level: number): number {
@@ -86,6 +87,17 @@ type LiveRoomContextValue = {
   // "Auriculares" — silencio LOCAL de todo el audio remoto de una vez, ver toggleDeafen.
   deafened: boolean;
   toggleDeafen: () => void;
+
+  // Controles avanzados de audio (dispositivos + supresión de ruido) — solo aplican en web/
+  // desktop, ver comentario junto al estado en el provider.
+  noiseSuppression: boolean;
+  selectedMicId: string | null;
+  selectedSpeakerId: string | null;
+  listMicrophones: () => Promise<{ deviceId: string; label: string }[]>;
+  listSpeakers: () => Promise<{ deviceId: string; label: string }[]>;
+  setMicrophoneDevice: (deviceId: string) => Promise<void>;
+  setSpeakerDevice: (deviceId: string) => Promise<void>;
+  setNoiseSuppression: (enabled: boolean) => Promise<void>;
 };
 
 const LiveRoomContext = createContext<LiveRoomContextValue | null>(null);
@@ -125,6 +137,15 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   // remoto de golpe, distinto de localMutedUserIds (por participante). Nunca pega al backend ni
   // afecta lo que escuchan los demás, mismo criterio que toggleLocalParticipantMute.
   const [deafened, setDeafened] = useState(false);
+  // Controles avanzados de audio (sección "como en Discord" del pedido) — selección de
+  // micrófono/salida y supresión de ruido. Solo tienen sentido en desktop/web (Agora expone
+  // enumeración de dispositivos vía getUserMedia, algo que Android/iOS no dan de la misma forma —
+  // ver menzomovil, que usa ruteo altavoz/auricular en vez de esto). Persisten para toda la
+  // sesión del provider, no solo mientras hay un LIVE activo, para no perder la preferencia del
+  // usuario entre una llamada y la siguiente.
+  const [noiseSuppression, setNoiseSuppressionState] = useState(true);
+  const [selectedMicId, setSelectedMicId] = useState<string | null>(null);
+  const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -145,6 +166,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const localVolumesRef = useRef<Map<string, number>>(new Map());
   const localMutedUserIdsRef = useRef<Set<string>>(new Set());
   const deafenedRef = useRef(false);
+  const noiseSuppressionRef = useRef(true);
+  const selectedMicIdRef = useRef<string | null>(null);
+  const selectedSpeakerIdRef = useRef<string | null>(null);
 
   const stompRef = useRef<Client | null>(null);
 
@@ -234,7 +258,12 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
   const publishMicTrack = useCallback(
     async (client: IAgoraRTCClient, AgoraRTC: typeof import("agora-rtc-sdk-ng").default) => {
       try {
-        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          microphoneId: selectedMicIdRef.current ?? undefined,
+          ANS: noiseSuppressionRef.current,
+          AEC: true,
+          AGC: true,
+        });
         micTrackRef.current = micTrack;
         await client.publish([micTrack]);
         await micTrack.setMuted(true);
@@ -380,6 +409,13 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
 
   const applyParticipantEvent = useCallback((event: LiveEventDto) => {
     const myRealId = getMyRealId();
+    // Cues de sonido (sección "como en Discord" del pedido) — solo para quien está REALMENTE
+    // conectado al audio de esta sala (activeRoomIdRef), no para cualquiera que solo tenga el
+    // chat abierto mirando la cabecera (ver watchRoom, un concepto distinto y mucho más frecuente
+    // — sonaría constantemente si se disparara ahí).
+    const imConnectedHere = activeRoomIdRef.current === event.roomId;
+    if (imConnectedHere && event.type === "CHAT_LIVE_STARTED") playLiveStartSound();
+
     const payload = event.payload as LiveParticipantDto | null;
     const participant = payload ? mapLiveParticipant(payload, myRealId) : null;
 
@@ -392,6 +428,11 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
 
     if (!participant) return;
     const isMe = participant.user.id === myRealId;
+
+    if (imConnectedHere && !isMe) {
+      if (event.type === "CHAT_LIVE_PARTICIPANT_JOINED") playJoinSound();
+      else if (event.type === "CHAT_LIVE_PARTICIPANT_LEFT") playLeaveSound();
+    }
 
     setParticipants((prev) => {
       const withoutTarget = prev.filter((p) => p.user.id !== participant.user.id);
@@ -584,6 +625,9 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
             const uid = String(user.uid);
             remoteAudioTracksRef.current.set(uid, user.audioTrack);
             user.audioTrack.play();
+            if (selectedSpeakerIdRef.current) {
+              user.audioTrack.setPlaybackDevice(selectedSpeakerIdRef.current).catch(() => {});
+            }
             // Reaplica la preferencia LOCAL guardada para este uid, si había una — el track es
             // nuevo (reconexión, o recién activó el mic) y por defecto arranca en volumen 100.
             // "Auriculares" (deafenedRef) manda sobre cualquier preferencia por participante —
@@ -813,6 +857,78 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Enumeración bajo demanda (no al montar el provider) — pedir la lista de dispositivos dispara
+  // el permiso de micrófono del navegador si todavía no se concedió, así que solo tiene sentido
+  // llamarlas cuando el usuario realmente abre el panel de configuración de audio.
+  const listMicrophones = useCallback(async () => {
+    const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
+    const devices = await AgoraRTC.getMicrophones();
+    return devices.map((d) => ({ deviceId: d.deviceId, label: d.label || "Micrófono" }));
+  }, []);
+
+  const listSpeakers = useCallback(async () => {
+    const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
+    const devices = await AgoraRTC.getPlaybackDevices();
+    return devices.map((d) => ({ deviceId: d.deviceId, label: d.label || "Salida de audio" }));
+  }, []);
+
+  const setMicrophoneDevice = useCallback(async (deviceId: string) => {
+    selectedMicIdRef.current = deviceId;
+    setSelectedMicId(deviceId);
+    if (micTrackRef.current) {
+      try {
+        await micTrackRef.current.setDevice(deviceId);
+      } catch (error) {
+        console.warn("[menzo/live] setDevice (mic) failed", error);
+      }
+    }
+  }, []);
+
+  const setSpeakerDevice = useCallback(async (deviceId: string) => {
+    selectedSpeakerIdRef.current = deviceId;
+    setSelectedSpeakerId(deviceId);
+    for (const track of remoteAudioTracksRef.current.values()) {
+      try {
+        await track.setPlaybackDevice(deviceId);
+      } catch (error) {
+        console.warn("[menzo/live] setPlaybackDevice failed", error);
+      }
+    }
+  }, []);
+
+  /** Agora fija ANS/AEC/AGC al CREAR el track — no hay un método para prenderlo/apagarlo sobre uno
+   * ya publicado. Para que el toggle tenga efecto inmediato (no recién en la próxima reconexión)
+   * se recrea el track local preservando mute/publish, en vez de solo guardar la preferencia para
+   * la próxima vez. Si no hay track activo todavía (nadie habilitó el mic en este LIVE), la
+   * preferencia igual queda guardada en el ref y se aplica normal en el próximo publishMicTrack. */
+  const setNoiseSuppression = useCallback(async (enabled: boolean) => {
+    noiseSuppressionRef.current = enabled;
+    setNoiseSuppressionState(enabled);
+    const client = clientRef.current;
+    const oldTrack = micTrackRef.current;
+    if (!client || !oldTrack) return;
+    setMicrophoneChanging(true);
+    try {
+      const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
+      const wasMuted = mutedRef.current;
+      const newTrack = await AgoraRTC.createMicrophoneAudioTrack({
+        microphoneId: selectedMicIdRef.current ?? undefined,
+        ANS: enabled,
+        AEC: true,
+        AGC: true,
+      });
+      await client.unpublish([oldTrack]);
+      oldTrack.close();
+      micTrackRef.current = newTrack;
+      await client.publish([newTrack]);
+      await newTrack.setMuted(wasMuted);
+    } catch (error) {
+      console.warn("[menzo/live] setNoiseSuppression (recreate track) failed", error);
+    } finally {
+      setMicrophoneChanging(false);
+    }
+  }, []);
+
   // Suscripción en vivo al roster/roles/solicitudes de la sala a la que estoy conectado —
   // independiente de qué pantalla se esté mirando, para que un cambio de rol o un mute forzado
   // se aplique aunque el usuario haya navegado a otra parte (el LIVE sigue minimizado).
@@ -893,6 +1009,14 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       toggleLocalParticipantMute,
       deafened,
       toggleDeafen,
+      noiseSuppression,
+      selectedMicId,
+      selectedSpeakerId,
+      listMicrophones,
+      listSpeakers,
+      setMicrophoneDevice,
+      setSpeakerDevice,
+      setNoiseSuppression,
     }),
     [
       watchedRoomId,
@@ -938,6 +1062,14 @@ export function LiveRoomProvider({ children }: { children: React.ReactNode }) {
       toggleLocalParticipantMute,
       deafened,
       toggleDeafen,
+      noiseSuppression,
+      selectedMicId,
+      selectedSpeakerId,
+      listMicrophones,
+      listSpeakers,
+      setMicrophoneDevice,
+      setSpeakerDevice,
+      setNoiseSuppression,
     ]
   );
 

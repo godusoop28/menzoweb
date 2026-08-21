@@ -1,4 +1,5 @@
 import { badgeById } from "@/data/badges";
+import { StarIcon } from "@/components/icons";
 import { gradientCss } from "@/lib/theme";
 
 /** Insignias (profile.badges, ver UserProfileResponse en menzoapi) — distintas de los títulos
@@ -12,11 +13,11 @@ export function UserBadges({ badgeIds }: { badgeIds: string[] }) {
       {resolved.map((badge) => (
         <div key={badge.id} className="flex flex-col items-center gap-1.5" title={badge.description}>
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 text-lg font-bold text-white shadow-[0_0_16px_-4px_rgba(124,77,255,0.5)]"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 text-white shadow-[0_0_16px_-4px_rgba(124,77,255,0.5)]"
             style={{ background: gradientCss(badge.gradient) }}
             aria-hidden
           >
-            ★
+            <StarIcon size={18} />
           </div>
           <span className="max-w-16 truncate text-center text-[10px] text-[var(--color-text-muted)]">{badge.name}</span>
         </div>

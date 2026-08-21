@@ -13,7 +13,7 @@ import type {
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
-import { BackIcon, CheckIcon, HomeIcon, ChatIcon, UsersIcon } from "@/components/icons";
+import { BackIcon, CheckIcon, CloseIcon, HomeIcon, ChatIcon, UsersIcon } from "@/components/icons";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 
 const IMAGE_FIELDS: { key: keyof Pick<CommunityDetailDto, "iconUrl" | "logoUrl" | "coverUrl" | "backgroundUrl" | "bannerUrl">; label: string }[] = [
@@ -341,9 +341,9 @@ export default function CommunityAppearancePage() {
               <img src={url} alt="" className="h-full w-full object-cover" />
               <button
                 onClick={() => removeDecoration(i)}
-                className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-black/60 text-xs text-white cursor-pointer"
+                className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-black/60 text-white cursor-pointer"
               >
-                ✕
+                <CloseIcon size={11} />
               </button>
             </div>
           ))}

@@ -242,10 +242,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="relative hidden md:flex md:h-full md:w-64 md:shrink-0 md:flex-col md:gap-1 md:overflow-y-auto md:px-3.5 md:py-4 md:shadow-[2px_0_16px_rgba(0,0,0,0.45)]"
         style={navStyle}
       >
+        {/* "Luces" de los colores de la comunidad — dos glows difuminados y fijos (no siguen el
+            scroll) detrás del contenido, con los colores reales del tema de esa comunidad en vez
+            de un violeta fijo. Puramente decorativo (pointer-events-none), nunca compite con la
+            legibilidad del texto por la opacidad baja + blur grande. */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div
+            className="absolute -left-16 -top-20 h-64 w-64 rounded-full opacity-25 blur-[70px]"
+            style={{ background: communityTheme.primaryColor }}
+          />
+          <div
+            className="absolute -right-20 top-1/2 h-56 w-56 rounded-full opacity-[0.16] blur-[70px]"
+            style={{ background: communityTheme.secondaryColor }}
+          />
+        </div>
         <div className="relative flex h-full flex-col gap-1">
           {/* community-mini del blueprint — orb + nombre + miembros/en línea, en una card propia
               con degradado sutil (antes era un botón suelto sin el marco de card). */}
-          <div className="mb-3 rounded-2xl border border-[var(--color-border-soft)] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-3">
+          <div
+            className="mb-3 rounded-2xl border p-3"
+            style={{
+              borderColor: `${communityTheme.primaryColor}2a`,
+              background: `linear-gradient(180deg, ${communityTheme.primaryColor}14, rgba(255,255,255,0.015))`,
+            }}
+          >
             <CommunitySwitcher />
           </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { BackIcon, PlusIcon } from "@/components/icons";
+import { BackIcon, PlusIcon, StickerIcon } from "@/components/icons";
 import { stickersApi } from "@/lib/api/endpoints";
 import type { StickerDto, StickerPackSummaryDto } from "@/lib/api/types";
 
@@ -118,7 +118,7 @@ export function StickerPickerSheet({ onPick, onClose }: { onPick: (sticker: Stic
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={pack.coverImageUrl} alt="" className="h-full w-full object-contain" />
                   ) : (
-                    <span className="text-2xl">🏷️</span>
+                    <StickerIcon size={24} className="text-[var(--color-text-muted)]" />
                   )}
                 </span>
                 <span className="truncate text-xs font-medium">{pack.name}</span>

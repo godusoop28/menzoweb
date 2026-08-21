@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { CommunityBadge } from "@/components/communities/CommunitySwitcher";
 import { GradientButton } from "@/components/GradientButton";
+import { CheckIcon } from "@/components/icons";
 import { communitiesApi } from "@/lib/api";
 import type { CommunitySummaryDto } from "@/lib/api/types";
 import { useOnboardingDraft } from "@/lib/OnboardingDraftContext";
@@ -94,7 +95,7 @@ export default function OnboardingCommunitiesPage() {
                   }`}
                   aria-hidden
                 >
-                  {selected && <span className="text-xs text-black">✓</span>}
+                  {selected && <CheckIcon size={12} className="text-black" />}
                 </div>
               </button>
             );

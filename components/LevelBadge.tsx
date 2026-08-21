@@ -1,3 +1,5 @@
+import { StarIcon } from "./icons";
+
 /** "Nivel X · Nombre" + barra de progreso hacia el próximo nivel — usado en el perfil propio y en
  * el de terceros. Ver LevelCurve en menzoapi: la curva es exponencial, así que a niveles altos la
  * barra avanza mucho más lento que a niveles bajos, eso es intencional. */
@@ -22,7 +24,7 @@ export function LevelBadge({
   return (
     <div className="flex flex-col gap-1.5">
       <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-yellow)]">
-        <span aria-hidden>★</span>
+        <StarIcon size={11} />
         Nivel {level}
         {!!levelName && <span className="text-[var(--color-yellow)]/70">· {levelName}</span>}
       </span>
