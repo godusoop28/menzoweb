@@ -601,7 +601,7 @@ export default function ChatRoomPage() {
 
     {room.type === "public" && (
       <aside className="hidden lg:flex lg:h-full lg:w-72 lg:shrink-0 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:py-4">
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="menzo-panel flex flex-col gap-3 p-4">
           <h3 className="font-display text-sm font-bold">Sobre la sala</h3>
           {room.description && <p className="text-xs text-[var(--color-text-secondary)]">{room.description}</p>}
           <div className="grid grid-cols-2 gap-2 text-center text-sm">
@@ -616,7 +616,7 @@ export default function ChatRoomPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="menzo-panel flex flex-col gap-3 p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-display text-sm font-bold">En línea ({room.onlineCount})</h3>
             <button onClick={() => setShowInfo(true)} className="text-xs font-semibold text-[var(--color-cyan)] cursor-pointer">

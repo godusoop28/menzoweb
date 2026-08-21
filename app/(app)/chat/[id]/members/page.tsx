@@ -133,7 +133,7 @@ export default function RoomMembersPage() {
       </div>
 
       {canModerate && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="menzo-panel flex flex-col gap-2 p-4">
           <p className="text-sm font-semibold">Invitar personas</p>
           <div className="flex gap-2">
             <input
@@ -184,7 +184,7 @@ export default function RoomMembersPage() {
             return (
               <div
                 key={member.user.id}
-                className="flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3"
+                className="menzo-panel flex items-center gap-3 p-3"
               >
                 <Avatar name={member.user.displayName} avatarUri={member.user.avatarUri} gradient={member.user.avatarGradient} size={40} />
                 <div className="min-w-0 flex-1">
@@ -248,7 +248,7 @@ export default function RoomMembersPage() {
           {bans.map((ban) => (
             <div
               key={ban.user.id}
-              className="flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3"
+              className="menzo-panel flex items-center gap-3 p-3"
             >
               <Avatar name={ban.user.displayName} avatarUri={ban.user.avatarUri} gradient={ban.user.avatarGradient} size={36} />
               <div className="min-w-0 flex-1">

@@ -26,7 +26,7 @@ export function ContextSidebarSection({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+    <div className="menzo-panel flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-sm font-bold">
           {icon}

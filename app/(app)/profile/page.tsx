@@ -94,7 +94,7 @@ export default function ProfilePage() {
         }
       />
 
-      <div className="mt-4 grid grid-cols-5 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-4 text-center">
+      <div className="menzo-panel mt-4 grid grid-cols-5 gap-2 py-4 text-center">
         <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
         <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
         <Stat value={profile.reputation} label="Reputación" />

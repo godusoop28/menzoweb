@@ -36,7 +36,7 @@ export function WallComposer({ profileId, placeholder }: { profileId: string; pl
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3">
+    <div className="menzo-panel flex flex-col gap-2 p-3">
       {imageUri && (
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}

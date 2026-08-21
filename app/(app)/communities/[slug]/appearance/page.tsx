@@ -459,7 +459,7 @@ export default function CommunityAppearancePage() {
           app completa acá adentro para "previsualizar" duplicaría toda su lógica de datos solo
           para una vista de referencia. */}
       <div className="flex w-full flex-col gap-4 lg:sticky lg:top-6 lg:max-w-sm">
-        <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="menzo-panel p-4">
           <h2 className="mb-3 text-sm font-semibold">Vista previa en tiempo real</h2>
 
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Escritorio</p>

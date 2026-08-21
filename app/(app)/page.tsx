@@ -12,7 +12,7 @@ import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSideb
 import { CreatePostComposer } from "@/components/CreatePostComposer";
 import { FeaturedPostCard } from "@/components/FeaturedPostCard";
 import { LiveIcon, UsersIcon } from "@/components/icons";
-import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
+import { LiveRoomsGrid } from "@/components/LiveRoomsGrid";
 import { PostCard } from "@/components/PostCard";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { useAccent } from "@/lib/AccentContext";
@@ -200,16 +200,19 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* En lg:+ "Salas en vivo" vive solo en el panel derecho (ver <aside> más abajo) — no
-              tiene sentido mostrar la misma lista dos veces en la misma pantalla. */}
+          {/* Sección "Salas activas" del blueprint — antes solo se mostraba como carrusel angosto
+              en mobile (`lg:hidden`) para no duplicar la lista chica del panel derecho; ahora es
+              el grid principal en todos los tamaños, como en la referencia (el panel derecho
+              sigue teniendo su propia lista más compacta, la referencia también las muestra en
+              los dos lugares a la vez). */}
           {liveRooms.length > 0 && (
-            <div className="flex flex-col gap-3 lg:hidden">
+            <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 font-display text-lg font-bold">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden /> Salas en vivo
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-coral)]" aria-hidden /> Salas activas
                 </h2>
               </div>
-              <LiveRoomsCarousel rooms={liveRooms} />
+              <LiveRoomsGrid rooms={liveRooms} />
             </div>
           )}
 

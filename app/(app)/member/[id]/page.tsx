@@ -192,7 +192,7 @@ export default function MemberProfilePage() {
         }
       />
 
-      <div className="mt-4 grid grid-cols-4 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-4 text-center">
+      <div className="menzo-panel mt-4 grid grid-cols-4 gap-2 py-4 text-center">
         <Stat value={user.reputation} label="Reputación" />
         <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />
         <Stat value={user.followers} label="Seguidores" href={`/connections/${user.id}/followers`} />

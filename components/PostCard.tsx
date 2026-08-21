@@ -46,7 +46,7 @@ export function PostCard({ post }: { post: Post }) {
   const roleLabel = ROLE_LABEL[author.globalRole];
 
   return (
-    <article className="group relative flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 menzo-fade-in shadow-[0_4px_18px_-6px_rgba(0,0,0,0.4)] transition-colors hover:border-[var(--color-border-strong)]">
+    <article className="menzo-panel group relative flex flex-col gap-3 p-4 menzo-fade-in transition-colors hover:border-[var(--color-border-strong)]">
       {post.featured && (
         <span className="absolute -top-2.5 left-4 w-fit rounded-full bg-[var(--color-yellow)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-on-accent)] shadow-sm">
           {post.type === "blog" ? "Blog destacado" : "Destacado"}

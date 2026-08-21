@@ -76,7 +76,7 @@ export function CreatePostComposer() {
   }
 
   return (
-    <div className="menzo-fade-in flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)]">
+    <div className="menzo-panel menzo-fade-in flex flex-col gap-3 p-4">
       <div className="flex items-center gap-3">
         {state.profile && (
           <Avatar

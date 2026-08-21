@@ -33,7 +33,7 @@ function MemberRow({ member }: { member: CommunityMemberDto }) {
   return (
     <Link
       href={`/member/${member.user.id}`}
-      className="flex items-center gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-secondary)]"
+      className="menzo-panel flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)]"
     >
       <Avatar
         name={member.user.displayName}
@@ -262,7 +262,7 @@ export default function MembersPage() {
     </div>
 
     <ContextSidebar>
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 text-center">
+      <div className="menzo-panel grid grid-cols-3 gap-2 p-4 text-center">
         <div>
           <p className="text-lg font-bold">{members.length}</p>
           <p className="text-[11px] text-[var(--color-text-muted)]">Miembros</p>

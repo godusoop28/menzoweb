@@ -48,7 +48,7 @@ export function ChatRoomListItem({
   return (
     <Link
       href={`/chat/${room.id}`}
-      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_4px_18px_-8px_rgba(0,0,0,0.4)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
+      className="menzo-panel group relative flex items-center gap-4 overflow-hidden p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)]"
     >
       {tintCss && (
         <div

@@ -63,6 +63,18 @@ a {
   color: inherit;
 }
 
+/** "Panel" del blueprint (.panel en web/styles.css) — el tratamiento base de card en toda la
+ * referencia: degradado vertical sutil + borde + sombra, nunca un fondo plano de un solo color.
+ * Reemplaza gradualmente los `bg-[var(--color-surface)]` sueltos de cards individuales — un solo
+ * lugar para que todas las cards (posts, composer, salas activas, right-rail, etc.) compartan
+ * exactamente la misma profundidad que la referencia. */
+.menzo-panel {
+  border: 1px solid var(--color-border-soft);
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(18, 31, 45, 0.96), rgba(10, 19, 29, 0.97));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

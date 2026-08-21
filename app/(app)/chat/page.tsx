@@ -121,7 +121,7 @@ export default function ChatListPage() {
       />
 
       {showCreate && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4">
+        <div className="menzo-panel flex flex-col gap-3 p-4">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
