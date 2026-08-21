@@ -38,18 +38,22 @@ export function ColorWheelPicker({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.scale(dpr, dpr);
+    // putImageData escribe en pixeles fisicos crudos y ignora ctx.scale — hay que generar la
+    // imagen ya al tamano fisico (size*dpr) en vez de escalar el contexto, si no en pantallas
+    // Retina (iPad, la mayoria de celulares y notebooks modernas) la rueda queda pintada solo
+    // en el cuadrante superior izquierdo del canvas y el resto se ve vacio/roto.
+    const physicalSize = Math.round(size * dpr);
+    canvas.width = physicalSize;
+    canvas.height = physicalSize;
 
-    const radius = size / 2;
-    const image = ctx.createImageData(size, size);
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
+    const radius = physicalSize / 2;
+    const image = ctx.createImageData(physicalSize, physicalSize);
+    for (let y = 0; y < physicalSize; y++) {
+      for (let x = 0; x < physicalSize; x++) {
         const dx = x - radius;
         const dy = y - radius;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const idx = (y * size + x) * 4;
+        const idx = (y * physicalSize + x) * 4;
         if (dist > radius) {
           image.data[idx + 3] = 0;
           continue;
