@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { LevelBadge } from "@/components/LevelBadge";
+import { SocialPlatformIcon } from "@/components/SocialPlatformIcon";
 import { UserBadges } from "@/components/UserBadges";
 import { UserTitles } from "@/components/UserTitles";
 import { useAccent } from "@/lib/AccentContext";
@@ -100,8 +101,9 @@ export function ProfileHero({
                 {SOCIAL_PLATFORMS.filter((p) => user.socialLinks?.[p.id]).map((p) => (
                   <span
                     key={p.id}
-                    className="rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-secondary)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]"
                   >
+                    <SocialPlatformIcon id={p.id} className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-primary)]" />
                     <span className="font-semibold text-[var(--color-text-primary)]">{p.label}</span>{" "}
                     {user.socialLinks![p.id]}
                   </span>
