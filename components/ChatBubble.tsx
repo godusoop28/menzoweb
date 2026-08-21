@@ -8,7 +8,7 @@ import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
-import type { BubbleStyle, ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
+import type { ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
 
@@ -21,16 +21,6 @@ const ROOM_ROLE_ICON: Partial<Record<RoomRole, React.ReactNode>> = {
   CO_HOST: <StarIcon size={11} />,
 };
 const GLOBAL_ROLE_LABEL: Record<string, string> = { CURATOR: "Curador", LEADER: "Líder", MASTER: "Staff" };
-
-/** `mode: "default"` devuelve `undefined` para que el llamador conserve exactamente el cálculo
- * de color que ya tenía (accent de comunidad / tinte de autor) — la apariencia personal solo
- * pisa ese comportamiento cuando el usuario eligió explícitamente un color o gradiente propio. */
-function resolveBubbleBackground(style: BubbleStyle | undefined): string | undefined {
-  if (!style || style.mode === "default") return undefined;
-  if (style.mode === "solid") return style.color;
-  if (style.mode === "gradient") return style.gradient;
-  return undefined;
-}
 
 /** Mismo set fijo que menzomovil/_quickReactionEmojis — un puñado de reacciones rápidas, no un
  * selector completo de emojis (eso sería una feature aparte). */
@@ -120,8 +110,6 @@ export function ChatBubble({
   const textScale = appearance?.textScale ?? 1;
   const compact = appearance?.compactMode ?? false;
   const showAvatars = appearance?.showAvatars ?? true;
-  const outgoingBg = resolveBubbleBackground(appearance?.outgoingBubble);
-  const incomingBg = resolveBubbleBackground(appearance?.incomingBubble);
 
   if (message.type === "system") {
     return (
@@ -199,21 +187,16 @@ export function ChatBubble({
   // wash muy sutil de fondo más una franja sólida al costado, nunca opaco encima del texto.
   const authorTint = !isOwn && author ? gradientCss(author.avatarGradient) : undefined;
 
-  // Personalización real de burbuja (sección "como te ven los demás" del pedido) — a diferencia
-  // del wash sutil de authorTint (derivado del avatar, decorativo), esto es un color que la
-  // persona eligió a propósito en su perfil (ver User.bubbleColor en menzoapi) y se ve igual para
-  // TODOS los que reciben sus mensajes. El override LOCAL del viewer (incomingBg, ver
-  // ChatAppearanceSheet) sigue ganando si está configurado — la personalización del autor es
-  // el nuevo "default", no un reemplazo forzado de lo que el viewer ya eligió para sí mismo.
-  // El color elegido en el perfil (User.bubbleColor) es el fallback tanto para cómo el propio
-  // usuario ve sus mensajes enviados como para cómo los ven los demás — antes solo se aplicaba
-  // del lado receptor, así que quien lo configuraba nunca veía el cambio en su propio chat. El
-  // override LOCAL del viewer (outgoingBg/incomingBg, ver ChatAppearanceSheet) sigue ganando en
-  // ambos casos si está configurado.
-  const authorBubbleColor = (isOwn ? !outgoingBg : !incomingBg) ? author?.bubbleColor : undefined;
-  const authorBubbleBorderColor = (isOwn ? !outgoingBg : !incomingBg) ? author?.bubbleBorderColor : undefined;
+  // Personalización real de burbuja — un color que la persona eligió a propósito en su perfil
+  // (User.bubbleColor en menzoapi) y se ve igual para TODOS los que reciben sus mensajes, sin
+  // ningún override local del viewer (existía uno vía ChatAppearanceSheet; se sacó a propósito
+  // porque contradecía "así debe salirle a todos" — ver la nota en lib/chat/chatAppearance.ts).
+  // Es también el fallback para cómo el propio usuario ve sus mensajes enviados, así quien lo
+  // configura ve el cambio en su propio chat y no solo del lado receptor.
+  const authorBubbleColor = author?.bubbleColor;
+  const authorBubbleBorderColor = author?.bubbleBorderColor;
 
-  const bubbleBackground = isOwn ? outgoingBg ?? authorBubbleColor ?? accent.color : incomingBg ?? authorBubbleColor ?? undefined;
+  const bubbleBackground = isOwn ? authorBubbleColor ?? accent.color : authorBubbleColor ?? undefined;
   // El texto "on-accent" es casi negro, pensado para el naranja del accent — sobre un color propio
   // elegido a mano (a menudo oscuro, como el navy del preset default) queda ilegible. Con fondo
   // propio no-default usamos el mismo texto claro que ya usan los mensajes ajenos.
@@ -237,18 +220,18 @@ export function ChatBubble({
         className={`relative flex flex-col gap-1 overflow-hidden rounded-[20px] ${compact ? "px-3 py-1.5" : "px-4 py-2"} shadow-[0_2px_10px_-4px_rgba(0,0,0,0.4)] backdrop-blur-sm ${
           isOwn
             ? `rounded-tr-lg ${usesCustomOwnBackground ? "" : "text-[var(--color-text-on-accent)]"}`
-            : `rounded-tl-lg ${incomingBg || authorBubbleColor ? "" : "border-l-[3px]"} ${authorBubbleColor ? "" : "bg-[var(--color-surface-secondary)]/90"}`
+            : `rounded-tl-lg ${authorBubbleColor ? "" : "border-l-[3px]"} ${authorBubbleColor ? "" : "bg-[var(--color-surface-secondary)]/90"}`
         }`}
         style={{
           background: bubbleBackground,
           opacity: bubbleOpacity,
-          ...(!isOwn && !incomingBg && !authorBubbleColor && authorTint ? { borderLeftColor: authorTint } : {}),
+          ...(!isOwn && !authorBubbleColor && authorTint ? { borderLeftColor: authorTint } : {}),
           ...(authorBubbleBorderColor
             ? { border: `1.5px solid ${authorBubbleBorderColor}`, boxShadow: `0 0 14px -3px ${authorBubbleBorderColor}` }
             : {}),
         }}
       >
-        {authorTint && !isOwn && !incomingBg && !authorBubbleColor && (
+        {authorTint && !isOwn && !authorBubbleColor && (
           <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.09]" style={{ background: authorTint }} aria-hidden />
         )}
         {!isOwn && !grouped && (

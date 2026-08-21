@@ -3,81 +3,8 @@
 import { useState } from "react";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import { ApiError, uploadsApi } from "@/lib/api";
-import type { BubbleStyle, ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
-import { Colors } from "@/lib/theme";
-
-const BUBBLE_SWATCHES = [Colors.orange, Colors.coral, Colors.purple, Colors.cyan, Colors.blue, Colors.green];
-
-function BubbleStylePicker({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: BubbleStyle;
-  onChange: (next: BubbleStyle) => void;
-}) {
-  const isCustom = value.mode === "solid" && !(BUBBLE_SWATCHES as string[]).includes(value.color ?? "");
-  const [showWheel, setShowWheel] = useState(isCustom);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium">{label}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => {
-            setShowWheel(false);
-            onChange({ mode: "default" });
-          }}
-          className={`flex h-8 items-center rounded-full border px-3 text-xs font-semibold cursor-pointer ${
-            value.mode === "default"
-              ? "border-[var(--color-orange)] text-[var(--color-orange)]"
-              : "border-[var(--color-border-soft)] text-[var(--color-text-muted)]"
-          }`}
-        >
-          Default
-        </button>
-        {BUBBLE_SWATCHES.map((color) => (
-          <button
-            key={color}
-            aria-label={`Usar color ${color}`}
-            onClick={() => {
-              setShowWheel(false);
-              onChange({ mode: "solid", color });
-            }}
-            className={`h-8 w-8 shrink-0 rounded-full cursor-pointer ${
-              value.mode === "solid" && value.color === color ? "ring-2 ring-offset-2 ring-offset-[var(--color-surface)] ring-white" : ""
-            }`}
-            style={{ background: color }}
-          />
-        ))}
-        <button
-          type="button"
-          onClick={() => setShowWheel((v) => !v)}
-          aria-label="Color personalizado"
-          title="Color personalizado"
-          className={`relative h-8 w-8 shrink-0 rounded-full border-2 border-dashed cursor-pointer ${
-            isCustom ? "border-solid border-[var(--color-text-primary)]" : "border-[var(--color-border-strong)]"
-          }`}
-          style={isCustom ? { background: value.color, borderStyle: "solid" } : undefined}
-        >
-          {!isCustom && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--color-text-muted)]">+</span>
-          )}
-        </button>
-      </div>
-      {showWheel && (
-        <ColorWheelPicker
-          value={value.mode === "solid" ? (value.color ?? "#FF7A1A") : "#FF7A1A"}
-          onChange={(hex) => onChange({ mode: "solid", color: hex })}
-          size={148}
-        />
-      )}
-    </div>
-  );
-}
+import type { ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
 
 function Slider({
   label,
@@ -196,9 +123,6 @@ export function ChatAppearanceSheet({
           </div>
           {uploadError && <p className="text-xs text-[var(--color-coral)]">{uploadError}</p>}
         </div>
-
-        <BubbleStylePicker label="Burbuja saliente (tuya)" value={prefs.outgoingBubble} onChange={(v) => onChange({ outgoingBubble: v })} />
-        <BubbleStylePicker label="Burbuja entrante" value={prefs.incomingBubble} onChange={(v) => onChange({ incomingBubble: v })} />
 
         <Slider
           label="Opacidad del fondo"
