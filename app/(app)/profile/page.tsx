@@ -8,7 +8,6 @@ import { ContextSidebar, ContextSidebarSection } from "@/components/ContextSideb
 import { PostCard } from "@/components/PostCard";
 import { ProfileHero } from "@/components/ProfileHero";
 import { ProfilePetChip } from "@/components/pets/ProfilePetChip";
-import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
@@ -68,7 +67,6 @@ export default function ProfilePage() {
   const myWall = wallMessagesForProfile(state.social, LOCAL_USER_ID);
   const mySaved = savedPosts(state.social, LOCAL_USER_ID);
 
-  const hasBackground = !!(profile.backgroundUri || profile.backgroundColor);
   const canManageTitles = profile.globalRole === "LEADER" || profile.globalRole === "MASTER";
 
   const content = (
@@ -80,6 +78,13 @@ export default function ProfilePage() {
         onAddTitle={(text, color) => actions.addUserTitle(LOCAL_USER_ID, text, color)}
         onRemoveTitle={(title) => actions.removeUserTitle(LOCAL_USER_ID, title.id)}
         petChip={myRealId ? <ProfilePetChip userId={myRealId} isSelf /> : null}
+        stats={[
+          { value: profile.followers, label: "Seguidores", href: myRealId ? `/connections/${myRealId}/followers` : undefined },
+          { value: profile.following, label: "Siguiendo", href: myRealId ? `/connections/${myRealId}/following` : undefined },
+          { value: profile.reputation, label: "Reputación" },
+          { value: allMyPosts.length, label: "Publicaciones" },
+          { value: myBlogs.length, label: "Blogs" },
+        ]}
         actions={
           <>
             <button
@@ -95,15 +100,7 @@ export default function ProfilePage() {
           </>
         }
       />
-
-      <div className="menzo-panel mt-4 grid grid-cols-5 gap-2 py-4 text-center">
-        <Stat value={profile.followers} label="Seguidores" href={myRealId ? `/connections/${myRealId}/followers` : undefined} />
-        <Stat value={profile.following} label="Siguiendo" href={myRealId ? `/connections/${myRealId}/following` : undefined} />
-        <Stat value={profile.reputation} label="Reputación" />
-        <Stat value={allMyPosts.length} label="Publicaciones" />
-        <Stat value={myBlogs.length} label="Blogs" />
-      </div>
-      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)] lg:text-left">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
+      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(profile.joinedAt)}</p>
 
       <div className="mt-6">
         <SegmentedTabs
@@ -180,27 +177,5 @@ export default function ProfilePage() {
     </div>
   );
 
-  if (!hasBackground) return content;
-  return (
-    <ScreenBackground src={profile.backgroundUri} color={profile.backgroundColor}>
-      {content}
-    </ScreenBackground>
-  );
-}
-
-function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
-  const content = (
-    <>
-      <p className="text-lg font-semibold">{value}</p>
-      <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-    </>
-  );
-  if (href) {
-    return (
-      <Link href={href} className="transition-opacity hover:opacity-75">
-        {content}
-      </Link>
-    );
-  }
-  return <div>{content}</div>;
+  return content;
 }

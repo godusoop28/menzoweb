@@ -4,10 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
-import { BackIcon, CloseIcon, PaletteIcon, SendIcon, SettingsIcon, StickerIcon } from "@/components/icons";
+import { BackIcon, CloseIcon, GameIcon, PaletteIcon, SendIcon, SettingsIcon, StickerIcon } from "@/components/icons";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ChatAppearanceSheet } from "@/components/chat/ChatAppearanceSheet";
 import { StickerPickerSheet } from "@/components/chat/StickerPickerSheet";
+import { GamesCatalogSheet } from "@/components/games/GamesCatalogSheet";
 import { MenziIllustrationState } from "@/components/illustrations/MenziIllustrationState";
 import { LiveAutoplayBar } from "@/components/live/LiveAutoplayBar";
 import { LiveRoomPanel } from "@/components/live/LiveRoomPanel";
@@ -50,6 +51,7 @@ export default function ChatRoomPage() {
   const [confirmStartLive, setConfirmStartLive] = useState(false);
   const [startingLive, setStartingLive] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [showGamesCatalog, setShowGamesCatalog] = useState(false);
   const [showAppearanceSheet, setShowAppearanceSheet] = useState(false);
   const chatAppearance = useChatAppearance(id);
   const [pendingDelete, setPendingDelete] = useState<{ message: Message; isSelf: boolean } | null>(null);
@@ -525,6 +527,14 @@ export default function ChatRoomPage() {
         style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
         <button
+          onClick={() => setShowGamesCatalog(true)}
+          aria-label="Juegos"
+          title="Juegos"
+          className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+        >
+          <GameIcon size={18} />
+        </button>
+        <button
           onClick={() => setShowStickerPicker(true)}
           aria-label="Enviar sticker"
           title="Enviar sticker"
@@ -560,6 +570,16 @@ export default function ChatRoomPage() {
       </div>
       {showStickerPicker && (
         <StickerPickerSheet onPick={(sticker) => handlePickSticker(sticker.id)} onClose={() => setShowStickerPicker(false)} />
+      )}
+      {showGamesCatalog && (
+        <GamesCatalogSheet
+          roomId={id}
+          onCreated={(matchId) => {
+            setShowGamesCatalog(false);
+            router.push(`/games/${matchId}`);
+          }}
+          onClose={() => setShowGamesCatalog(false)}
+        />
       )}
 
       <ChatAppearanceSheet

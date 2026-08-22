@@ -1,7 +1,7 @@
 // Contrato 1:1 con menzoapi. Nombres de campo exactos, case-sensitive.
 
 export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog" | "drawing";
-export type MessageType = "text" | "system" | "sticker";
+export type MessageType = "text" | "system" | "sticker" | "game_invite";
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
 export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos" | "en_vivo" | "juegos";
 export type ActivityKind = "post" | "member";
@@ -419,6 +419,9 @@ export type MessageDto = {
   deleted: boolean;
   sticker: MessageStickerPreviewDto | null;
   reactions: MessageReactionDto[];
+  /** Solo presente cuando type === "game_invite" — el estado en vivo de la partida NO viaja acá
+   * (ver GameEventDto), el cliente se suscribe aparte a /topic/matches/{matchId}/state. */
+  matchId: string | null;
 };
 
 export type SendMessageRequest = {
@@ -854,15 +857,33 @@ export type UpdateCommunityNavigationRequest = { navigationConfig: CommunityNavi
 // `state`/`action` son de forma libre (distinta por juego), este cliente solo los pasa de largo.
 // Sin matchmaking: se desafía a un usuario puntual (opponentId), no hay cola pública.
 
-export type GameType = "TIC_TAC_TOE";
-export type MatchStatus = "IN_PROGRESS" | "FINISHED" | "ABANDONED";
+export type GameType = "TIC_TAC_TOE" | "LUDO" | "MENZO_CARDS" | "MENZO_CITY" | "MONSTER_BATTLE" | "DRAW_AND_GUESS";
+export type MatchStatus =
+  | "WAITING"
+  | "READY"
+  | "STARTING"
+  | "PLAYING"
+  | "PAUSED"
+  | "FINISHED"
+  | "CANCELLED"
+  | "ABANDONED"
+  | "ERROR";
+export type JoinMode = "OPEN" | "SELECTED";
+export type SeatType = "PLAYER" | "SPECTATOR";
 
-export type MatchPlayerSummaryDto = { user: UserSummaryDto; playerIndex: number };
+export type MatchPlayerSummaryDto = {
+  user: UserSummaryDto;
+  playerIndex: number;
+  connected: boolean;
+  seatType: SeatType;
+};
 
 export type MatchResponseDto = {
   id: string;
   gameType: GameType;
   status: MatchStatus;
+  /** null mientras la partida sigue en lobby (WAITING/READY/STARTING) — recién hay `state` real
+   * a partir de PLAYING (ver GameRoomMatchService.startWithEngine en menzoapi). */
   state: unknown;
   version: number;
   players: MatchPlayerSummaryDto[];
@@ -870,12 +891,33 @@ export type MatchResponseDto = {
   createdAt: string;
   updatedAt: string;
   finishedAt: string | null;
+  /** null para el desafío 1v1 directo (gamesApi.createMatch) — seteado siempre que la partida
+   * nace de "Juegos" en un chat (gamesApi.createRoomMatch). */
+  roomId: string | null;
+  createdBy: string | null;
+  joinMode: JoinMode | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
 };
 
 export type CreateMatchRequest = { gameType: GameType; opponentId: string };
-export type MatchActionRequest = { action: unknown; expectedVersion?: number };
+export type CreateRoomMatchRequest = { gameType: GameType; joinMode: JoinMode; invitedUserIds?: string[] };
+export type MatchActionRequest = { action: unknown; expectedVersion?: number; actionId?: string };
 
-export type GameEventType = "MATCH_CREATED" | "MATCH_STATE_UPDATED" | "MATCH_FINISHED";
+export type GameEventType =
+  | "MATCH_CREATED"
+  | "PLAYER_JOINED"
+  | "PLAYER_LEFT"
+  | "PLAYER_DISCONNECTED"
+  | "PLAYER_RECONNECTED"
+  | "MATCH_READY"
+  | "MATCH_STARTED"
+  | "MATCH_STATE_UPDATED"
+  | "MATCH_PAUSED"
+  | "MATCH_RESUMED"
+  | "MATCH_FINISHED"
+  | "MATCH_CANCELLED"
+  | "MATCH_ERROR";
 export type GameEventDto = {
   type: GameEventType;
   matchId: string;
@@ -883,6 +925,31 @@ export type GameEventDto = {
   version: number;
   payload: MatchResponseDto;
 };
+
+// Catálogo de "Juegos" del chat — ver GameCatalogController en menzoapi. available=false para
+// los que todavía no tienen un motor real (el picker los muestra igual, "Disponible pronto").
+export type GameCatalogEntryDto = {
+  gameType: GameType;
+  name: string;
+  description: string;
+  minPlayers: number;
+  maxPlayers: number;
+  iconKey: string;
+  available: boolean;
+};
+
+// Forma real de MatchResponseDto.state/MatchActionRequest.action para LUDO — no viene tipado
+// desde el backend (es JSON libre), pero esta ES la forma exacta que produce/espera LudoEngine
+// (ver LudoState/LudoAction en menzoapi).
+export type LudoPlayerDto = { userId: string; colorIndex: number; active: boolean };
+export type LudoStateDto = {
+  players: LudoPlayerDto[];
+  tokenSteps: number[][];
+  currentPlayerIndex: number;
+  pendingRoll: number | null;
+  consecutiveSixes: number;
+};
+export type LudoActionDto = { type: "ROLL_DICE" | "MOVE_TOKEN"; tokenIndex?: number };
 
 // Forma real de MatchResponseDto.state/MatchActionRequest.action para TIC_TAC_TOE — no viene
 // tipado desde el backend (es JSON libre), pero esta SÍ es la forma exacta que produce/espera

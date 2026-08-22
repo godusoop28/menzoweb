@@ -332,6 +332,7 @@ export function mapMessage(dto: MessageDto, myRealId: string | null): Message {
     replyTo: dto.replyTo,
     deleted: dto.deleted,
     sticker: dto.sticker ? { id: dto.sticker.id, imageUrl: dto.sticker.imageUrl } : null,
+    matchId: dto.matchId ?? null,
     // userIds también se alía — igual razón que authorId más arriba: si no, "reactedByMe" nunca
     // matchearía contra LOCAL_USER_ID cuando el usuario propio reaccionó.
     reactions: (dto.reactions ?? []).map((r) => ({ ...r, userIds: r.userIds.map((id) => alias(id, myRealId)) })),

@@ -12,7 +12,6 @@ import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { ProfileHero } from "@/components/ProfileHero";
 import { ProfilePetChip } from "@/components/pets/ProfilePetChip";
-import { ScreenBackground } from "@/components/ScreenBackground";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
@@ -118,7 +117,6 @@ export default function MemberProfilePage() {
     if (roomId) router.push(`/chat/${roomId}`);
   }
 
-  const hasBackground = !!(user.backgroundUri || user.backgroundColor);
   const canManageTitles = state.profile?.globalRole === "LEADER" || state.profile?.globalRole === "MASTER";
 
   // El panel derecho solo existe con una comunidad activa (ver más abajo) — sin ella, la columna
@@ -150,6 +148,12 @@ export default function MemberProfilePage() {
             )
           )
         }
+        stats={[
+          { value: user.reputation, label: "Reputación" },
+          { value: user.following, label: "Siguiendo", href: `/connections/${user.id}/following` },
+          { value: user.followers, label: "Seguidores", href: `/connections/${user.id}/followers` },
+          { value: user.visitors, label: "Visitantes" },
+        ]}
         actions={
           <>
             <GradientButton
@@ -169,14 +173,7 @@ export default function MemberProfilePage() {
           </>
         }
       />
-
-      <div className="menzo-panel mt-4 grid grid-cols-4 gap-2 py-4 text-center">
-        <Stat value={user.reputation} label="Reputación" />
-        <Stat value={user.following} label="Siguiendo" href={`/connections/${user.id}/following`} />
-        <Stat value={user.followers} label="Seguidores" href={`/connections/${user.id}/followers`} />
-        <Stat value={user.visitors} label="Visitantes" />
-      </div>
-      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)] lg:text-left">Miembro desde {formatJoinDate(user.joinedAt)}</p>
+      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)]">Miembro desde {formatJoinDate(user.joinedAt)}</p>
 
       <div className="mt-6">
         <SegmentedTabs
@@ -273,27 +270,5 @@ export default function MemberProfilePage() {
     </div>
   );
 
-  if (!hasBackground) return content;
-  return (
-    <ScreenBackground src={user.backgroundUri} color={user.backgroundColor}>
-      {content}
-    </ScreenBackground>
-  );
-}
-
-function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
-  const content = (
-    <>
-      <p className="text-lg font-semibold">{value}</p>
-      <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-    </>
-  );
-  if (href) {
-    return (
-      <Link href={href} className="transition-opacity hover:opacity-75">
-        {content}
-      </Link>
-    );
-  }
-  return <div>{content}</div>;
+  return content;
 }

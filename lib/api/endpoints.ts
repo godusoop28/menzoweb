@@ -12,6 +12,7 @@ import type {
   CommunityConfigDto,
   CreateMatchRequest,
   CreatePostRequest,
+  CreateRoomMatchRequest,
   CreateRoomRequest,
   CommunityDetailDto,
   CommunityMemberDto,
@@ -26,6 +27,7 @@ import type {
   LiveTokenDto,
   LoginRequest,
   MessageDto,
+  GameCatalogEntryDto,
   MatchActionRequest,
   MatchResponseDto,
   MatchStatus,
@@ -433,6 +435,8 @@ export const stickersApi = {
  * por STOMP (ver lib/realtime/useGameMatchSocket.ts), estos endpoints son para crear/consultar/
  * jugar/abandonar. */
 export const gamesApi = {
+  // Desafío 1v1 directo (sin sala/lobby) — sigue existiendo tal cual, para juegos que algún día
+  // quieran ese camino en vez de nacer de un chat.
   createMatch: (body: CreateMatchRequest) =>
     apiFetch<MatchResponseDto>("/api/games/matches", { method: "POST", body }),
   getMatch: (id: string) => apiFetch<MatchResponseDto>(`/api/games/matches/${id}`),
@@ -441,6 +445,19 @@ export const gamesApi = {
   act: (id: string, body: MatchActionRequest) =>
     apiFetch<MatchResponseDto>(`/api/games/matches/${id}/actions`, { method: "POST", body }),
   forfeit: (id: string) => apiFetch<void>(`/api/games/matches/${id}/forfeit`, { method: "POST" }),
+
+  // Catálogo de "Juegos" del chat — ver GameCatalogController.
+  catalog: () => apiFetch<GameCatalogEntryDto[]>("/api/games/catalog"),
+
+  // Partidas de sala/lobby que nacen de un chat — ver GameRoomMatchController.
+  createRoomMatch: (roomId: string, body: CreateRoomMatchRequest) =>
+    apiFetch<MatchResponseDto>(`/api/rooms/${roomId}/games/matches`, { method: "POST", body }),
+  join: (id: string) => apiFetch<MatchResponseDto>(`/api/games/matches/${id}/join`, { method: "POST" }),
+  start: (id: string) => apiFetch<MatchResponseDto>(`/api/games/matches/${id}/start`, { method: "POST" }),
+  leave: (id: string) => apiFetch<void>(`/api/games/matches/${id}/leave`, { method: "POST" }),
+  cancel: (id: string) => apiFetch<void>(`/api/games/matches/${id}/cancel`, { method: "POST" }),
+  heartbeat: (id: string) => apiFetch<void>(`/api/games/matches/${id}/heartbeat`, { method: "POST" }),
+  rematch: (id: string) => apiFetch<MatchResponseDto>(`/api/games/matches/${id}/rematch`, { method: "POST" }),
 };
 
 /** Ver PetController en menzoapi — una mascota por usuario, todo el catálogo desbloqueado desde

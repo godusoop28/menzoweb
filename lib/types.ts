@@ -121,7 +121,7 @@ export type Post = {
 
 export type Comment = { id: string; postId: string; authorId: string; body: string; createdAt: string };
 
-export type MessageType = "text" | "system" | "sticker";
+export type MessageType = "text" | "system" | "sticker" | "game_invite";
 
 export type MessageReplyPreview = {
   id: string;
@@ -152,6 +152,7 @@ export type Message = {
   deleted: boolean;
   sticker: MessageStickerPreview | null;
   reactions: MessageReaction[];
+  matchId: string | null;
 };
 
 export type ChatRoomType = "public" | "direct";

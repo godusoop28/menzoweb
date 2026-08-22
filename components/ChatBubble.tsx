@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Avatar } from "./Avatar";
+import { GameInviteCard } from "./games/GameInviteCard";
 import { CrownIcon, ReplyIcon, SmileIcon, StarIcon, TrashIcon } from "./icons";
 import { renderWithMentions } from "./Mentions";
 import { useAccent } from "@/lib/AccentContext";
@@ -166,6 +167,43 @@ export function ChatBubble({
             )}
           </div>
         )}
+        {onDelete && (
+          <button
+            onClick={() => onDelete(message)}
+            aria-label="Eliminar"
+            title="Eliminar"
+            className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <TrashIcon size={14} />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Tarjeta de invitación a partida — sin fondo de burbuja ni reacciones (es un widget en vivo,
+  // no contenido para reaccionar), mismo layout de avatar/nombre que el resto. message.matchId
+  // siempre viene seteado acá (ver ChatService.postGameInvite en menzoapi).
+  if (message.type === "game_invite" && message.matchId && !message.deleted) {
+    return (
+      <div
+        className={`group flex max-w-[86%] items-end ${compact ? "gap-1.5" : "gap-2"} ${isOwn ? "ml-auto flex-row-reverse" : ""} ${grouped ? "mt-[-6px]" : ""}`}
+      >
+        {grouped || !showAvatars ? (
+          <div className="w-[30px] shrink-0" aria-hidden />
+        ) : author ? (
+          <Link href={`/member/${author.id}`} className="shrink-0">
+            <Avatar name={author.displayName} avatarUri={author.avatarUri} gradient={author.avatarGradient} size={30} level={author.level} />
+          </Link>
+        ) : (
+          <Avatar name="?" gradient="fire" size={30} />
+        )}
+        <div className={`flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}>
+          <GameInviteCard matchId={message.matchId} />
+          <span className={`text-[10px] ${isOwn ? "self-end" : ""} text-[var(--color-text-muted)]`}>
+            {relativeTime(message.createdAt)}
+          </span>
+        </div>
         {onDelete && (
           <button
             onClick={() => onDelete(message)}
