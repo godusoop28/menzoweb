@@ -28,7 +28,22 @@ export function drawStroke(
   ctx.lineJoin = "round";
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
-  for (const p of points.slice(1)) ctx.lineTo(p.x, p.y);
+  if (points.length === 2) {
+    ctx.lineTo(points[1].x, points[1].y);
+  } else {
+    // Bézier cuadrática por punto medio (mismo criterio que whiteboard_painter.dart en móvil) —
+    // cada punto real es el "control point", la curva pasa por los puntos medios entre
+    // consecutivos en vez de ir recto de punto a punto, así el trazo no se ve quebrado.
+    for (let i = 1; i < points.length - 1; i++) {
+      const current = points[i];
+      const next = points[i + 1];
+      const midX = (current.x + next.x) / 2;
+      const midY = (current.y + next.y) / 2;
+      ctx.quadraticCurveTo(current.x, current.y, midX, midY);
+    }
+    const last = points[points.length - 1];
+    ctx.lineTo(last.x, last.y);
+  }
   ctx.stroke();
 }
 

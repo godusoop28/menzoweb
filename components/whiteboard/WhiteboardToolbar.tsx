@@ -1,26 +1,34 @@
+import { EditIcon, EraserIcon, PaletteIcon, PanToolIcon } from "@/components/icons";
 import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import { QUICK_COLORS } from "@/lib/whiteboard/canvasDrawing";
 import type { WhiteboardToolKind } from "@/lib/realtime/useWhiteboardSocket";
 
-/** Mismos controles que menzomovil/whiteboard_toolbar.dart — pincel/borrador, color rápido +
- * rueda completa (reusa ColorWheelPicker tal cual, mismo picker que perfil/mascota), grosor,
- * deshacer y (solo moderador+) limpiar. */
+/** Mismos controles que menzomovil/whiteboard_toolbar.dart — pincel/borrador/mover, color rápido
+ * + rueda completa (reusa ColorWheelPicker tal cual, mismo picker que perfil/mascota), grosor,
+ * deshacer y (solo moderador+) limpiar. Íconos reales (EditIcon/EraserIcon/PaletteIcon), no
+ * emojis — antes usaba ✏️/🧽/🎨 directo como glyphs. */
 export function WhiteboardToolbar({
   tool,
+  moveMode,
   color,
   width,
   canClear,
   onToolChange,
+  onSelectMove,
   onColorChange,
   onWidthChange,
   onUndo,
   onClear,
 }: {
   tool: WhiteboardToolKind;
+  /** true mientras la herramienta "Mover" está activa — independiente de `tool` (pen/eraser
+   * siguen siendo lo que se usa la próxima vez que se sale de "Mover"). */
+  moveMode: boolean;
   color: string;
   width: number;
   canClear: boolean;
   onToolChange: (tool: WhiteboardToolKind) => void;
+  onSelectMove: () => void;
   onColorChange: (color: string) => void;
   onWidthChange: (width: number) => void;
   onUndo: () => void;
@@ -33,21 +41,31 @@ export function WhiteboardToolbar({
           type="button"
           onClick={() => onToolChange("pen")}
           className={`flex h-9 w-9 items-center justify-center rounded-lg border cursor-pointer ${
-            tool === "pen" ? "border-[var(--color-orange)] bg-[var(--color-orange)]/15" : "border-[var(--color-border-soft)]"
+            !moveMode && tool === "pen" ? "border-[var(--color-orange)] bg-[var(--color-orange)]/15 text-[var(--color-orange)]" : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)]"
           }`}
           aria-label="Pincel"
         >
-          ✏️
+          <EditIcon size={17} />
         </button>
         <button
           type="button"
           onClick={() => onToolChange("eraser")}
           className={`flex h-9 w-9 items-center justify-center rounded-lg border cursor-pointer ${
-            tool === "eraser" ? "border-[var(--color-orange)] bg-[var(--color-orange)]/15" : "border-[var(--color-border-soft)]"
+            !moveMode && tool === "eraser" ? "border-[var(--color-orange)] bg-[var(--color-orange)]/15 text-[var(--color-orange)]" : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)]"
           }`}
           aria-label="Borrador"
         >
-          🧽
+          <EraserIcon size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={onSelectMove}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg border cursor-pointer ${
+            moveMode ? "border-[var(--color-orange)] bg-[var(--color-orange)]/15 text-[var(--color-orange)]" : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)]"
+          }`}
+          aria-label="Mover"
+        >
+          <PanToolIcon size={17} />
         </button>
 
         <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -104,8 +122,8 @@ export function WhiteboardToolbar({
 export function ColorPopover({ color, onChange }: { color: string; onChange: (color: string) => void }) {
   return (
     <details className="relative shrink-0">
-      <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-[var(--color-border-soft)] text-xs">
-        🎨
+      <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-[var(--color-border-soft)] text-[var(--color-text-secondary)]">
+        <PaletteIcon size={14} />
       </summary>
       <div className="absolute bottom-full right-0 z-10 mb-2 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-background)] p-3 shadow-lg">
         <ColorWheelPicker value={color} onChange={onChange} size={160} />

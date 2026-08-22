@@ -253,7 +253,7 @@ export default function FeedPage() {
 
             <div className="flex flex-col gap-3">
               <h3 className="font-display text-lg font-bold">Elegidos por la comunidad</h3>
-              <div className="flex snap-x gap-4 overflow-x-auto pb-1">
+              <div className="flex snap-x gap-4 overflow-x-auto pb-1" data-no-swipe-nav>
                 {featured.map((post) => (
                   <div key={`chosen-${post.id}`} className="w-[220px] shrink-0 snap-start">
                     <FeaturedPostCard post={post} />
@@ -264,7 +264,7 @@ export default function FeedPage() {
 
             <div className="flex flex-col gap-3">
               <h3 className="font-display text-lg font-bold">También te puede interesar</h3>
-              <div className="flex snap-x gap-4 overflow-x-auto pb-1">
+              <div className="flex snap-x gap-4 overflow-x-auto pb-1" data-no-swipe-nav>
                 {[...featured].reverse().map((post) => (
                   <div key={`memory-${post.id}`} className="w-[220px] shrink-0 snap-start">
                     <FeaturedPostCard post={post} />

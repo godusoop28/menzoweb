@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { relativeTime } from "@/lib/time";
-import { Gradients, gradientCss } from "@/lib/theme";
+import { gradientCss } from "@/lib/theme";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { useAppState } from "@/lib/AppStateContext";
 import type { ChatRoom } from "@/lib/types";
@@ -51,25 +51,16 @@ export function ChatRoomListItem({
         ? `${room.lastMessage!.senderId === LOCAL_USER_ID ? "Tú" : lastMessageAuthorName ?? "Alguien"}: ${lastMessageBody}`
         : room.description || room.topic;
 
-  // Cada fila tiene su propia "personalidad de color" (estilo comunidad de Amino) en vez de ser
-  // todas el mismo gris plano — el wash es deliberadamente sutil (baja opacidad) para no pisar la
-  // legibilidad del texto, y sube un poco al pasar el mouse como señal de interactividad extra.
-  const tintGradient = room.type === "direct" ? room.peer?.avatarGradient : room.gradient;
-  const tintCss = tintGradient ? gradientCss(tintGradient) : undefined;
+  // Fila plana estilo WhatsApp/Telegram (antes: card con degradado + borde de "personalidad de
+  // color" por sala) — se sacó a propósito, hacía que cada conversación se sintiera como una
+  // card independiente en vez de una fila de lista. El único acento por sala que queda es el
+  // color de fondo del ícono de las salas públicas sin foto de portada, más abajo.
 
   return (
     <Link
       href={`/chat/${room.id}`}
-      className="menzo-panel group relative flex items-center gap-4 overflow-hidden p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-strong)]"
-      style={tintGradient ? { borderColor: `color-mix(in srgb, ${Gradients[tintGradient][0]} 35%, var(--color-border-soft))` } : undefined}
+      className="group relative flex items-center gap-3 border-b border-[var(--color-border-soft)] px-1 py-3 transition-colors hover:bg-white/[0.04]"
     >
-      {tintCss && (
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.22] transition-opacity duration-200 group-hover:opacity-[0.32]"
-          style={{ background: tintCss }}
-          aria-hidden
-        />
-      )}
       {room.type === "direct" && room.peer ? (
         <span className="relative shrink-0">
           <Avatar name={room.peer.displayName} avatarUri={room.peer.avatarUri} gradient={room.peer.avatarGradient} size={52} showOnline online={room.peer.isOnline} />
@@ -99,13 +90,13 @@ export function ChatRoomListItem({
       )}
       <span className="relative min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
-          <span className="truncate font-display font-bold">{title}</span>
+          <span className="truncate font-display text-[16.5px] font-semibold">{title}</span>
           {room.lastMessage && (
             <span className="shrink-0 text-xs text-[var(--color-text-muted)]">{relativeTime(room.lastMessage.createdAt)}</span>
           )}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="block min-w-0 flex-1 truncate text-sm text-[var(--color-text-muted)]">{lastMessagePreview || subtitle}</span>
+          <span className="block min-w-0 flex-1 truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview || subtitle}</span>
           {room.favorite && <StarIcon size={12} className="shrink-0 text-[var(--color-yellow)]" />}
         </span>
       </span>

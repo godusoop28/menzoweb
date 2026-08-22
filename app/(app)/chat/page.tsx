@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { ChatRoomListItem } from "@/components/ChatRoomListItem";
@@ -42,6 +43,8 @@ function sortByActivity(rooms: ChatRoom[]): ChatRoom[] {
 export default function ChatListPage() {
   const { state, actions } = useAppState();
   const accent = useAccent();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { activeCommunity, activeCommunityDetail } = useCommunity();
   const chatBackgroundUrl = activeCommunityDetail?.themeConfig?.chatBackgroundUrl || activeCommunityDetail?.backgroundUrl;
   const chatFallbackGradient = communityFallbackGradient(activeCommunity);
@@ -50,6 +53,20 @@ export default function ChatListPage() {
   const [creating, setCreating] = useState(false);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [tab, setTab] = useState<ChatListTab>("directos");
+
+  // El botón "Nueva conversación" del header flotante de mobile (ver AppShell.tsx) navega acá
+  // con ?compose=1 en vez de duplicar este panel — abre el mismo panel que ya usa el "+" de
+  // escritorio/el atajo del sidebar, sin ningún estado nuevo que mantener sincronizado.
+  useEffect(() => {
+    if (searchParams.get("compose") === "1") {
+      // Sincroniza un parámetro de URL externo (llegó de un Link, no de un evento local) a
+      // estado — mismo caso ya documentado en CommunityContext.tsx, no un setState evitable.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowCreate(true);
+      router.replace("/chat");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const allMyRooms = state.social.rooms.filter((r) => r.type === "direct" || r.joined);
   const myRooms = onlyFavorites ? allMyRooms.filter((r) => r.favorite) : allMyRooms;
@@ -95,7 +112,10 @@ export default function ChatListPage() {
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
+      {/* En mobile el header flotante compartido (AppShell.tsx) ya dice "Chats" y trae su propio
+          botón de nueva conversación — repetir un <h1> acá se sentía redundante, así que este
+          título/CTA queda solo para escritorio (que no tiene ese header por pantalla). */}
+      <div className="hidden items-center justify-between md:flex">
         <div>
           <h1 className="font-display text-2xl font-bold">Chats / Mensajes</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">Conecta, habla y comparte tu pasión</p>

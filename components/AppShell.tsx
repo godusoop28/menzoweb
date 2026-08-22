@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useAccent } from "@/lib/AccentContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAppHeight } from "@/lib/useAppHeight";
+import { useSwipeNavigation } from "@/lib/useSwipeNavigation";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 import { useCommunityTheme } from "@/lib/theme/useCommunityTheme";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
@@ -30,6 +31,7 @@ import {
   LiveIcon,
   LogoutIcon,
   MenuIcon,
+  PaletteIcon,
   PawIcon,
   PlusIcon,
   ProfileIcon,
@@ -43,7 +45,7 @@ import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
  * activa (ver COMMUNITY_NAV_ROUTES más abajo para el caso normal, con comunidad). */
 const FALLBACK_NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: HomeIcon },
-  { href: "/members", label: "Miembros", icon: UsersIcon },
+  { href: "/members", label: "Comunidad", icon: UsersIcon },
   { href: "/chat", label: "Chats", icon: ChatIcon },
   { href: "/profile", label: "Perfil", icon: ProfileIcon },
 ];
@@ -104,6 +106,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // compartido no debe scrollear ahí también, o el composer "sticky" termina en un punto arbitrario
   // cuando el teclado móvil cambia el viewport visual sin tocar el layout viewport.
   const isChatRoom = /^\/chat\/[^/]+$/.test(pathname) && !pathname.startsWith("/chat/public");
+  // La lista de Chats pide su propio header (título "Chats" + buscar/nueva conversación en vez
+  // de la marca genérica "Menzo" + notificaciones) — mismo criterio que MenzoHeader en Flutter,
+  // que ya varía título/acciones por pantalla; acá es la única ruta que lo hace distinto del
+  // resto (todas las demás siguen mostrando la marca genérica).
+  const isChatsList = pathname === "/chat";
+  const swipeNav = useSwipeNavigation();
 
   // Secciones reales de la comunidad activa (navigationConfig, respetando enabled/order/label que
   // decide el líder) — mismo dato que CommunityContextNav.tsx, cae a la nav global cuando todavía
@@ -262,6 +270,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           accent={accent}
           isActive={isActive}
           onLogout={handleLogout}
+          activeCommunitySlug={activeCommunityDetail?.slug ?? null}
         />
       </aside>
 
@@ -270,36 +279,75 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scroll (solo los mensajes). */}
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Barra superior — solo móvil, oculta dentro del detalle de una sala (ya tiene su propio
-            header con botón de volver, y en móvil no hay espacio para dos cabeceras). */}
+            header con botón de volver, y en móvil no hay espacio para dos cabeceras). Píldora
+            oscura flotante separada de los bordes (antes era una barra cuadrada de borde a
+            borde) — mismo criterio que el bottom nav de acá abajo: redondeada, con margen, blur
+            MUY liviano, sin glassmorphism pesado. `env(safe-area-inset-top)` en el wrapper
+            exterior (no en la píldora misma) para que nunca quede debajo del notch/reloj/status
+            bar sin agrandar la altura visual de los botones. */}
         {!isChatRoom && (
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-4 py-3 backdrop-blur-md md:hidden">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="shrink-0 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+            <div className="mx-4 mb-2 mt-2 flex h-[68px] items-center gap-2 rounded-[22px] border border-[var(--color-border-soft)] bg-[var(--color-background)]/95 px-2.5 backdrop-blur-[6px]">
               <button
                 onClick={() => setMobileNavOpen(true)}
                 aria-label="Abrir menú"
                 title="Menú"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-secondary)] cursor-pointer"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)] cursor-pointer"
               >
                 <MenuIcon size={20} />
               </button>
-              <Link href="/" className="flex min-w-0 items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/branding/menzo-logo.png" alt="Menzo" className="h-7 w-7 shrink-0 rounded-lg" />
-                <span className="font-display truncate text-base font-bold">MENZO</span>
-              </Link>
-            </div>
-            <div className="flex shrink-0 items-center gap-4">
-              <Link href="/search" aria-label="Buscar" className="text-[var(--color-text-secondary)]">
-                <SearchIcon />
-              </Link>
-              <Link href="/notifications" aria-label="Notificaciones" className="relative text-[var(--color-text-secondary)]">
-                <BellIcon />
-                {unread > 0 && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />}
-              </Link>
-              {state.profile && (
-                <Link href="/profile" aria-label="Mi perfil" className="shrink-0">
-                  <Avatar name={state.profile.displayName} avatarUri={state.profile.avatarUri} gradient={state.profile.avatarGradient} size={26} />
+              {isChatsList ? (
+                <span className="min-w-0 flex-1 truncate font-display text-[22px] font-bold" style={{ letterSpacing: "-0.3px" }}>
+                  Chats
+                </span>
+              ) : (
+                <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/branding/menzo-logo.png" alt="Menzo" className="h-[34px] w-[34px] shrink-0 rounded-xl" />
+                  <span className="min-w-0 truncate font-display text-[22px] font-bold" style={{ letterSpacing: "-0.3px" }}>
+                    Menzo
+                  </span>
                 </Link>
+              )}
+              {isChatsList ? (
+                <>
+                  <Link
+                    href="/search"
+                    aria-label="Buscar"
+                    title="Buscar"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)]"
+                  >
+                    <SearchIcon size={20} />
+                  </Link>
+                  <Link
+                    href="/chat?compose=1"
+                    aria-label="Nueva conversación"
+                    title="Nueva conversación"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)]"
+                  >
+                    <PlusIcon size={20} />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/search"
+                    aria-label="Buscar"
+                    title="Buscar"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)]"
+                  >
+                    <SearchIcon size={20} />
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    aria-label="Notificaciones"
+                    title="Notificaciones"
+                    className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)]"
+                  >
+                    <BellIcon size={20} />
+                    {unread > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--color-orange)]" />}
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -309,8 +357,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className={
             isChatRoom
               ? "flex min-h-0 flex-1 flex-col overflow-hidden"
-              : "min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"
+              : "min-h-0 flex-1 overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-0"
           }
+          onPointerDown={swipeNav.onPointerDown}
+          onPointerUp={swipeNav.onPointerUp}
+          onPointerCancel={swipeNav.onPointerCancel}
         >
           {children}
         </main>
@@ -319,38 +370,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Tab bar — solo móvil, oculta dentro del detalle de una sala: no hay lugar para header +
           mensajes + composer + teclado + tab bar a la vez, y la sala ya tiene su propio botón de
-          volver. Reaparece al salir de la sala. */}
+          volver. Reaparece al salir de la sala. Píldora flotante con margen (antes: barra
+          cuadrada de borde a borde) — mismo criterio que el header de arriba. El botón "Crear"
+          sobresale apenas por arriba de la píldora (nunca un círculo gigante de 100px) y el
+          `paddingBottom` del wrapper exterior es el único lugar donde entra el safe-area
+          inferior — nunca se suma adentro de la altura visual de los botones. */}
       {!isChatRoom && (
-        <nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-[var(--color-border-soft)] bg-[var(--color-background-deep)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-          {FALLBACK_NAV_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={active ? { color: accent.color } : undefined}
-                className={`relative flex flex-1 flex-col items-center gap-1 pt-2.5 pb-2.5 text-[11px] font-medium transition-colors ${
-                  active ? "" : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {active && (
-                  <span className="absolute top-0 h-0.5 w-8 rounded-full" style={{ background: accent.color }} />
-                )}
-                <span className="relative">
-                  <Icon size={22} />
-                  {/* Mismo dato real que el badge de "Salas en vivo" del sidebar (liveRoomCount) —
-                      acá no hay un tab de "Salas en vivo" propio en mobile, así que el aviso vive
-                      en Chats (ahí es donde efectivamente se puede entrar a una). */}
-                  {item.href === "/chat" && liveRoomCount > 0 && (
-                    <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />
-                  )}
-                </span>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div
+          className="fixed inset-x-0 bottom-0 z-20 px-3.5 md:hidden"
+          style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="relative mx-auto flex h-[68px] max-w-md items-center rounded-[24px] border border-[var(--color-border-soft)] bg-[var(--color-background)]/90 px-1.5 backdrop-blur-[8px]">
+            {FALLBACK_NAV_ITEMS.slice(0, 2).map((item) => (
+              <NavTabItem key={item.href} item={item} active={isActive(item.href)} accent={accent.color} liveRoomCount={liveRoomCount} />
+            ))}
+            <div className="w-[58px] shrink-0" aria-hidden />
+            {FALLBACK_NAV_ITEMS.slice(2, 4).map((item) => (
+              <NavTabItem key={item.href} item={item} active={isActive(item.href)} accent={accent.color} liveRoomCount={liveRoomCount} />
+            ))}
+            <Link
+              href="/"
+              aria-label="Crear"
+              title="Crear"
+              className="absolute left-1/2 top-0 flex h-[54px] w-[54px] -translate-x-1/2 -translate-y-[14px] items-center justify-center rounded-full text-black"
+              style={{
+                background: `linear-gradient(135deg, var(--color-orange), ${accent.color})`,
+                border: "4px solid var(--color-background)",
+                boxShadow: `0 0 14px 1px ${accent.color}33`,
+              }}
+            >
+              <PlusIcon size={24} />
+            </Link>
+          </div>
+        </div>
       )}
 
       {/* Drawer hamburguesa — solo mobile, mismo SidebarNavContent que el <aside> de escritorio
@@ -380,6 +432,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               isActive={isActive}
               onLogout={handleLogout}
               onNavigate={() => setMobileNavOpen(false)}
+              activeCommunitySlug={activeCommunityDetail?.slug ?? null}
             />
           </div>
         </div>
@@ -389,6 +442,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <MenziDjPlayerHost />
       <MenziDjAutoplayBar />
     </div>
+  );
+}
+
+/** Un ítem del tab bar flotante de mobile — indicador activo chico (barrita de 18px debajo del
+ * ícono, no la barra ancha de 32px que había antes) y color de acento solo en lo estrictamente
+ * activo, mismo criterio que _navItem en app_shell.dart (Flutter). */
+function NavTabItem({
+  item,
+  active,
+  accent,
+  liveRoomCount,
+}: {
+  item: (typeof FALLBACK_NAV_ITEMS)[number];
+  active: boolean;
+  accent: string;
+  liveRoomCount: number;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      style={{ color: active ? accent : undefined }}
+      className={`relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors ${
+        active ? "font-semibold" : "font-medium text-[var(--color-text-muted)]"
+      }`}
+    >
+      <span className="relative">
+        <Icon size={22} />
+        {/* Mismo dato real que el badge de "Salas en vivo" del sidebar (liveRoomCount) — acá no
+            hay un tab de "Salas en vivo" propio en mobile, así que el aviso vive en Chats (ahí es
+            donde efectivamente se puede entrar a una). */}
+        {item.href === "/chat" && liveRoomCount > 0 && (
+          <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-[var(--color-coral)]" />
+        )}
+      </span>
+      {item.label}
+      <span
+        className="h-[3px] rounded-full transition-[width] duration-200"
+        style={{ width: active ? 18 : 0, background: accent }}
+      />
+    </Link>
   );
 }
 
@@ -406,6 +500,7 @@ function SidebarNavContent({
   isActive,
   onLogout,
   onNavigate,
+  activeCommunitySlug,
 }: {
   communityTheme: ResolvedCommunityTheme;
   communityNavSections: ({ key: CommunityNavigationSectionKey } & CommunityNavigationSectionConfig)[];
@@ -416,6 +511,10 @@ function SidebarNavContent({
   isActive: (href: string) => boolean;
   onLogout: () => void;
   onNavigate?: () => void;
+  /** Para el link de "Pizarra" — a diferencia del resto de MY_STUFF_ITEMS (rutas fijas), la
+   * pizarra es por comunidad (`/communities/{slug}/whiteboard`), así que no puede vivir en ese
+   * array estático. `null` = sin comunidad activa, no se muestra el link. */
+  activeCommunitySlug: string | null;
 }) {
   return (
     <>
@@ -520,6 +619,18 @@ function SidebarNavContent({
               </Link>
             );
           })}
+          {activeCommunitySlug && (
+            <Link
+              href={`/communities/${activeCommunitySlug}/whiteboard`}
+              onClick={onNavigate}
+              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)]"
+            >
+              <span className="w-5 text-center">
+                <PaletteIcon size={18} />
+              </span>
+              Pizarra
+            </Link>
+          )}
           {isStaff && (
             <Link
               href="/admin"

@@ -534,6 +534,48 @@ export function GameIcon({ size = 20, className = "" }: IconProps) {
   );
 }
 
+export function DiceIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="8.2" cy="8.2" r="1.3" fill="currentColor" />
+      <circle cx="15.8" cy="8.2" r="1.3" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+      <circle cx="8.2" cy="15.8" r="1.3" fill="currentColor" />
+      <circle cx="15.8" cy="15.8" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function EraserIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="m16.5 3.5 4 4-9.5 9.5H6.5l-3-3 9.5-9.5a1.5 1.5 0 0 1 2.12 0L16.5 5.6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 20.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PanToolIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path
+        d="M8 12.5V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11.5V6a1.5 1.5 0 0 1 3 0v9M5.5 14l1.6 5A4 4 0 0 0 11 22h3a5 5 0 0 0 5-5v-4.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function MoreIcon({ size = 18, className = "" }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

@@ -205,7 +205,7 @@ export default function MembersPage() {
       {onlineMembers.length > 0 && (
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Conectados ahora</h2>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex gap-3 overflow-x-auto pb-1" data-no-swipe-nav>
             {onlineMembers.slice(0, 16).map((member) => (
               <Link
                 key={member.user.id}

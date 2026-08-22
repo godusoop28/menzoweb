@@ -7,6 +7,7 @@ import type { WhiteboardStrokePoint } from "@/lib/api/types";
 import { drawStroke, QUICK_COLORS } from "@/lib/whiteboard/canvasDrawing";
 import type { WhiteboardToolKind } from "@/lib/realtime/useWhiteboardSocket";
 import { GradientButton } from "@/components/GradientButton";
+import { EditIcon, EraserIcon } from "@/components/icons";
 import { ColorPopover } from "./WhiteboardToolbar";
 
 const CANVAS_SIZE = 512;
@@ -127,7 +128,7 @@ export function DrawingCanvas({ onUploaded }: { onUploaded: (url: string) => voi
           }`}
           aria-label="Pincel"
         >
-          ✏️
+          <EditIcon size={17} />
         </button>
         <button
           type="button"
@@ -137,7 +138,7 @@ export function DrawingCanvas({ onUploaded }: { onUploaded: (url: string) => voi
           }`}
           aria-label="Borrador"
         >
-          🧽
+          <EraserIcon size={17} />
         </button>
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {QUICK_COLORS.map((c) => (
