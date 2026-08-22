@@ -951,6 +951,30 @@ export type LudoStateDto = {
 };
 export type LudoActionDto = { type: "ROLL_DICE" | "MOVE_TOKEN"; tokenIndex?: number };
 
+// Forma real de MatchResponseDto.state (la proyección por jugador, MENZO_CARDS tiene
+// hasHiddenState=true — ver MenzoCardsEngine.viewFor en menzoapi) y de MatchActionRequest.action
+// para MENZO_CARDS. `hand` son SIEMPRE las cartas propias — el servidor nunca manda las de otro
+// jugador, ni siquiera acá; el resto de jugadores solo trae `cardCount`.
+export type CardColorDto = "RED" | "BLUE" | "GREEN" | "YELLOW";
+export type CardKindDto = "NUMBER" | "SKIP" | "REVERSE" | "DRAW_TWO" | "WILD" | "WILD_DRAW_FOUR";
+export type MenzoCardDto = { color: CardColorDto | null; kind: CardKindDto; number: number | null };
+export type MenzoCardsPlayerViewDto = { userId: string; cardCount: number; active: boolean };
+export type MenzoCardsViewDto = {
+  players: MenzoCardsPlayerViewDto[];
+  hand: MenzoCardDto[];
+  topDiscard: MenzoCardDto;
+  activeColor: CardColorDto;
+  drawPileCount: number;
+  currentPlayerIndex: number;
+  direction: number;
+  hasDrawnThisTurn: boolean;
+  myTurn: boolean;
+};
+export type MenzoCardsActionDto =
+  | { type: "PLAY_CARD"; cardIndex: number; chosenColor?: CardColorDto }
+  | { type: "DRAW_CARD" }
+  | { type: "PASS_TURN" };
+
 // Forma real de MatchResponseDto.state/MatchActionRequest.action para TIC_TAC_TOE — no viene
 // tipado desde el backend (es JSON libre), pero esta SÍ es la forma exacta que produce/espera
 // TicTacToeEngine (ver TicTacToeState/TicTacToeAction en menzoapi).

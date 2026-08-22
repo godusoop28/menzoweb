@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { GameIcon } from "@/components/icons";
-import { GAME_DISPLAY_NAME, PlayerAvatarsRow, isActiveStatus, isLobbyStatus, statusLabel } from "@/components/games/gameShared";
+import { GAME_DISPLAY_NAME, PlayerAvatarsRow, hasHiddenStateFor, isActiveStatus, isLobbyStatus, statusLabel } from "@/components/games/gameShared";
 import { ApiError, gamesApi, getMyRealId } from "@/lib/api";
 import { useGameMatchSocket } from "@/lib/realtime/useGameMatchSocket";
 import { useToast } from "@/lib/ToastContext";
@@ -30,7 +30,12 @@ export function GameInviteCard({ matchId }: { matchId: string }) {
       .catch(() => setError(true));
   }, [matchId]);
 
-  useGameMatchSocket(matchId, false, {
+  // Antes de que resuelva el primer fetch no sabemos el gameType — false por defecto no rompe
+  // nada mientras tanto (los eventos de lobby, WAITING/READY/CANCELLED, siempre van al tópico
+  // público sin importar el juego; solo MATCH_STARTED en adelante depende de esto, y para
+  // entonces `match` ya está seteado). Se resuscribe solo si el gameType resulta ser de
+  // información oculta (ver hasHiddenStateFor).
+  useGameMatchSocket(matchId, match ? hasHiddenStateFor(match.gameType) : false, {
     onEvent: (event) => setMatch(event.payload),
     onReconnected: () => gamesApi.getMatch(matchId).then(setMatch).catch(() => setError(true)),
   });

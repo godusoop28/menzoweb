@@ -7,7 +7,8 @@ import { BackIcon } from "@/components/icons";
 import { GameLobby } from "@/components/games/GameLobby";
 import { ResultsScreen } from "@/components/games/ResultsScreen";
 import { LudoBoard } from "@/components/games/ludo/LudoBoard";
-import { isActiveStatus, isLobbyStatus } from "@/components/games/gameShared";
+import { MenzoCardsBoard } from "@/components/games/cards/MenzoCardsBoard";
+import { hasHiddenStateFor, isActiveStatus, isLobbyStatus } from "@/components/games/gameShared";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError, gamesApi, getMyRealId } from "@/lib/api";
 import { useGameMatchSocket } from "@/lib/realtime/useGameMatchSocket";
@@ -45,7 +46,12 @@ export default function GameMatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
-  useGameMatchSocket(matchId, false, {
+  // Igual criterio que GameInviteCard: antes del primer fetch no sabemos el gameType, false por
+  // defecto no rompe nada (todo lo de lobby va al tópico público sin importar el juego) — en
+  // cuanto `match` se setea, si el juego tiene información oculta (MENZO_CARDS) el hook se
+  // resuscribe solo al tópico privado, indispensable para recibir MATCH_STARTED/actualizaciones
+  // de estado en un juego con mano oculta.
+  useGameMatchSocket(matchId, match ? hasHiddenStateFor(match.gameType) : false, {
     onEvent: (event) => setMatch(event.payload),
     onReconnected: reload,
   });
@@ -142,6 +148,8 @@ export default function GameMatchPage() {
         {active &&
           (match.gameType === "LUDO" ? (
             <LudoBoard match={match} myId={myId} />
+          ) : match.gameType === "MENZO_CARDS" ? (
+            <MenzoCardsBoard match={match} myId={myId} />
           ) : (
             <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[var(--color-text-muted)]">
               Este juego todavía no tiene tablero — disponible pronto.

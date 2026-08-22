@@ -15,6 +15,14 @@ export const GAME_DISPLAY_NAME: Record<GameType, string> = {
   DRAW_AND_GUESS: "Dibuja y Adivina",
 };
 
+// Mismo criterio que GameEngine.hasHiddenState() en menzoapi — MENZO_CARDS es el primer juego
+// con información oculta real (cada jugador solo ve su propia mano). Determina si el cliente se
+// suscribe al tópico público de la partida o al privado por jugador (ver useGameMatchSocket).
+const HIDDEN_STATE_GAMES: GameType[] = ["MENZO_CARDS"];
+export function hasHiddenStateFor(gameType: GameType): boolean {
+  return HIDDEN_STATE_GAMES.includes(gameType);
+}
+
 const LOBBY_STATUSES: MatchStatus[] = ["WAITING", "READY", "STARTING"];
 const ACTIVE_STATUSES: MatchStatus[] = ["PLAYING", "PAUSED"];
 
