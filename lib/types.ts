@@ -30,6 +30,10 @@ export type UserProfile = {
   backgroundColor?: string;
   bubbleColor?: string;
   bubbleBorderColor?: string;
+  bubbleOpacity?: number;
+  bubbleBorderWidth?: number;
+  bubbleRadius?: number;
+  bubbleGlowIntensity?: number;
   bio: string;
   statusText: string;
   interests: InterestId[];
@@ -60,7 +64,7 @@ export type RelationshipStatus = "SELF" | "NONE" | "FOLLOWING" | "FOLLOWS_YOU" |
 
 export type DemoUser = UserProfile & { activityStatus: string };
 
-export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog";
+export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog" | "drawing";
 
 export type AbstractVisualPreset =
   | "fire"

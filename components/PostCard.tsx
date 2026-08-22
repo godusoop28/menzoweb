@@ -21,6 +21,7 @@ const typeLabel: Record<Post["type"], string> = {
   question: "Pregunta",
   event: "Evento",
   blog: "Blog",
+  drawing: "Dibujo",
 };
 
 // Rol GLOBAL de la cuenta (USER/CURATOR/LEADER/MASTER) — no el rol dentro de una comunidad

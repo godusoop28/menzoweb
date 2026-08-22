@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { BlockEditor } from "./post/BlockEditor";
+import { DrawingCanvas } from "./whiteboard/DrawingCanvas";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
 import { useToast } from "@/lib/ToastContext";
@@ -12,7 +13,11 @@ import { Avatar } from "./Avatar";
 import { GradientButton } from "./GradientButton";
 import { CloseIcon, ImageIcon } from "./icons";
 
-type Mode = "text" | "image" | "poll" | "blog";
+type Mode = "text" | "image" | "poll" | "blog" | "drawing";
+
+function newBlockId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `b-${Date.now()}-${Math.random()}`;
+}
 
 function hasRealContent(blocks: PostBlockDto[]) {
   return blocks.some(
@@ -63,7 +68,7 @@ export function CreatePostComposer() {
         tags: mode === "poll" ? undefined : tags.length > 0 ? tags : undefined,
         pollOptions: mode === "poll" ? filledOptions : undefined,
         blocks: mode === "poll" ? undefined : blocks,
-        postType: mode === "blog" ? "blog" : undefined,
+        postType: mode === "blog" ? "blog" : mode === "drawing" ? "drawing" : undefined,
         nsfw: mode === "blog" ? nsfw : undefined,
       });
       reset();
@@ -91,17 +96,17 @@ export function CreatePostComposer() {
         </p>
       </div>
 
-      <div className="flex gap-2 border-t border-[var(--color-border-soft)] pt-3">
-        {(["text", "image", "blog", "poll"] as Mode[]).map((m) => (
+      <div className="flex gap-2 overflow-x-auto border-t border-[var(--color-border-soft)] pt-3">
+        {(["text", "image", "drawing", "blog", "poll"] as Mode[]).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer ${
               mode === m ? "bg-[var(--color-surface-soft)] text-[var(--color-text-primary)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]"
             }`}
           >
             {m === "image" && <ImageIcon size={14} />}
-            {m === "text" ? "Texto" : m === "image" ? "Imagen" : m === "blog" ? "Blog" : "Encuesta"}
+            {m === "text" ? "Texto" : m === "image" ? "Imagen" : m === "drawing" ? "Dibujo" : m === "blog" ? "Blog" : "Encuesta"}
           </button>
         ))}
       </div>
@@ -147,6 +152,24 @@ export function CreatePostComposer() {
             )}
           </div>
         </>
+      ) : mode === "drawing" ? (
+        blocks.some((b) => b.type === "image") ? (
+          <div className="flex flex-col items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={blocks.find((b) => b.type === "image")?.url ?? ""} alt="" className="max-h-64 rounded-xl object-contain" />
+            <button
+              type="button"
+              onClick={() => setBlocks([])}
+              className="text-xs font-medium text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-primary)]"
+            >
+              Volver a dibujar
+            </button>
+          </div>
+        ) : (
+          <DrawingCanvas
+            onUploaded={(url) => setBlocks([{ id: newBlockId(), type: "image", text: null, url, alt: null, fontSize: null, fontFamily: null, align: null, bold: null, italic: null }])}
+          />
+        )
       ) : (
         <>
           <input

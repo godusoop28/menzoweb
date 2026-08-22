@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { ChevronDownIcon, CompassIcon, SettingsIcon } from "@/components/icons";
+import { ChevronDownIcon, CompassIcon, PaletteIcon, SettingsIcon } from "@/components/icons";
 import { useAppState } from "@/lib/AppStateContext";
 import { useCommunity } from "@/lib/communities/CommunityContext";
 
@@ -100,6 +100,16 @@ export function CommunitySwitcher() {
             <CompassIcon size={18} />
             Explorar comunidades
           </Link>
+          {activeCommunity && (
+            <Link
+              href={`/communities/${activeCommunity.slug}/whiteboard`}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-secondary)]"
+            >
+              <PaletteIcon size={18} />
+              Pizarra
+            </Link>
+          )}
           {canEditAppearance && (
             <Link
               href={`/communities/${activeCommunity!.slug}/appearance`}

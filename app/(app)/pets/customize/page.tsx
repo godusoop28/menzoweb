@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { ApiError, petsApi } from "@/lib/api";
 import type { PetCatalogDto, PetDto } from "@/lib/api/types";
 import { GradientButton } from "@/components/GradientButton";
-import { MenzoPet } from "@/components/pets/MenzoPet";
+import { MenzoPet, MenzoPetItemThumb } from "@/components/pets/MenzoPet";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { ColorWheelPicker } from "@/components/ui/ColorWheelPicker";
 import { petColorsToProps } from "@/lib/pets/petColors";
+
+type PetTab = "colors" | "accessories";
 
 const COLOR_FIELDS: { key: string; label: string }[] = [
   { key: "primary", label: "Color principal" },
@@ -57,6 +60,11 @@ export default function CustomizePetPage() {
   const [saving, setSaving] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<PetTab>("colors");
+  // itemId -> archivo SVG del ítem (manifest visual, no el catálogo de negocio) — para renderizar
+  // una miniatura real de cada accesorio en vez de un botón de solo texto, mismo criterio que
+  // pet_customize_screen.dart en menzomovil.
+  const [itemFiles, setItemFiles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     petsApi
@@ -69,6 +77,12 @@ export default function CustomizePetPage() {
       })
       .catch(() => setPet(null));
     petsApi.catalog().then(setCatalog);
+    fetch("/pets/manifest.json")
+      .then((r) => r.json())
+      .then((manifest: { items: { id: string; file: string }[] }) => {
+        setItemFiles(Object.fromEntries(manifest.items.map((i) => [i.id, i.file])));
+      })
+      .catch(() => setItemFiles({}));
   }, []);
 
   const hasChanges =
@@ -163,13 +177,20 @@ export default function CustomizePetPage() {
   const itemsBySlot = (slot: string) => (catalog?.items ?? []).filter((i) => i.slot === slot);
   const previewColors = comparing ? pet.colors : draftColors;
   const previewEquipped = comparing ? pet.equipped : draftEquipped;
+  const petColors = petColorsToProps(previewColors);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-6 md:px-8">
       <h1 className="font-display text-xl font-bold">Personalizar a {pet.name}</h1>
 
-      <div className="flex flex-col items-center gap-2">
-        <MenzoPet species={pet.speciesId} colors={petColorsToProps(previewColors)} equipment={previewEquipped} size={200} />
+      {/* Marco de "vitrina" con glow del color principal actual — antes la mascota flotaba
+          directo sobre el fondo de la página, sin ningún peso visual propio (criterio
+          "customizador de personaje" del pedido, no un formulario más). */}
+      <div
+        className="flex flex-col items-center gap-2 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-6"
+        style={{ boxShadow: `0 0 48px -12px ${petColors.primary}55` }}
+      >
+        <MenzoPet species={pet.speciesId} colors={petColors} equipment={previewEquipped} size={200} />
         {hasChanges && (
           <button
             type="button"
@@ -205,71 +226,102 @@ export default function CustomizePetPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Colores</h2>
-          <button
-            type="button"
-            onClick={resetSpeciesColors}
-            className="cursor-pointer text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-          >
-            Restablecer colores de especie
-          </button>
-        </div>
-        {COLOR_FIELDS.map(({ key, label }) => (
-          <div key={key} className="flex flex-col gap-3 rounded-xl border border-[var(--color-border-soft)] p-3">
+      <SegmentedTabs
+        options={[
+          { value: "colors", label: "Colores" },
+          { value: "accessories", label: "Accesorios" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+
+      {tab === "colors" ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setExpandedColor((prev) => (prev === key ? null : key))}
-              className="flex w-full cursor-pointer items-center gap-3"
+              onClick={resetSpeciesColors}
+              className="cursor-pointer text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
             >
-              <span
-                className="h-8 w-8 shrink-0 rounded-lg border border-[var(--color-border-soft)]"
-                style={{ background: draftColors[key] || "#888888" }}
-              />
-              <p className="flex-1 text-left text-sm font-medium">{label}</p>
-              <span className="text-xs text-[var(--color-text-muted)]">{draftColors[key] || "—"}</span>
+              Restablecer colores de especie
             </button>
-            {expandedColor === key && (
-              <ColorWheelPicker value={draftColors[key] || "#888888"} onChange={(hex) => setColor(key, hex)} size={148} />
-            )}
           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Accesorios</h2>
-        {SLOT_ORDER.map((slot) => (
-          <div key={slot} className="flex flex-col gap-2">
-            <span className="text-sm text-[var(--color-text-muted)]">{SLOT_LABELS[slot]}</span>
-            <div className="flex flex-wrap gap-2">
+          {/* Grilla de swatches en vez de la lista de filas de antes — cada tile es tocable y
+              abre el mismo ColorWheelPicker de siempre, solo cambia el layout alrededor. */}
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {COLOR_FIELDS.map(({ key, label }) => (
               <button
-                onClick={() => setEquip(slot, null)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${
-                  !draftEquipped[slot]
-                    ? "border-[var(--color-orange)] text-[var(--color-orange)]"
-                    : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
+                key={key}
+                type="button"
+                onClick={() => setExpandedColor((prev) => (prev === key ? null : key))}
+                className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors ${
+                  expandedColor === key
+                    ? "border-[var(--color-orange)]"
+                    : "border-[var(--color-border-soft)] hover:border-[var(--color-border-strong)]"
                 }`}
               >
-                Ninguno
+                <span
+                  className="h-10 w-10 shrink-0 rounded-full border border-white/15"
+                  style={{ background: draftColors[key] || "#888888" }}
+                />
+                <span className="text-xs font-medium leading-tight">{label}</span>
               </button>
-              {itemsBySlot(slot).map((item) => (
+            ))}
+          </div>
+          {expandedColor && (
+            <div className="flex justify-center rounded-xl border border-[var(--color-border-soft)] p-4">
+              <ColorWheelPicker
+                value={draftColors[expandedColor] || "#888888"}
+                onChange={(hex) => setColor(expandedColor, hex)}
+                size={172}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {SLOT_ORDER.map((slot) => (
+            <div key={slot} className="flex flex-col gap-2">
+              <span className="text-sm text-[var(--color-text-muted)]">{SLOT_LABELS[slot]}</span>
+              {/* Miniaturas reales del ítem (MenzoPetItemThumb) en vez de botones de solo texto —
+                  un anillo naranja marca la selección, como un selector de personaje. */}
+              <div className="flex flex-wrap gap-3">
                 <button
-                  key={item.id}
-                  onClick={() => setEquip(slot, item.id)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${
-                    draftEquipped[slot] === item.id
-                      ? "border-[var(--color-orange)] text-[var(--color-orange)]"
-                      : "border-[var(--color-border-soft)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
+                  onClick={() => setEquip(slot, null)}
+                  className={`flex w-[76px] flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-colors cursor-pointer ${
+                    !draftEquipped[slot]
+                      ? "border-[var(--color-orange)] shadow-[0_0_12px_-2px_var(--color-orange)]"
+                      : "border-[var(--color-border-soft)] hover:border-[var(--color-border-strong)]"
                   }`}
                 >
-                  {item.name}
+                  <span className="flex h-[52px] w-[52px] items-center justify-center text-[var(--color-text-muted)]">
+                    ⛔
+                  </span>
+                  <span className="text-xs font-medium text-[var(--color-text-secondary)]">Ninguno</span>
                 </button>
-              ))}
+                {itemsBySlot(slot).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setEquip(slot, item.id)}
+                    className={`flex w-[76px] flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-colors cursor-pointer ${
+                      draftEquipped[slot] === item.id
+                        ? "border-[var(--color-orange)] shadow-[0_0_12px_-2px_var(--color-orange)]"
+                        : "border-[var(--color-border-soft)] hover:border-[var(--color-border-strong)]"
+                    }`}
+                  >
+                    {itemFiles[item.id] ? (
+                      <MenzoPetItemThumb file={itemFiles[item.id]} colors={petColors} size={52} />
+                    ) : (
+                      <span className="h-[52px] w-[52px]" />
+                    )}
+                    <span className="line-clamp-2 text-xs font-medium leading-tight">{item.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button

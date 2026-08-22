@@ -84,6 +84,29 @@ function SvgLayer({ src, colors, isSpecies, zIndex }: { src: string; colors: Men
   );
 }
 
+/** Miniatura de UN SOLO ítem del catálogo (sin la capa de especie base) — reusa el mismo
+ * `SvgLayer` (fetch + recoloreo) que las capas normales de `MenzoPet`, para la grilla de
+ * accesorios de /pets/customize en vez del botón de solo texto que había antes. No necesita el
+ * manifest completo: el caller (la página de personalización) ya conoce el `file` de cada ítem
+ * porque lo levantó una sola vez para armar la grilla entera. */
+export function MenzoPetItemThumb({
+  assetRoot = "/pets",
+  file,
+  colors,
+  size = 56,
+}: {
+  assetRoot?: string;
+  file: string;
+  colors: MenzoPetColors;
+  size?: number;
+}) {
+  return (
+    <div style={{ position: "relative", width: size, height: size, flex: "0 0 auto" }}>
+      <SvgLayer src={`${assetRoot}/${file}`} colors={colors} isSpecies={false} zIndex={0} />
+    </div>
+  );
+}
+
 export function MenzoPet({
   assetRoot = "/pets",
   species,

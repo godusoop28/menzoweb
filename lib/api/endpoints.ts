@@ -78,6 +78,7 @@ import type {
   VoiceTokenDto,
   WallCommentDto,
   WallMessageDto,
+  WhiteboardStrokeDto,
   YoutubeSearchResultDto,
 } from "./types";
 
@@ -453,4 +454,12 @@ export const petsApi = {
   equip: (body: EquipItemRequest) => apiFetch<PetDto>("/api/pets/me/equipment", { method: "PATCH", body }),
   interact: (body: PetInteractionRequest) => apiFetch<PetDto>("/api/pets/me/interact", { method: "POST", body }),
   ofUser: (userId: string) => apiFetch<PetDto>(`/api/pets/users/${userId}`),
+};
+
+export const whiteboardApi = {
+  // size grande a propósito: no hay paginación real en la UI, se trae todo lo que haya de una
+  // (tope real del lado del servidor, ver WhiteboardService.MAX_STROKES_PER_COMMUNITY).
+  strokes: (communityId: string) =>
+    apiFetch<PageResponse<WhiteboardStrokeDto>>(`/api/communities/${communityId}/whiteboard/strokes${qs({ size: 5000 })}`),
+  clear: (communityId: string) => apiFetch<void>(`/api/communities/${communityId}/whiteboard`, { method: "DELETE" }),
 };

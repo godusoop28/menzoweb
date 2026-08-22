@@ -1,6 +1,6 @@
 // Contrato 1:1 con menzoapi. Nombres de campo exactos, case-sensitive.
 
-export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog";
+export type PostType = "text" | "image" | "poll" | "question" | "event" | "blog" | "drawing";
 export type MessageType = "text" | "system" | "sticker";
 export type GlobalRole = "USER" | "CURATOR" | "LEADER" | "MASTER";
 export type NotificationCategory = "comentarios" | "likes" | "mensajes" | "eventos" | "seguimientos" | "en_vivo" | "juegos";
@@ -39,6 +39,10 @@ export type UserSummaryDto = {
   isOnline: boolean;
   bubbleColor: string | null;
   bubbleBorderColor: string | null;
+  bubbleOpacity: number | null;
+  bubbleBorderWidth: number | null;
+  bubbleRadius: number | null;
+  bubbleGlowIntensity: number | null;
 };
 
 /** Etiqueta de texto libre con color propio (p.ej. "Friendly") que un LEADER+ le otorgó a este
@@ -56,6 +60,10 @@ export type UserProfileDto = {
   backgroundColor: string | null;
   bubbleColor: string | null;
   bubbleBorderColor: string | null;
+  bubbleOpacity: number | null;
+  bubbleBorderWidth: number | null;
+  bubbleRadius: number | null;
+  bubbleGlowIntensity: number | null;
   bio: string | null;
   statusText: string | null;
   interests: string[];
@@ -119,6 +127,10 @@ export type UpdateProfileRequest = {
   backgroundColor?: string;
   bubbleColor?: string;
   bubbleBorderColor?: string;
+  bubbleOpacity?: number;
+  bubbleBorderWidth?: number;
+  bubbleRadius?: number;
+  bubbleGlowIntensity?: number;
   bio?: string;
   statusText?: string;
   interests?: string[];
@@ -908,4 +920,20 @@ export type AdoptPetRequest = { speciesId: string; name: string };
 export type RenamePetRequest = { name: string };
 export type UpdatePetColorsRequest = { colors: Record<string, string> };
 export type EquipItemRequest = { slot: string; itemId: string | null };
+
+// Pizarra colaborativa — WhiteboardStrokeResponse en menzoapi. El dibujo EN VIVO (segments,
+// trazo completo, deshacer) viaja por STOMP con un shape parecido pero no idéntico (ver
+// lib/whiteboard/useWhiteboardSocket.ts), esto es solo el historial REST.
+export type WhiteboardStrokePoint = { x: number; y: number };
+export type WhiteboardStrokeDto = {
+  id: string;
+  strokeId: string;
+  communityId: string;
+  authorId: string;
+  tool: "pen" | "eraser";
+  color: string | null;
+  width: number;
+  points: WhiteboardStrokePoint[];
+  createdAt: string;
+};
 export type PetInteractionRequest = { source: PetXpSource; idempotencyKey: string };

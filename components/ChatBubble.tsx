@@ -195,6 +195,11 @@ export function ChatBubble({
   // configura ve el cambio en su propio chat y no solo del lado receptor.
   const authorBubbleColor = author?.bubbleColor;
   const authorBubbleBorderColor = author?.bubbleBorderColor;
+  // Controles finos (ver V43__user_chat_bubble_style_extra.sql) — mismo gate que arriba: solo
+  // tienen efecto si el autor eligió de verdad un color de burbuja/borde (el único checkbox
+  // "Personalizar mi burbuja" del perfil agrupa a los 6 campos a la vez).
+  const authorBubbleRadius = authorBubbleColor ? author?.bubbleRadius : undefined;
+  const authorBubbleOpacity = authorBubbleColor ? author?.bubbleOpacity : undefined;
 
   const bubbleBackground = isOwn ? authorBubbleColor ?? accent.color : authorBubbleColor ?? undefined;
   // El texto "on-accent" es casi negro, pensado para el naranja del accent — sobre un color propio
@@ -224,10 +229,32 @@ export function ChatBubble({
         }`}
         style={{
           background: bubbleBackground,
-          opacity: bubbleOpacity,
+          opacity: authorBubbleOpacity != null ? bubbleOpacity * authorBubbleOpacity : bubbleOpacity,
           ...(!isOwn && !authorBubbleColor && authorTint ? { borderLeftColor: authorTint } : {}),
           ...(authorBubbleBorderColor
-            ? { border: `1.5px solid ${authorBubbleBorderColor}`, boxShadow: `0 0 14px -3px ${authorBubbleBorderColor}` }
+            ? {
+                border: `${author?.bubbleBorderWidth ?? 1.5}px solid ${authorBubbleBorderColor}`,
+                boxShadow: `0 0 14px -3px ${authorBubbleBorderColor}${
+                  author?.bubbleGlowIntensity != null
+                    ? Math.round(author.bubbleGlowIntensity * 255).toString(16).padStart(2, "0")
+                    : ""
+                }`,
+              }
+            : {}),
+          ...(authorBubbleRadius != null
+            ? isOwn
+                ? {
+                    borderTopLeftRadius: authorBubbleRadius,
+                    borderTopRightRadius: 8,
+                    borderBottomLeftRadius: authorBubbleRadius,
+                    borderBottomRightRadius: authorBubbleRadius,
+                  }
+                : {
+                    borderTopLeftRadius: 8,
+                    borderTopRightRadius: authorBubbleRadius,
+                    borderBottomLeftRadius: authorBubbleRadius,
+                    borderBottomRightRadius: authorBubbleRadius,
+                  }
             : {}),
         }}
       >

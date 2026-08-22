@@ -44,6 +44,10 @@ export default function EditProfilePage() {
   const [bubbleColor, setBubbleColor] = useState(profile.bubbleColor ?? "#1E2A38");
   const [bubbleBorderColor, setBubbleBorderColor] = useState(profile.bubbleBorderColor ?? "#FF7A1A");
   const [bubbleCustomized, setBubbleCustomized] = useState(!!profile.bubbleColor);
+  const [bubbleOpacity, setBubbleOpacity] = useState(profile.bubbleOpacity ?? 1);
+  const [bubbleBorderWidth, setBubbleBorderWidth] = useState(profile.bubbleBorderWidth ?? 1.5);
+  const [bubbleRadius, setBubbleRadius] = useState(profile.bubbleRadius ?? 20);
+  const [bubbleGlowIntensity, setBubbleGlowIntensity] = useState(profile.bubbleGlowIntensity ?? 0.6);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(profile.socialLinks ?? {});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +123,17 @@ export default function EditProfilePage() {
           backgroundColor: finalBackgroundColor,
           bubbleColor: bubbleCustomized ? bubbleColor : "",
           bubbleBorderColor: bubbleCustomized ? bubbleBorderColor : "",
+          // Solo se mandan mientras está personalizada — igual criterio que menzomovil: si no,
+          // quedan sin tocar en el backend (inofensivo, ChatBubble.tsx solo los lee cuando
+          // bubbleColor/bubbleBorderColor están seteados).
+          ...(bubbleCustomized
+            ? {
+                bubbleOpacity,
+                bubbleBorderWidth,
+                bubbleRadius,
+                bubbleGlowIntensity,
+              }
+            : {}),
           socialLinks: socialLinksPayload,
         },
         { avatar: avatarFile, cover: coverFile, background: backgroundFile }
@@ -268,11 +283,18 @@ export default function EditProfilePage() {
           {bubbleCustomized && (
             <div className="flex flex-col gap-4">
               <div
-                className="w-fit max-w-[80%] self-end rounded-[20px] rounded-tr-lg px-4 py-2 text-sm text-white"
+                className="w-fit max-w-[80%] self-end px-4 py-2 text-sm text-white"
                 style={{
                   background: bubbleColor,
-                  border: `1.5px solid ${bubbleBorderColor}`,
-                  boxShadow: `0 0 14px -2px ${bubbleBorderColor}`,
+                  opacity: bubbleOpacity,
+                  border: `${bubbleBorderWidth}px solid ${bubbleBorderColor}`,
+                  boxShadow: `0 0 14px -2px ${bubbleBorderColor}${Math.round(bubbleGlowIntensity * 255)
+                    .toString(16)
+                    .padStart(2, "0")}`,
+                  borderTopLeftRadius: bubbleRadius,
+                  borderTopRightRadius: 8,
+                  borderBottomLeftRadius: bubbleRadius,
+                  borderBottomRightRadius: bubbleRadius,
                 }}
               >
                 Así se ve tu burbuja
@@ -286,6 +308,44 @@ export default function EditProfilePage() {
                   <span className="text-xs font-medium text-[var(--color-text-muted)]">Borde (brillo)</span>
                   <ColorWheelPicker value={bubbleBorderColor} onChange={setBubbleBorderColor} size={148} />
                 </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <BubbleSlider
+                  label="Opacidad"
+                  value={bubbleOpacity}
+                  min={0.3}
+                  max={1}
+                  step={0.05}
+                  onChange={setBubbleOpacity}
+                  formatValue={(v) => `${Math.round(v * 100)}%`}
+                />
+                <BubbleSlider
+                  label="Grosor del borde"
+                  value={bubbleBorderWidth}
+                  min={0}
+                  max={6}
+                  step={0.5}
+                  onChange={setBubbleBorderWidth}
+                  formatValue={(v) => `${v}px`}
+                />
+                <BubbleSlider
+                  label="Redondez de esquinas"
+                  value={bubbleRadius}
+                  min={4}
+                  max={32}
+                  step={1}
+                  onChange={setBubbleRadius}
+                  formatValue={(v) => `${v}px`}
+                />
+                <BubbleSlider
+                  label="Brillo del borde"
+                  value={bubbleGlowIntensity}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={setBubbleGlowIntensity}
+                  formatValue={(v) => `${Math.round(v * 100)}%`}
+                />
               </div>
             </div>
           )}
@@ -355,6 +415,44 @@ export default function EditProfilePage() {
 
         <GradientButton label="Guardar cambios" onClick={handleSave} disabled={!valid} loading={saving} />
       </div>
+    </div>
+  );
+}
+
+/** Mismo patrón visual que el `Slider` privado de ChatAppearanceSheet.tsx (no reusable acá, no
+ * está exportado) — para los controles finos de la burbuja (opacidad/grosor/redondez/brillo). */
+function BubbleSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  formatValue,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  formatValue: (value: number) => string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-[var(--color-text-secondary)]">{label}</span>
+        <span className="text-[var(--color-text-muted)]">{formatValue(value)}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-[var(--color-orange)]"
+      />
     </div>
   );
 }
