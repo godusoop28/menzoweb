@@ -8,6 +8,7 @@ import { GradientButton } from "@/components/GradientButton";
 import { EyeIcon, EyeOffIcon } from "@/components/icons";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { useWakingHint } from "@/lib/useWakingHint";
 
 export default function LoginPage() {
   const { actions } = useAppState();
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showWakingHint = useWakingHint(submitting);
 
   const valid = email.trim().length > 3 && password.length > 0;
 
@@ -80,6 +82,11 @@ export default function LoginPage() {
         </label>
 
         {!!error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
+        {showWakingHint && (
+          <p className="text-center text-xs text-[var(--color-text-muted)]">
+            Despertando el servidor… puede tardar unos segundos la primera vez.
+          </p>
+        )}
 
         <GradientButton label="Entrar" type="submit" disabled={!valid} loading={submitting} />
       </form>

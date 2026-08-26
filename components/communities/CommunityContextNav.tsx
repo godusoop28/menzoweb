@@ -9,13 +9,14 @@ import { useCommunity } from "@/lib/communities/CommunityContext";
 import { withNavDefaults } from "@/lib/communities/navigationDefaults";
 
 /** Solo las secciones que hoy tienen una pantalla real en menzoweb. El resto
- * (posts/blogs/live/events/about) ya se puede configurar y guardar desde el editor de
+ * (posts/blogs/events/about) ya se puede configurar y guardar desde el editor de
  * apariencia, pero todavía no tiene una ruta dedicada — se suman acá a medida que existan, para
  * no renderizar links muertos hacia pantallas que no existen. */
 const SECTION_ROUTES: Partial<Record<CommunityNavigationSectionKey, string>> = {
   home: "/",
   chats: "/chat",
   members: "/members",
+  live: "/live",
 };
 
 const MAX_VISIBLE = 5;

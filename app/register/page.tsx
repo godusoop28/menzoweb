@@ -7,6 +7,7 @@ import { AuthLayout } from "@/components/AuthLayout";
 import { GradientButton } from "@/components/GradientButton";
 import { ApiError } from "@/lib/api";
 import { useAppState } from "@/lib/AppStateContext";
+import { useWakingHint } from "@/lib/useWakingHint";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,6 +19,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showWakingHint = useWakingHint(submitting);
 
   const emailValid = EMAIL_PATTERN.test(email.trim());
   const passwordValid = password.length >= 8;
@@ -72,6 +74,11 @@ export default function RegisterPage() {
         </label>
 
         {!!error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
+        {showWakingHint && (
+          <p className="text-center text-xs text-[var(--color-text-muted)]">
+            Despertando el servidor… puede tardar unos segundos la primera vez.
+          </p>
+        )}
 
         <GradientButton label="Crear cuenta" type="submit" disabled={!valid} loading={submitting} />
       </form>

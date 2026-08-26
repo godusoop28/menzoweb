@@ -382,7 +382,7 @@ export default function FeedPage() {
         <ContextSidebarSection
           title="Salas en vivo"
           icon={<LiveIcon size={16} className="text-[var(--color-coral)]" />}
-          action={{ label: "Ver todas", href: "/chat/public" }}
+          action={{ label: "Ver todas", href: "/live" }}
         >
           <div className="flex flex-col gap-2">
             {liveRooms.slice(0, 4).map((room) => (

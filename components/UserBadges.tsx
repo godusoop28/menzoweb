@@ -19,7 +19,7 @@ export function UserBadges({ badgeIds }: { badgeIds: string[] }) {
           >
             <StarIcon size={18} />
           </div>
-          <span className="max-w-16 truncate text-center text-[10px] text-[var(--color-text-muted)]">{badge.name}</span>
+          <span className="line-clamp-2 max-w-20 text-center text-[10px] leading-tight text-[var(--color-text-muted)]">{badge.name}</span>
         </div>
       ))}
     </div>

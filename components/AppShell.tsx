@@ -52,14 +52,14 @@ const FALLBACK_NAV_ITEMS = [
 
 /** Solo las secciones de navigationConfig que hoy tienen una pantalla real — mismo criterio que
  * components/communities/CommunityContextNav.tsx (esa tira horizontal sigue existiendo para
- * mobile; en escritorio esta barra lateral cubre el mismo rol, ver más abajo). "live" no tiene
- * una pantalla dedicada todavía, así que apunta a Chats públicos (donde ya se puede ver/entrar a
- * salas en vivo), no se inventa una ruta nueva. */
+ * mobile; en escritorio esta barra lateral cubre el mismo rol, ver más abajo). "live" tiene su
+ * propia pantalla en /live (antes apuntaba a /chat/public, la misma URL que "Chats > Salas
+ * públicas" — sin identidad propia y sin transición visible si ya estabas ahí). */
 const COMMUNITY_NAV_ROUTES: Partial<Record<CommunityNavigationSectionKey, string>> = {
   home: "/",
   chats: "/chat",
   members: "/members",
-  live: "/chat/public",
+  live: "/live",
 };
 const COMMUNITY_NAV_ICONS: Partial<Record<CommunityNavigationSectionKey, typeof HomeIcon>> = {
   home: HomeIcon,
