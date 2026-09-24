@@ -12,6 +12,7 @@ import { LiveRoomsCarousel } from "@/components/LiveRoomsCarousel";
 import { PostCard } from "@/components/PostCard";
 import { ProfileHero } from "@/components/ProfileHero";
 import { ProfilePetChip } from "@/components/pets/ProfilePetChip";
+import { MemberSafetyMenu } from "@/components/safety/MemberSafetyMenu";
 import { SegmentedTabs } from "@/components/SegmentedTabs";
 import { WallComposer } from "@/components/WallComposer";
 import { WallMessageCard } from "@/components/WallMessageCard";
@@ -170,6 +171,7 @@ export default function MemberProfilePage() {
             >
               Mensaje
             </button>
+            <MemberSafetyMenu userId={user.id} username={user.username} />
           </>
         }
       />

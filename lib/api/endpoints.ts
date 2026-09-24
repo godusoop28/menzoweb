@@ -75,6 +75,7 @@ import type {
   UpdateSettingsRequest,
   UploadResponseDto,
   UserProfileDto,
+  UserSummaryDto,
   VersionedRequest,
   VoiceParticipantsDto,
   VoiceTokenDto,
@@ -98,6 +99,33 @@ export const authApi = {
   refresh: (body: RefreshRequest) =>
     apiFetch<AuthResponseDto>("/api/auth/refresh", { method: "POST", body, skipAuth: true }),
   logout: (body: RefreshRequest) => apiFetch<void>("/api/auth/logout", { method: "POST", body, skipAuth: true }),
+  /** Siempre 204, exista o no la cuenta (el backend no revela qué correos están registrados). */
+  forgotPassword: (email: string) =>
+    apiFetch<void>("/api/auth/forgot-password", { method: "POST", body: { email }, skipAuth: true }),
+  resetPassword: (token: string, password: string) =>
+    apiFetch<void>("/api/auth/reset-password", { method: "POST", body: { token, password }, skipAuth: true }),
+};
+
+export type ReportTargetType = "POST" | "COMMENT" | "MESSAGE" | "WALL_MESSAGE" | "WALL_COMMENT" | "USER";
+export type ReportReason =
+  | "SPAM"
+  | "HARASSMENT"
+  | "HATE"
+  | "SEXUAL"
+  | "VIOLENCE"
+  | "SELF_HARM"
+  | "IMPERSONATION"
+  | "OTHER";
+
+/** Bloqueos, reportes y borrado de la propia cuenta (requisitos de las tiendas para contenido de usuarios). */
+export const safetyApi = {
+  blocked: () => apiFetch<UserSummaryDto[]>("/api/users/me/blocks"),
+  block: (userId: string) => apiFetch<void>(`/api/users/${userId}/block`, { method: "POST" }),
+  unblock: (userId: string) => apiFetch<void>(`/api/users/${userId}/block`, { method: "DELETE" }),
+  report: (targetType: ReportTargetType, targetId: string, reason: ReportReason, details?: string) =>
+    apiFetch<void>("/api/reports", { method: "POST", body: { targetType, targetId, reason, details } }),
+  deleteAccount: (password: string) =>
+    apiFetch<void>("/api/users/me/delete-account", { method: "POST", body: { password } }),
 };
 
 export const usersApi = {

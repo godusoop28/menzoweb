@@ -17,9 +17,18 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://menzoweb.vercel.app"),
   title: "Menzo",
   description: "Conecta, comparte y descubre gente con tus mismos intereses.",
   icons: { icon: "/branding/favicon.png" },
+  openGraph: {
+    title: "Menzo",
+    description: "Comunidades que comparten tu pasión: chats en vivo, blogs, perfiles y mucho más.",
+    siteName: "Menzo",
+    locale: "es_MX",
+    type: "website",
+    images: [{ url: "/branding/menzo-logo.png" }],
+  },
 };
 
 // viewportFit: "cover" es lo que hace que env(safe-area-inset-*) deje de valer 0 en iOS Safari —

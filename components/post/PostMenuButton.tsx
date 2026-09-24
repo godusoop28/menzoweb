@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { EditIcon, MoreIcon, TrashIcon } from "@/components/icons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ReportDialog } from "@/components/safety/ReportDialog";
 import { ReasonDialog } from "@/components/ui/ReasonDialog";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
@@ -11,7 +12,8 @@ import type { Post } from "@/lib/types";
 
 import { EditPostDialog } from "./EditPostDialog";
 
-/** Menú "⋮" con Editar/Eliminar — visible para el autor y, además, para CURATOR+/LEADER+/MASTER
+/** Menú "⋮" — cualquiera que no sea el autor puede Reportar (requisito de las tiendas). Editar/
+ * Eliminar: visible para el autor y, además, para CURATOR+/LEADER+/MASTER
  * (moderación), mismo criterio que PostService.updatePost/deletePost en menzoapi. Editar solo
  * aplica a text/image (lo único que el backend sabe editar); Eliminar aplica a cualquier tipo.
  * Un no-autor siempre necesita un motivo (lo pide EditPostDialog al editar, este diálogo al
@@ -25,6 +27,7 @@ export function PostMenuButton({ post }: { post: Post }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +43,8 @@ export function PostMenuButton({ post }: { post: Post }) {
   const canDelete = isAuthor || isStaff;
   const canEdit = canDelete && (post.type === "text" || post.type === "image");
 
-  if (!canDelete) return null;
+  const canReport = !isAuthor && !!state.profile;
+  if (!canDelete && !canReport) return null;
 
   async function handleDelete(reason?: string) {
     setDeleting(true);
@@ -78,17 +82,34 @@ export function PostMenuButton({ post }: { post: Post }) {
               <EditIcon size={15} /> Editar
             </button>
           )}
-          <button
-            onClick={() => {
-              setOpen(false);
-              if (isAuthor) setConfirmingDelete(true);
-              else setReasonDialogOpen(true);
-            }}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--color-coral)] cursor-pointer hover:bg-[var(--color-surface-secondary)]"
-          >
-            <TrashIcon size={15} /> Eliminar
-          </button>
+          {canReport && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                setReporting(true);
+              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm cursor-pointer hover:bg-[var(--color-surface-secondary)]"
+            >
+              Reportar
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                if (isAuthor) setConfirmingDelete(true);
+                else setReasonDialogOpen(true);
+              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--color-coral)] cursor-pointer hover:bg-[var(--color-surface-secondary)]"
+            >
+              <TrashIcon size={15} /> Eliminar
+            </button>
+          )}
         </div>
+      )}
+
+      {reporting && (
+        <ReportDialog targetType="POST" targetId={post.id} subject="esta publicación" onClose={() => setReporting(false)} />
       )}
 
       {canEdit && <EditPostDialog post={post} isAuthor={isAuthor} open={editing} onClose={() => setEditing(false)} />}

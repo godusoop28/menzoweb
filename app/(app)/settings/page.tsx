@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BlockedUsersSection, DeleteAccountSection, LegalLinksSection } from "@/components/safety/AccountSafetySections";
 import { usersApi } from "@/lib/api";
 import { useAccessibilityPrefs } from "@/lib/AccessibilityPrefsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -151,6 +152,10 @@ export default function SettingsPage() {
           </div>
         </>
       )}
+
+      <BlockedUsersSection />
+      <LegalLinksSection />
+      <DeleteAccountSection />
 
       <p className="text-xs text-[var(--color-text-muted)]">Menzo Web · Conecta. Comparte. Crea.</p>
     </div>

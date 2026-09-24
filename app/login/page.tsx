@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -80,6 +81,10 @@ export default function LoginPage() {
             </button>
           </div>
         </label>
+
+        <Link href="/forgot-password" className="-mt-2 self-end text-xs text-[var(--color-text-muted)] hover:text-[var(--color-orange)]">
+          ¿Olvidaste tu contraseña?
+        </Link>
 
         {!!error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
         {showWakingHint && (

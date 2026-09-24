@@ -19,7 +19,16 @@ const TAB_INACTIVE = "pb-3 -mb-3 text-[var(--color-text-muted)] transition-color
  * diferencia de fondos personales con texto/caras, el caso que ScreenBackground documenta que
  * rompe en desktop).
  */
-export function AuthLayout({ activeTab, children }: { activeTab: "login" | "register"; children: ReactNode }) {
+export function AuthLayout({
+  activeTab,
+  title,
+  children,
+}: {
+  /** null = pantalla de cuenta sin pestañas (recuperar/restablecer contraseña). */
+  activeTab: "login" | "register" | null;
+  title?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[var(--color-background)]">
       <div className="absolute inset-0">
@@ -37,7 +46,11 @@ export function AuthLayout({ activeTab, children }: { activeTab: "login" | "regi
             <span className="font-display text-lg font-bold tracking-tight">MENZO</span>
           </Link>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            {activeTab === "login" ? (
+            {activeTab === null ? (
+              <Link href="/login" className="font-semibold text-[var(--color-orange)]">
+                Iniciar sesión
+              </Link>
+            ) : activeTab === "login" ? (
               <>
                 ¿No tienes cuenta?{" "}
                 <Link href="/register" className="font-semibold text-[var(--color-orange)]">
@@ -68,14 +81,20 @@ export function AuthLayout({ activeTab, children }: { activeTab: "login" | "regi
           </div>
 
           <div className="menzo-fade-in flex flex-col gap-4 rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-surface)]/85 p-6 backdrop-blur-md shadow-2xl">
-            <div className="flex items-center gap-6 border-b border-[var(--color-border-soft)] pb-3 text-sm font-semibold">
-              <Link href="/login" className={activeTab === "login" ? TAB_ACTIVE : TAB_INACTIVE}>
-                Iniciar sesión
-              </Link>
-              <Link href="/register" className={activeTab === "register" ? TAB_ACTIVE : TAB_INACTIVE}>
-                Crear cuenta
-              </Link>
-            </div>
+            {activeTab === null ? (
+              <h1 className="border-b border-[var(--color-border-soft)] pb-3 text-sm font-semibold text-[var(--color-orange)]">
+                {title}
+              </h1>
+            ) : (
+              <div className="flex items-center gap-6 border-b border-[var(--color-border-soft)] pb-3 text-sm font-semibold">
+                <Link href="/login" className={activeTab === "login" ? TAB_ACTIVE : TAB_INACTIVE}>
+                  Iniciar sesión
+                </Link>
+                <Link href="/register" className={activeTab === "register" ? TAB_ACTIVE : TAB_INACTIVE}>
+                  Crear cuenta
+                </Link>
+              </div>
+            )}
             {children}
           </div>
 
@@ -83,6 +102,11 @@ export function AuthLayout({ activeTab, children }: { activeTab: "login" | "regi
             Comunidades que comparten tu pasión.
             <br />
             Chats en vivo, blogs, perfiles y mucho más.
+          </p>
+          <p className="text-center text-xs text-[var(--color-text-muted)]">
+            <Link href="/privacidad" className="hover:text-[var(--color-text-primary)]">Privacidad</Link>
+            {" · "}
+            <Link href="/terminos" className="hover:text-[var(--color-text-primary)]">Términos</Link>
           </p>
         </div>
       </div>

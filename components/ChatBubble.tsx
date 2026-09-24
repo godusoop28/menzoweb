@@ -9,6 +9,7 @@ import { useAccent } from "@/lib/AccentContext";
 import { relativeTime } from "@/lib/time";
 import { gradientCss } from "@/lib/theme";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
+import { ReportDialog } from "@/components/safety/ReportDialog";
 import type { ChatAppearancePrefs } from "@/lib/chat/chatAppearance";
 import type { RoomRole } from "@/lib/api/types";
 import type { DemoUser, Message } from "@/lib/types";
@@ -107,6 +108,7 @@ export function ChatBubble({
 }) {
   const accent = useAccent();
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const bubbleOpacity = appearance?.bubbleOpacity ?? 1;
   const textScale = appearance?.textScale ?? 1;
   const compact = appearance?.compactMode ?? false;
@@ -401,6 +403,19 @@ export function ChatBubble({
         >
           <TrashIcon size={14} />
         </button>
+      )}
+      {!message.deleted && !isOwn && (
+        <button
+          onClick={() => setReporting(true)}
+          aria-label="Reportar mensaje"
+          title="Reportar"
+          className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-xs text-[var(--color-text-secondary)] opacity-40 transition-opacity cursor-pointer hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          ⚑
+        </button>
+      )}
+      {reporting && (
+        <ReportDialog targetType="MESSAGE" targetId={message.id} subject="este mensaje" onClose={() => setReporting(false)} />
       )}
     </div>
   );
