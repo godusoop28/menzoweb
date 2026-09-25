@@ -9,6 +9,7 @@ import { BackIcon, BookmarkIcon, HeartIcon, SendIcon } from "@/components/icons"
 import { PollCard } from "@/components/PollCard";
 import { PostBlockRenderer } from "@/components/post/PostBlockRenderer";
 import { PostMenuButton } from "@/components/post/PostMenuButton";
+import { TipButton } from "@/components/wallet/TipButton";
 import { useAppState } from "@/lib/AppStateContext";
 import { LOCAL_USER_ID } from "@/lib/store/localUser";
 import { findPost, findUser } from "@/lib/store/selectors";
@@ -112,6 +113,11 @@ export default function PostDetailPage() {
           <BookmarkIcon size={20} filled={saved} className={saved ? "text-[var(--color-yellow)]" : "text-[var(--color-text-muted)]"} />
           <span className="text-sm text-[var(--color-text-secondary)]">{saved ? "Guardado" : "Guardar"}</span>
         </button>
+        {author && author.id !== LOCAL_USER_ID && (
+          <div className="ml-auto">
+            <TipButton postId={post.id} creatorName={author.displayName} />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">

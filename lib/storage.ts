@@ -35,6 +35,9 @@ export const StorageKeys = {
   // Preferencias de accesibilidad, por DISPOSITIVO (no por usuario) — ver
   // lib/AccessibilityPrefsContext.tsx.
   accessibilityPrefs: "menzo.accessibilityPrefs",
+  // Menzo Coins en modo demo (sin backend todavía) — ver lib/wallet/WalletContext.tsx. La clave
+  // real es `${walletPrefix}.${username}`.
+  walletPrefix: "menzo.wallet",
 } as const;
 
 /** Clave de storage para la apariencia personal de una sala — un usuario nunca ve la

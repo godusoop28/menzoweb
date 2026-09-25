@@ -13,6 +13,7 @@ import { Avatar } from "./Avatar";
 import { BookmarkIcon, CommentIcon, HeartIcon } from "./icons";
 import { PollCard } from "./PollCard";
 import { PostMenuButton } from "./post/PostMenuButton";
+import { TipButton } from "./wallet/TipButton";
 
 const typeLabel: Record<Post["type"], string> = {
   text: "",
@@ -137,9 +138,16 @@ export function PostCard({ post }: { post: Post }) {
           <span className="text-xs">{post.commentCount}</span>
         </Link>
 
+        {/* Propina en MC — nunca a un post propio. */}
+        {author.id !== LOCAL_USER_ID && (
+          <div className="ml-auto">
+            <TipButton postId={post.id} creatorName={author.displayName} />
+          </div>
+        )}
+
         <button
           onClick={() => actions.toggleBookmark(post.id)}
-          className="ml-auto text-[var(--color-text-muted)] cursor-pointer"
+          className={`${author.id === LOCAL_USER_ID ? "ml-auto " : ""}text-[var(--color-text-muted)] cursor-pointer`}
           aria-label={saved ? "Quitar de guardados" : "Guardar"}
         >
           <BookmarkIcon filled={saved} className={saved ? "text-[var(--color-yellow)]" : ""} />

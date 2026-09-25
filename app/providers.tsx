@@ -7,6 +7,7 @@ import { CommunityProvider } from "@/lib/communities/CommunityContext";
 import { LiveRoomProvider } from "@/lib/live/LiveRoomContext";
 import { MenziDjProvider } from "@/lib/music/MenziDjContext";
 import { ToastProvider } from "@/lib/ToastContext";
+import { WalletProvider } from "@/lib/wallet/WalletContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -22,7 +23,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <LiveRoomProvider>
                 {/* Depende de LiveRoomProvider (la música vive mientras dure la conexión de voz al
                     LIVE) — tiene que montarse debajo, nunca al revés. */}
-                <MenziDjProvider>{children}</MenziDjProvider>
+                <MenziDjProvider>
+                  {/* Menzo Coins en modo demo (solo local) — necesita el perfil y los posts del
+                      store para las recompensas automáticas. */}
+                  <WalletProvider>{children}</WalletProvider>
+                </MenziDjProvider>
               </LiveRoomProvider>
             </AccentProvider>
           </CommunityProvider>

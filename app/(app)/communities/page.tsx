@@ -9,6 +9,15 @@ import { ApiError } from "@/lib/api/client";
 import { CommunityBadge } from "@/components/communities/CommunitySwitcher";
 import { CompassIcon } from "@/components/icons";
 import { useCommunity } from "@/lib/communities/CommunityContext";
+import { MenzoCoin } from "@/components/wallet/MenzoCoin";
+import { PremiumJoinDialog } from "@/components/wallet/PremiumJoinDialog";
+import { MC_PREMIUM_PRICE, useWallet } from "@/lib/wallet/WalletContext";
+
+/** Demo de Menzo Coins: por ahora toda comunidad que no es de acceso abierto se muestra como
+ * "premium" con precio en MC. No hay backend de pagos todavía — el cobro es solo local. */
+function isPremium(community: CommunitySummaryDto) {
+  return community.accessType !== "OPEN";
+}
 
 /** Explorar comunidades — ver Contexto §9 del pedido. Versión mínima de Fase A/B: lista +
  * unirse/abandonar. Categorías, destacadas, búsqueda avanzada y la pantalla de detalle previa a
@@ -20,6 +29,8 @@ export default function CommunitiesExplorePage() {
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [premiumTarget, setPremiumTarget] = useState<CommunitySummaryDto | null>(null);
+  const { payPremium, premiumCommunities } = useWallet();
 
   useEffect(() => {
     communitiesApi
@@ -39,6 +50,25 @@ export default function CommunitiesExplorePage() {
       router.push("/communities");
     } catch (err) {
       console.warn("[menzo/web] joinCommunity failed", err);
+      setError(err instanceof ApiError ? err.message : "No pudimos unirte a esta comunidad.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handlePremiumJoin() {
+    if (!premiumTarget) return;
+    const target = premiumTarget;
+    setPendingId(target.id);
+    setError(null);
+    try {
+      await joinCommunity(target.id);
+      payPremium(target.id, target.name);
+      setPremiumTarget(null);
+      router.push("/communities");
+    } catch (err) {
+      console.warn("[menzo/web] joinCommunity (premium) failed", err);
+      setPremiumTarget(null);
       setError(err instanceof ApiError ? err.message : "No pudimos unirte a esta comunidad.");
     } finally {
       setPendingId(null);
@@ -90,7 +120,15 @@ export default function CommunitiesExplorePage() {
               <div className="flex items-center gap-3">
                 <CommunityBadge name={community.name} iconUrl={community.iconUrl} color={community.primaryColor} size={44} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{community.name}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-bold">
+                    <span className="truncate">{community.name}</span>
+                    {isPremium(community) && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-yellow)]/15 px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-yellow)]">
+                        <MenzoCoin size={11} />
+                        {premiumCommunities.includes(community.id) ? "Premium" : `${MC_PREMIUM_PRICE} MC/mes`}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-[var(--color-text-muted)]">
                     {community.memberCount} miembro{community.memberCount === 1 ? "" : "s"}
                     {community.category ? ` · ${community.category}` : ""}
@@ -116,6 +154,15 @@ export default function CommunitiesExplorePage() {
                     Salir
                   </button>
                 </div>
+              ) : isPremium(community) ? (
+                <button
+                  onClick={() => setPremiumTarget(community)}
+                  disabled={isPending}
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--color-yellow)] to-[var(--color-orange)] py-2 text-xs font-bold text-[var(--color-text-on-accent)] disabled:opacity-50 cursor-pointer"
+                >
+                  <MenzoCoin size={14} />
+                  Unirme · {MC_PREMIUM_PRICE} MC / mes
+                </button>
               ) : (
                 <button
                   onClick={() => handleJoin(community.id)}
@@ -130,6 +177,13 @@ export default function CommunitiesExplorePage() {
           );
         })}
       </div>
+
+      <PremiumJoinDialog
+        community={premiumTarget && { name: premiumTarget.name, color: premiumTarget.primaryColor }}
+        busy={!!premiumTarget && pendingId === premiumTarget.id}
+        onConfirm={handlePremiumJoin}
+        onCancel={() => setPremiumTarget(null)}
+      />
     </div>
   );
 }

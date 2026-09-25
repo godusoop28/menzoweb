@@ -40,6 +40,8 @@ import {
   UsersIcon,
 } from "./icons";
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
+import { MenzoCoin } from "./wallet/MenzoCoin";
+import { WalletPill } from "./wallet/WalletPill";
 
 /** Nav global de respaldo — se usa solo cuando la cuenta todavía no tiene ninguna comunidad
  * activa (ver COMMUNITY_NAV_ROUTES más abajo para el caso normal, con comunidad). */
@@ -170,6 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </form>
           <div className="ml-auto flex items-center gap-2">
+            <WalletPill />
             <Link
               href="/"
               style={{ background: accent.color }}
@@ -221,6 +224,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-secondary)]"
                       >
                         <ProfileIcon size={16} /> Mi perfil
+                      </Link>
+                      <Link
+                        href="/wallet"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-surface-secondary)]"
+                      >
+                        <MenzoCoin size={16} /> Mi wallet
                       </Link>
                       <Link
                         href="/settings"
@@ -304,7 +314,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/branding/menzo-logo.png" alt="Menzo" className="h-[34px] w-[34px] shrink-0 rounded-xl" />
-                  <span className="min-w-0 truncate font-display text-[22px] font-bold" style={{ letterSpacing: "-0.3px" }}>
+                  {/* En pantallas angostas el saldo MC le gana el lugar a la palabra "Menzo" (el
+                      logo queda). */}
+                  <span className="min-w-0 truncate font-display text-[22px] font-bold max-[420px]:hidden" style={{ letterSpacing: "-0.3px" }}>
                     Menzo
                   </span>
                 </Link>
@@ -330,6 +342,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </>
               ) : (
                 <>
+                  <WalletPill compact />
                   <Link
                     href="/search"
                     aria-label="Buscar"
