@@ -42,6 +42,7 @@ import {
 import { PersistentVoiceBubble } from "./PersistentVoiceBubble";
 import { MenzoCoin } from "./wallet/MenzoCoin";
 import { WalletPill } from "./wallet/WalletPill";
+import { formatMc, useWallet } from "@/lib/wallet/WalletContext";
 
 /** Nav global de respaldo — se usa solo cuando la cuenta todavía no tiene ninguna comunidad
  * activa (ver COMMUNITY_NAV_ROUTES más abajo para el caso normal, con comunidad). */
@@ -632,6 +633,7 @@ function SidebarNavContent({
               </Link>
             );
           })}
+          <SidebarWalletLink active={isActive("/wallet")} onNavigate={onNavigate} />
           {activeCommunitySlug && (
             <Link
               href={`/communities/${activeCommunitySlug}/whiteboard`}
@@ -701,5 +703,25 @@ function SidebarNavContent({
         </div>
       </div>
     </>
+  );
+}
+
+/** Acceso a la wallet de Menzo Coins en "Mis cosas" — con el saldo a la derecha. */
+function SidebarWalletLink({ active, onNavigate }: { active: boolean; onNavigate?: () => void }) {
+  const { balance } = useWallet();
+  return (
+    <Link
+      href="/wallet"
+      onClick={onNavigate}
+      className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-primary)] ${
+        active ? "bg-white/[0.05] text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
+      }`}
+    >
+      <span className="flex w-5 justify-center">
+        <MenzoCoin size={18} />
+      </span>
+      <span className="flex-1">Wallet</span>
+      <span className="font-display text-xs font-bold tabular-nums text-[var(--color-yellow)]">{formatMc(balance)} MC</span>
+    </Link>
   );
 }
