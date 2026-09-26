@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeEntitiesReviver } from "@/lib/api/htmlEntities";
 import { Client } from "@stomp/stompjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -54,7 +55,7 @@ export function useRoomSocket(roomId: string | undefined) {
         hasConnectedBefore = true;
 
         client.subscribe(`/topic/rooms/${roomId}/messages`, (frame) => {
-          const dto = JSON.parse(frame.body) as MessageDto;
+          const dto = JSON.parse(frame.body, decodeEntitiesReviver) as MessageDto;
           actions.receiveRoomMessage(dto);
           if (dto.authorId !== session.userId) playMessageReceivedSound();
         });

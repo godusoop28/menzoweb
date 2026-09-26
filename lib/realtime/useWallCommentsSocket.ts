@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeEntitiesReviver } from "@/lib/api/htmlEntities";
 import { Client } from "@stomp/stompjs";
 import { useEffect, useRef } from "react";
 
@@ -36,7 +37,7 @@ export function useWallCommentsSocket(wallMessageId: string | undefined) {
         hasConnectedBefore = true;
 
         client.subscribe(`/topic/wall/${wallMessageId}/comments`, (frame) => {
-          const event = JSON.parse(frame.body) as WallCommentEventDto;
+          const event = JSON.parse(frame.body, decodeEntitiesReviver) as WallCommentEventDto;
           if (event.type === "created" && event.comment) {
             actions.receiveWallComment(event.comment);
           } else if (event.type === "deleted" && event.deletedCommentId) {

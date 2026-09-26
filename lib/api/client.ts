@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./config";
+import { decodeEntitiesReviver } from "./htmlEntities";
 import { clearSession, getCachedSession, saveSession } from "./session";
 import type { AuthResponseDto, ErrorResponse } from "./types";
 
@@ -153,7 +154,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   // o unirse a un LIVE) en vez de mostrar un error manejable.
   let data: unknown;
   try {
-    data = text ? JSON.parse(text) : undefined;
+    data = text ? JSON.parse(text, decodeEntitiesReviver) : undefined;
   } catch {
     throw new ApiError(
       response.status,
